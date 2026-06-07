@@ -6,6 +6,9 @@ Run locally:
 
 Endpoints:
     GET  /fuel-mix          5-min fuel mix by ISO
+    GET  /carbon            Carbon intensity (lbs CO₂/MWh) derived from fuel mix
+    GET  /carbon/latest     Latest carbon intensity + % clean per ISO
+    GET  /carbon/summary    All ISOs in one call
     GET  /curtailment       Daily renewable curtailment
     GET  /curtailment/hourly Hourly curtailment breakdown (CAISO)
     GET  /curtailment/summary Cross-ISO 30-day summary
@@ -23,7 +26,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import curtailment, fuel_mix, isos, lmp, load, queue
+from api.routes import carbon, curtailment, fuel_mix, isos, lmp, load, queue
 
 
 @asynccontextmanager
@@ -85,6 +88,7 @@ app.add_middleware(
 )
 
 app.include_router(fuel_mix.router)
+app.include_router(carbon.router)
 app.include_router(curtailment.router)
 app.include_router(lmp.router)
 app.include_router(load.router)
