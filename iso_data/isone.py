@@ -69,7 +69,7 @@ def _eia_paginate(endpoint: str, params: dict[str, Any]) -> list[dict]:
         body = r.json()
         data = body.get("response", {}).get("data", [])
         rows.extend(data)
-        total = body.get("response", {}).get("total", len(rows))
+        total = int(body.get("response", {}).get("total", len(rows)))
         if len(rows) >= total or not data:
             break
         offset += length
