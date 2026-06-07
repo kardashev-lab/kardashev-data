@@ -959,6 +959,157 @@ def ingest_spp_lmp_rt():
 # BPA real-time balancing area  (#8 / #16)
 # ---------------------------------------------------------------------------
 
+def ingest_eia_monthly_generation():
+    """
+    EIA-923 monthly net generation by state + fuel type (#10).
+    Runs weekly (data updates monthly ~2 months lag).
+    """
+    from iso_data.eia import api_key, _http
+    from ingest.writer import upsert_monthly_generation
+    import os, requests
+
+    key = os.environ.get("EIA_API_KEY", "")
+    if not key:
+        log.warning("EIA_API_KEY not set — skipping monthly generation")
+        return
+
+    rows: list[dict] = []
+    try:
+        now = datetime.now(timezone.utc)
+        start_y = now.year - 2
+        resp = requests.get(
+            "https://api.eia.gov/v2/electricity/electric-power-operational-data/data/",
+            params={
+                "api_key": key,
+                "frequency": "monthly",
+                "data[]": "generation",
+                "start": f"{start_y}-01",
+                "sort[0][column]": "period",
+                "sort[0][direction]": "desc",
+                "length": 5000,
+            }, timeout=30)
+        if not resp.ok:
+            log.warning("EIA monthly gen: HTTP %d", resp.status_code)
+            return
+        data = resp.json().get("response", {}).get("data", [])
+        for rec in data:
+            try:
+                rows.append({
+                    "period":    rec.get("period", ""),        # "YYYY-MM"
+                    "state":     rec.get("location", "US"),
+                    "fuel_type": rec.get("fueltypeid", rec.get("fuelTypeId", "ALL")),
+                    "sector":    rec.get("sectorid", rec.get("sectorId", "")),
+                    "mwh":       float(rec["generation"]) if rec.get("generation") is not None else None,
+                })
+            except Exception:
+                continue
+    except Exception as exc:
+        log.warning("EIA monthly gen: %s", exc)
+        return
+
+    n = upsert_monthly_generation(rows)
+    log.info("EIA monthly generation: %d rows", n)
+
+
+def ingest_eia_generator_capacity():
+    """
+    EIA-860 annual installed capacity by state + technology (#11).
+    """
+    import os, requests
+    from ingest.writer import upsert_generator_capacity
+
+    key = os.environ.get("EIA_API_KEY", "")
+    if not key:
+        log.warning("EIA_API_KEY not set — skipping generator capacity")
+        return
+
+    rows: list[dict] = []
+    try:
+        resp = requests.get(
+            "https://api.eia.gov/v2/electricity/operating-generator-capacity/data/",
+            params={
+                "api_key": key,
+                "frequency": "annual",
+                "data[]": "nameplate-capacity-mw",
+                "sort[0][column]": "period",
+                "sort[0][direction]": "desc",
+                "length": 5000,
+            }, timeout=30)
+        if not resp.ok:
+            log.warning("EIA gen capacity: HTTP %d", resp.status_code)
+            return
+        data = resp.json().get("response", {}).get("data", [])
+        for rec in data:
+            try:
+                rows.append({
+                    "period":     str(rec.get("period", "")),
+                    "state":      rec.get("stateid", rec.get("stateId", "US")),
+                    "technology": rec.get("technology", rec.get("entityName", "Unknown")),
+                    "fuel_type":  rec.get("energy_source_code", rec.get("energySourceCode")),
+                    "capacity_mw": float(rec["nameplate-capacity-mw"])
+                        if rec.get("nameplate-capacity-mw") is not None else None,
+                })
+            except Exception:
+                continue
+    except Exception as exc:
+        log.warning("EIA gen capacity: %s", exc)
+        return
+
+    n = upsert_generator_capacity(rows)
+    log.info("EIA generator capacity: %d rows", n)
+
+
+def ingest_eia_retail_prices():
+    """
+    EIA-861 monthly retail electricity prices + sales by state + sector (#12).
+    Sectors: RES, COM, IND, ALL.
+    """
+    import os, requests
+    from ingest.writer import upsert_retail_prices
+
+    key = os.environ.get("EIA_API_KEY", "")
+    if not key:
+        log.warning("EIA_API_KEY not set — skipping retail prices")
+        return
+
+    now = datetime.now(timezone.utc)
+    rows: list[dict] = []
+    try:
+        resp = requests.get(
+            "https://api.eia.gov/v2/electricity/retail-sales/data/",
+            params={
+                "api_key": key,
+                "frequency": "monthly",
+                "data[]": ["price", "sales", "customers"],
+                "start": f"{now.year - 3}-01",
+                "sort[0][column]": "period",
+                "sort[0][direction]": "desc",
+                "length": 5000,
+            }, timeout=30)
+        if not resp.ok:
+            log.warning("EIA retail prices: HTTP %d", resp.status_code)
+            return
+        data = resp.json().get("response", {}).get("data", [])
+        for rec in data:
+            try:
+                rows.append({
+                    "period":           str(rec.get("period", "")),
+                    "state":            rec.get("stateid", rec.get("stateId", "US")),
+                    "sector":           rec.get("sectorid", rec.get("sectorId", "ALL")),
+                    "price_cents_kwh":  float(rec["price"]) if rec.get("price") is not None else None,
+                    "sales_mwh":        float(rec["sales"]) if rec.get("sales") is not None else None,
+                    "customers":        float(rec["customers"]) if rec.get("customers") is not None else None,
+                })
+            except Exception:
+                continue
+    except Exception as exc:
+        log.warning("EIA retail prices: %s", exc)
+        return
+
+    n = upsert_retail_prices(rows)
+    log.info("EIA retail prices: %d rows", n)
+
+
 def ingest_bpa_balancesheet():
     """BPA 5-min wind, hydro, thermal, load from public balance sheet."""
     from iso_data import bpa

@@ -229,3 +229,43 @@ CREATE TABLE IF NOT EXISTS grid_temperature (
 );
 CREATE INDEX IF NOT EXISTS temp_ts_brin ON grid_temperature USING BRIN (ts);
 CREATE INDEX IF NOT EXISTS temp_iso     ON grid_temperature (iso, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- EIA-923: Monthly net generation by state + fuel type
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS monthly_generation (
+    period       TEXT             NOT NULL,   -- "YYYY-MM"
+    state        TEXT             NOT NULL,
+    fuel_type    TEXT             NOT NULL,
+    sector       TEXT,
+    mwh          DOUBLE PRECISION,
+    CONSTRAINT   mgen_pk PRIMARY KEY (period, state, fuel_type, sector)
+);
+CREATE INDEX IF NOT EXISTS mgen_period ON monthly_generation (period DESC, state, fuel_type);
+
+-- ---------------------------------------------------------------------------
+-- EIA-860: Annual installed generator capacity
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS generator_capacity (
+    period       TEXT             NOT NULL,   -- "YYYY"
+    state        TEXT             NOT NULL,
+    technology   TEXT             NOT NULL,
+    fuel_type    TEXT,
+    capacity_mw  DOUBLE PRECISION,
+    CONSTRAINT   gcap_pk PRIMARY KEY (period, state, technology)
+);
+CREATE INDEX IF NOT EXISTS gcap_period ON generator_capacity (period DESC, state);
+
+-- ---------------------------------------------------------------------------
+-- EIA-861: Monthly retail electricity prices + sales
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS retail_prices (
+    period       TEXT             NOT NULL,   -- "YYYY-MM"
+    state        TEXT             NOT NULL,
+    sector       TEXT             NOT NULL,   -- RES, COM, IND, ALL
+    price_cents_kwh DOUBLE PRECISION,
+    sales_mwh    DOUBLE PRECISION,
+    customers    DOUBLE PRECISION,
+    CONSTRAINT   rp_pk PRIMARY KEY (period, state, sector)
+);
+CREATE INDEX IF NOT EXISTS rp_period ON retail_prices (period DESC, state, sector);

@@ -173,6 +173,62 @@ def upsert_battery_storage(rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_monthly_generation(rows: list[dict]) -> int:
+    """rows: [{period, state, fuel_type, sector, mwh}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO monthly_generation (period, state, fuel_type, sector, mwh)
+            VALUES %s
+            ON CONFLICT (period, state, fuel_type, sector) DO UPDATE SET mwh = EXCLUDED.mwh
+            """,
+            [(r["period"], r["state"], r["fuel_type"], r.get("sector", ""), r.get("mwh")) for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_generator_capacity(rows: list[dict]) -> int:
+    """rows: [{period, state, technology, fuel_type, capacity_mw}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO generator_capacity (period, state, technology, fuel_type, capacity_mw)
+            VALUES %s
+            ON CONFLICT (period, state, technology) DO UPDATE
+              SET capacity_mw = EXCLUDED.capacity_mw, fuel_type = EXCLUDED.fuel_type
+            """,
+            [(r["period"], r["state"], r["technology"], r.get("fuel_type"), r.get("capacity_mw"))
+             for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_retail_prices(rows: list[dict]) -> int:
+    """rows: [{period, state, sector, price_cents_kwh, sales_mwh, customers}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO retail_prices (period, state, sector, price_cents_kwh, sales_mwh, customers)
+            VALUES %s
+            ON CONFLICT (period, state, sector) DO UPDATE
+              SET price_cents_kwh = EXCLUDED.price_cents_kwh,
+                  sales_mwh = EXCLUDED.sales_mwh, customers = EXCLUDED.customers
+            """,
+            [(r["period"], r["state"], r["sector"], r.get("price_cents_kwh"),
+              r.get("sales_mwh"), r.get("customers")) for r in rows],
+        )
+    return len(rows)
+
+
 def upsert_bpa_balancesheet(rows: list[dict]) -> int:
     """rows: [{ts, load_mw, wind_mw, hydro_mw, thermal_mw, nuclear_mw, net_interchange_mw}]"""
     if not rows:

@@ -93,3 +93,84 @@ def get_fuel_mix(respondent: str, target: date) -> list[dict]:
         "sort[0][direction]": "asc",
         "length": 5000,
     })
+
+
+# ---------------------------------------------------------------------------
+# EIA-923: Monthly plant-level generation (aggregated by state + fuel type)
+# Endpoint: electricity/electric-power-operational-data
+# ---------------------------------------------------------------------------
+
+def get_monthly_generation(months: int = 12) -> list[dict]:
+    """
+    Monthly net generation (MWh) by state and fuel type.
+    Aggregated from EIA-923. Returns newest `months` of data.
+    """
+    now = datetime.now(timezone.utc)
+    start_month = (now.year, now.month)
+    # EIA period format: "YYYY-MM"
+    start_y = now.year - (months // 12 + 1)
+    params = {
+        "api_key": api_key(),
+        "frequency": "monthly",
+        "data[]": "generation",
+        "facets[location][]": ["US"],  # national total; can also filter by state
+        "start": f"{start_y}-01",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 5000,
+    }
+    url = "https://api.eia.gov/v2/electricity/electric-power-operational-data/data/"
+    r = _http.get(url, params=params)
+    return r.json().get("response", {}).get("data", [])
+
+
+# ---------------------------------------------------------------------------
+# EIA-860: Annual generator capacity
+# Endpoint: electricity/operating-generator-capacity
+# ---------------------------------------------------------------------------
+
+def get_generator_capacity(year: int | None = None) -> list[dict]:
+    """
+    Annual installed generator capacity (MW) by state, technology, and fuel type.
+    Defaults to most recent available year.
+    """
+    params: dict = {
+        "api_key": api_key(),
+        "frequency": "annual",
+        "data[]": "nameplate-capacity-mw",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 5000,
+    }
+    if year:
+        params["start"] = str(year)
+        params["end"]   = str(year)
+    url = "https://api.eia.gov/v2/electricity/operating-generator-capacity/data/"
+    r = _http.get(url, params=params)
+    return r.json().get("response", {}).get("data", [])
+
+
+# ---------------------------------------------------------------------------
+# EIA-861: Monthly retail electricity prices and sales
+# Endpoint: electricity/retail-sales
+# ---------------------------------------------------------------------------
+
+def get_retail_prices(months: int = 24) -> list[dict]:
+    """
+    Monthly retail electricity prices (cents/kWh) and sales (MWh) by state and sector.
+    Sectors: residential (RES), commercial (COM), industrial (IND), all (ALL).
+    """
+    now = datetime.now(timezone.utc)
+    start_y = now.year - (months // 12 + 2)
+    params = {
+        "api_key": api_key(),
+        "frequency": "monthly",
+        "data[]": ["price", "sales", "customers"],
+        "start": f"{start_y}-01",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": 5000,
+    }
+    url = "https://api.eia.gov/v2/electricity/retail-sales/data/"
+    r = _http.get(url, params=params)
+    return r.json().get("response", {}).get("data", [])

@@ -19,6 +19,7 @@ Schedule (UTC):
                    + grid-area temperatures via Open-Meteo
     Daily 06:00  : Curtailment (CAISO, SPP, ERCOT) + EIA nat gas prices + EIA gas storage
     Daily 07:00  : Interconnection queues (NYISO, PJM, ISONE)
+    Weekly Mon 08:00 : EIA-923 monthly generation, EIA-860 capacity, EIA-861 retail prices
 """
 from __future__ import annotations
 
@@ -161,6 +162,18 @@ def run_binding_constraints():
     _run("miso_binding_constraints", ingest_miso_binding_constraints)
 
 
+def run_eia_static():
+    """Monthly/annual EIA datasets — run weekly."""
+    from ingest.jobs import (
+        ingest_eia_monthly_generation,
+        ingest_eia_generator_capacity,
+        ingest_eia_retail_prices,
+    )
+    _run("eia_monthly_gen",    ingest_eia_monthly_generation)
+    _run("eia_gen_capacity",   ingest_eia_generator_capacity)
+    _run("eia_retail_prices",  ingest_eia_retail_prices)
+
+
 def run_queue():
     from ingest.jobs import ingest_nyiso_queue
     _run("nyiso_queue", ingest_nyiso_queue)
@@ -216,6 +229,7 @@ def start():
     last_hour  = -1
     last_curtailment_day = -1
     last_queue_day       = -1
+    last_static_week     = -1   # ISO week number for EIA monthly/annual data
 
     # Run immediately on startup
     log.info("Initial startup: all data sources")
@@ -236,6 +250,7 @@ def start():
     run_bpa()
     run_temperatures()
     run_binding_constraints()
+    run_eia_static()   # monthly/annual EIA data (EIA-923, EIA-860, EIA-861)
 
     while True:
         now   = _utcnow()
@@ -244,6 +259,7 @@ def start():
         hour  = now.hour                 # 0-23
         mins  = _minutes_since_midnight(now)
         day   = now.toordinal()
+        week  = now.isocalendar()[1]     # ISO week number (1-53)
 
         if min5 != last_5min:
             last_5min = min5
@@ -284,6 +300,11 @@ def start():
             log.info("tick: interconnection queues (NYISO + PJM + ISONE)")
             run_queue()
             run_queue_all()
+
+        if hour == 8 and week != last_static_week:
+            last_static_week = week
+            log.info("tick: weekly EIA static data (EIA-923, EIA-860, EIA-861)")
+            run_eia_static()
 
         time.sleep(30)
 

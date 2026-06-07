@@ -23,6 +23,9 @@ Endpoints:
     GET  /bpa                        BPA 5-min wind/hydro/thermal/load balancesheet
     GET  /weather                    Hourly grid-area temperatures (Open-Meteo)
     GET  /constraints                Binding transmission constraints (MISO RT)
+    GET  /eia/generation             EIA-923 monthly generation by state + fuel type
+    GET  /eia/capacity               EIA-860 annual installed capacity by state + technology
+    GET  /eia/retail-prices          EIA-861 monthly retail electricity prices (cents/kWh)
     GET  /interconnection-queue Active queue with filters
     GET  /isos              ISO catalog with dataset coverage
     GET  /health            Uptime check
@@ -36,7 +39,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import (
-    bpa, carbon, constraints, curtailment, fuel_mix, generation,
+    bpa, carbon, constraints, curtailment, eia_static, fuel_mix, generation,
     isos, lmp, load, nat_gas, queue, weather,
 )
 
@@ -109,6 +112,7 @@ app.include_router(nat_gas.router)
 app.include_router(bpa.router)
 app.include_router(weather.router)
 app.include_router(constraints.router)
+app.include_router(eia_static.router)
 app.include_router(queue.router)
 app.include_router(isos.router)
 
