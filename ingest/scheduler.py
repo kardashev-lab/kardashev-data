@@ -1,164 +1,81 @@
 """
-APScheduler-based ingestion daemon.
+Ingestion daemon — plain while-loop scheduler (no APScheduler dependency).
 
 Run:
     python -m ingest.scheduler
+    python -m ingest.scheduler backfill CAISO 90
 
-Schedule:
-    Every 5 min  : CAISO fuel mix, NYISO fuel mix, MISO fuel mix, ISONE fuel mix
-    Every 15 min : ERCOT fuel mix (dashboard latency)
-    Every hour   : CAISO load, NYISO load, ISONE load
-    Daily 6 AM   : Curtailment for yesterday (CAISO, SPP, ERCOT)
-    Daily 7 AM   : Interconnection queue refresh (NYISO)
+Schedule (UTC):
+    Every 5 min  : CAISO, NYISO, MISO, ISONE fuel mix
+    Every 15 min : ERCOT fuel mix
+    Every hour   : CAISO, NYISO, ISONE load
+    Daily 06:00  : Curtailment for yesterday (CAISO, SPP, ERCOT)
+    Daily 07:00  : Interconnection queue (NYISO)
 """
 from __future__ import annotations
 
 import logging
-import os
 import sys
-from datetime import date, timedelta
+import time
+from datetime import date, datetime, timedelta, timezone
 
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
-from dotenv import load_dotenv
-
-load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    stream=sys.stdout,
+)
 log = logging.getLogger("scheduler")
 
-sched = BlockingScheduler(timezone="UTC")
-
 
 # ---------------------------------------------------------------------------
-# Fuel mix  — every 5 min
+# Job registry
 # ---------------------------------------------------------------------------
 
-@sched.scheduled_job(IntervalTrigger(minutes=5), id="fuel_mix_caiso")
-def job_caiso_fuel_mix():
-    from ingest.jobs import ingest_caiso_fuel_mix
+def _run(name: str, fn, *args):
     try:
-        ingest_caiso_fuel_mix()
+        fn(*args)
     except Exception as exc:
-        log.error("CAISO fuel mix: %s", exc)
+        log.error("%s failed: %s", name, exc)
 
 
-@sched.scheduled_job(IntervalTrigger(minutes=5), id="fuel_mix_nyiso")
-def job_nyiso_fuel_mix():
-    from ingest.jobs import ingest_nyiso_fuel_mix
-    try:
-        ingest_nyiso_fuel_mix(date.today())
-    except Exception as exc:
-        log.error("NYISO fuel mix: %s", exc)
+def run_fuel_mix():
+    from ingest.jobs import (
+        ingest_caiso_fuel_mix, ingest_nyiso_fuel_mix,
+        ingest_miso_fuel_mix, ingest_isone_fuel_mix,
+    )
+    _run("caiso_fuel_mix",  ingest_caiso_fuel_mix)
+    _run("nyiso_fuel_mix",  ingest_nyiso_fuel_mix, date.today())
+    _run("miso_fuel_mix",   ingest_miso_fuel_mix)
+    _run("isone_fuel_mix",  ingest_isone_fuel_mix)
 
 
-@sched.scheduled_job(IntervalTrigger(minutes=5), id="fuel_mix_miso")
-def job_miso_fuel_mix():
-    from ingest.jobs import ingest_miso_fuel_mix
-    try:
-        ingest_miso_fuel_mix()
-    except Exception as exc:
-        log.error("MISO fuel mix: %s", exc)
-
-
-@sched.scheduled_job(IntervalTrigger(minutes=5), id="fuel_mix_isone")
-def job_isone_fuel_mix():
-    from ingest.jobs import ingest_isone_fuel_mix
-    try:
-        ingest_isone_fuel_mix()
-    except Exception as exc:
-        log.error("ISONE fuel mix: %s", exc)
-
-
-@sched.scheduled_job(IntervalTrigger(minutes=15), id="fuel_mix_ercot")
-def job_ercot_fuel_mix():
+def run_ercot_fuel_mix():
     from ingest.jobs import ingest_ercot_fuel_mix
-    try:
-        ingest_ercot_fuel_mix()
-    except Exception as exc:
-        log.error("ERCOT fuel mix: %s", exc)
+    _run("ercot_fuel_mix", ingest_ercot_fuel_mix)
 
 
-# ---------------------------------------------------------------------------
-# Load  — every hour
-# ---------------------------------------------------------------------------
-
-@sched.scheduled_job(IntervalTrigger(hours=1), id="load_caiso")
-def job_caiso_load():
-    from ingest.jobs import ingest_caiso_load
-    try:
-        ingest_caiso_load()
-    except Exception as exc:
-        log.error("CAISO load: %s", exc)
+def run_load():
+    from ingest.jobs import ingest_caiso_load, ingest_nyiso_load, ingest_isone_load
+    _run("caiso_load", ingest_caiso_load)
+    _run("nyiso_load", ingest_nyiso_load, date.today())
+    _run("isone_load", ingest_isone_load)
 
 
-@sched.scheduled_job(IntervalTrigger(hours=1), id="load_nyiso")
-def job_nyiso_load():
-    from ingest.jobs import ingest_nyiso_load
-    try:
-        ingest_nyiso_load(date.today())
-    except Exception as exc:
-        log.error("NYISO load: %s", exc)
-
-
-@sched.scheduled_job(IntervalTrigger(hours=1), id="load_isone")
-def job_isone_load():
-    from ingest.jobs import ingest_isone_load
-    try:
-        ingest_isone_load()
-    except Exception as exc:
-        log.error("ISONE load: %s", exc)
-
-
-# ---------------------------------------------------------------------------
-# Curtailment  — daily at 06:00 UTC (covers previous-day final numbers)
-# ---------------------------------------------------------------------------
-
-@sched.scheduled_job(CronTrigger(hour=6, minute=0), id="curtailment_caiso")
-def job_caiso_curtailment():
-    from ingest.jobs import ingest_caiso_curtailment
+def run_curtailment():
+    from ingest.jobs import ingest_caiso_curtailment, ingest_spp_curtailment, ingest_ercot_curtailment
     yesterday = date.today() - timedelta(days=1)
-    try:
-        ingest_caiso_curtailment(yesterday)
-    except Exception as exc:
-        log.error("CAISO curtailment: %s", exc)
+    _run("caiso_curtailment", ingest_caiso_curtailment, yesterday)
+    _run("spp_curtailment",   ingest_spp_curtailment,   yesterday)
+    _run("ercot_curtailment", ingest_ercot_curtailment, yesterday)
 
 
-@sched.scheduled_job(CronTrigger(hour=6, minute=15), id="curtailment_spp")
-def job_spp_curtailment():
-    from ingest.jobs import ingest_spp_curtailment
-    yesterday = date.today() - timedelta(days=1)
-    try:
-        ingest_spp_curtailment(yesterday)
-    except Exception as exc:
-        log.error("SPP curtailment: %s", exc)
-
-
-@sched.scheduled_job(CronTrigger(hour=6, minute=30), id="curtailment_ercot")
-def job_ercot_curtailment():
-    from ingest.jobs import ingest_ercot_curtailment
-    yesterday = date.today() - timedelta(days=1)
-    try:
-        ingest_ercot_curtailment(yesterday)
-    except Exception as exc:
-        log.error("ERCOT curtailment: %s", exc)
-
-
-# ---------------------------------------------------------------------------
-# Interconnection queue  — daily at 07:00 UTC
-# ---------------------------------------------------------------------------
-
-@sched.scheduled_job(CronTrigger(hour=7, minute=0), id="queue_nyiso")
-def job_nyiso_queue():
+def run_queue():
     from ingest.jobs import ingest_nyiso_queue
-    try:
-        ingest_nyiso_queue()
-    except Exception as exc:
-        log.error("NYISO queue: %s", exc)
+    _run("nyiso_queue", ingest_nyiso_queue)
 
 
 # ---------------------------------------------------------------------------
-# Backfill CLI  (python -m ingest.scheduler backfill <iso> <days>)
+# Backfill CLI
 # ---------------------------------------------------------------------------
 
 def backfill(iso: str, days: int):
@@ -184,14 +101,78 @@ def backfill(iso: str, days: int):
                 jobs.ingest_isone_load(target)
         except Exception as exc:
             log.warning("%s backfill %s: %s", iso, target, exc)
-    log.info("Backfill done")
+    log.info("Backfill complete: %s", iso)
 
+
+# ---------------------------------------------------------------------------
+# Scheduler loop
+# ---------------------------------------------------------------------------
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _minutes_since_midnight(now: datetime) -> int:
+    return now.hour * 60 + now.minute
+
+
+def start():
+    log.info("Kardashev Data scheduler starting")
+
+    last_5min  = -1
+    last_15min = -1
+    last_hour  = -1
+    last_curtailment_day = -1
+    last_queue_day       = -1
+
+    # Run fuel mix immediately on startup
+    log.info("Initial fuel mix fetch")
+    run_fuel_mix()
+    run_ercot_fuel_mix()
+
+    while True:
+        now   = _utcnow()
+        min5  = now.minute // 5          # 0-11, changes every 5 min
+        min15 = now.minute // 15         # 0-3,  changes every 15 min
+        hour  = now.hour                 # 0-23
+        mins  = _minutes_since_midnight(now)
+        day   = now.toordinal()
+
+        if min5 != last_5min:
+            last_5min = min5
+            log.info("tick: 5-min fuel mix")
+            run_fuel_mix()
+
+        if min15 != last_15min:
+            last_15min = min15
+            run_ercot_fuel_mix()
+
+        if hour != last_hour:
+            last_hour = hour
+            log.info("tick: hourly load")
+            run_load()
+
+        if hour == 6 and day != last_curtailment_day:
+            last_curtailment_day = day
+            log.info("tick: daily curtailment")
+            run_curtailment()
+
+        if hour == 7 and day != last_queue_day:
+            last_queue_day = day
+            log.info("tick: interconnection queue")
+            run_queue()
+
+        time.sleep(30)
+
+
+# ---------------------------------------------------------------------------
+# Entrypoint
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3 and sys.argv[1] == "backfill":
-        iso_arg = sys.argv[2]
+        iso_arg  = sys.argv[2]
         days_arg = int(sys.argv[3]) if len(sys.argv) > 3 else 90
         backfill(iso_arg, days_arg)
     else:
-        log.info("Starting Kardashev Data scheduler")
-        sched.start()
+        start()
