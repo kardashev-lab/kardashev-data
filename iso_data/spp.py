@@ -1,0 +1,107 @@
+"""
+SPP (Southwest Power Pool) raw data client.
+
+Sources (no auth required):
+  VER curtailments : https://portal.spp.org/file-browser-api/download/ver-curtailments
+                     ?path=/{YYYY}/{MM}/VER-Curtailments-{YYYYMMDD}.csv
+  Annual archive   : same base, path=/{YYYY}/{YYYY}.zip
+  Gen mix rolling  : https://marketplace.spp.org/chart-api/gen-mix-365/asFile
+  Fuel mix live    : https://portal.spp.org/file-browser-api/download/{endpoint}
+                     ?path=/{prefix}-latestInterval.csv
+"""
+from __future__ import annotations
+
+import io
+from datetime import date
+
+import pandas as pd
+
+from . import _http
+
+_FILE_BROWSER = "https://portal.spp.org/file-browser-api/download"
+
+_VER_WIND_COLS = [
+    "Wind Redispatch Curtailments",
+    "Wind Manual Curtailments",
+    "Wind Curtailed For Energy",
+]
+_VER_SOLAR_COLS = [
+    "Solar Redispatch Curtailments",
+    "Solar Manual Curtailments",
+    "Solar Curtailed For Energy",
+]
+_INTERVAL_H = 5 / 60  # 5-minute rows in MW → MWh
+
+
+# ---------------------------------------------------------------------------
+# VER curtailments
+# ---------------------------------------------------------------------------
+
+def get_ver_curtailments_raw(target: date) -> pd.DataFrame:
+    """
+    5-minute VER curtailment rows for target date.
+    Columns include Wind/Solar Redispatch/Manual/CurtailedForEnergy (MW).
+    """
+    path = f"/{target.strftime('%Y')}/{target.strftime('%m')}/VER-Curtailments-{target.strftime('%Y%m%d')}.csv"
+    url = f"{_FILE_BROWSER}/ver-curtailments"
+    r = _http.get(url, params={"path": path})
+    return pd.read_csv(io.StringIO(r.text))
+
+
+def get_ver_curtailments_annual_raw(year: int) -> pd.DataFrame:
+    """Full-year VER curtailments from the annual ZIP archive."""
+    path = f"/{year}/{year}.zip"
+    url = f"{_FILE_BROWSER}/ver-curtailments"
+    members = _http.get_zip_csv(url, params={"path": path})
+    if not members:
+        raise ValueError(f"SPP: no CSV in annual zip for {year}")
+    dfs = [pd.read_csv(buf) for _, buf in members]
+    return pd.concat(dfs, ignore_index=True)
+
+
+def get_curtailment_daily_totals(target: date) -> dict[str, float]:
+    """
+    Returns {solar_mwh, wind_mwh, total_mwh} for target date.
+    Sums 5-min MW values × (5/60) across all curtailment categories.
+    """
+    df = get_ver_curtailments_raw(target)
+    for col in _VER_WIND_COLS + _VER_SOLAR_COLS:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    wind_mwh  = float(df[_VER_WIND_COLS].sum().sum()  * _INTERVAL_H)
+    solar_mwh = float(df[_VER_SOLAR_COLS].sum().sum() * _INTERVAL_H)
+    return {
+        "solar_mwh": round(solar_mwh, 2),
+        "wind_mwh":  round(wind_mwh,  2),
+        "total_mwh": round(solar_mwh + wind_mwh, 2),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Generation mix
+# ---------------------------------------------------------------------------
+
+def get_gen_mix_rolling365() -> pd.DataFrame:
+    """365-day rolling hourly generation mix by fuel type."""
+    url = "https://marketplace.spp.org/chart-api/gen-mix-365/asFile"
+    r = _http.get(url)
+    return pd.read_csv(io.StringIO(r.text))
+
+
+def get_gen_mix_latest(endpoint: str = "rtbm-lmp-by-location") -> pd.DataFrame:
+    """Latest 5-min generation mix interval."""
+    url = f"{_FILE_BROWSER}/{endpoint}"
+    r = _http.get(url, params={"path": f"/{endpoint}-latestInterval.csv"})
+    return pd.read_csv(io.StringIO(r.text))
+
+
+# ---------------------------------------------------------------------------
+# Load / demand
+# ---------------------------------------------------------------------------
+
+def get_load_forecast(target: date) -> pd.DataFrame:
+    """Short-term load forecast vs actual for target date."""
+    path = f"/{target.strftime('%Y')}/{target.strftime('%m')}/STLF-Vs-Actual-{target.strftime('%Y%m%d')}.csv"
+    url = f"{_FILE_BROWSER}/stlf-vs-actual"
+    r = _http.get(url, params={"path": path})
+    return pd.read_csv(io.StringIO(r.text))

@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kardashev
+      POSTGRES_PASSWORD: kardashev
+      POSTGRES_DB: energy
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kardashev -d energy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://kardashev:kardashev@db:5432/energy
+      CORS_ORIGINS: "*"
+    ports:
+      - "8000:8000"
+
+  ingest:
+    build: .
+    command: python -m ingest.scheduler
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://kardashev:kardashev@db:5432/energy
+      PJM_API_KEY: ${PJM_API_KEY:-}
+
+volumes:
+  timescale_data:
