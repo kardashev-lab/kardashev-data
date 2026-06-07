@@ -55,10 +55,11 @@ def run_ercot_fuel_mix():
 
 
 def run_load():
-    from ingest.jobs import ingest_caiso_load, ingest_nyiso_load, ingest_isone_load
+    from ingest.jobs import ingest_caiso_load, ingest_nyiso_load, ingest_isone_load, ingest_eia_load_all
     _run("caiso_load", ingest_caiso_load)
     _run("nyiso_load", ingest_nyiso_load, date.today())
     _run("isone_load", ingest_isone_load)
+    _run("eia_load_all", ingest_eia_load_all)
 
 
 def run_curtailment():

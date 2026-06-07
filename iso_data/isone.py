@@ -26,15 +26,13 @@ EIA fuel-type data endpoint:
 from __future__ import annotations
 
 import io
-import os
 from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
 
-from . import _http
+from . import _http, eia as _eia
 
-_EIA_BASE = "https://api.eia.gov/v2/electricity/rto"
 _ISONE_RESPONDENT = "ISNE"
 
 _BASE_TRANSFORM = "https://www.iso-ne.com/transform/csv"
@@ -44,36 +42,6 @@ _ISONE_HEADERS = {
     "Referer": "https://www.iso-ne.com/isoexpress/",
     "Origin": "https://www.iso-ne.com",
 }
-
-
-def _eia_api_key() -> str:
-    key = os.environ.get("EIA_API_KEY", "")
-    if not key:
-        raise RuntimeError(
-            "EIA_API_KEY not set. Register free at https://www.eia.gov/opendata/register.php"
-        )
-    return key
-
-
-def _eia_paginate(endpoint: str, params: dict[str, Any]) -> list[dict]:
-    """Fetch all pages from an EIA v2 endpoint."""
-    params = dict(params)
-    params["api_key"] = _eia_api_key()
-    url = f"{_EIA_BASE}/{endpoint}"
-    rows: list[dict] = []
-    offset = 0
-    length = int(params.get("length", 5000))
-    while True:
-        params["offset"] = offset
-        r = _http.get(url, params=params)
-        body = r.json()
-        data = body.get("response", {}).get("data", [])
-        rows.extend(data)
-        total = int(body.get("response", {}).get("total", len(rows)))
-        if len(rows) >= total or not data:
-            break
-        offset += length
-    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -86,24 +54,13 @@ def get_fuel_mix(target: date) -> pd.DataFrame:
     Columns: period (UTC hour), fueltype, value (MW), respondent
     Requires EIA_API_KEY env var.
     """
-    start = f"{target.strftime('%Y-%m-%d')}T00"
-    end   = f"{target.strftime('%Y-%m-%d')}T23"
-    rows = _eia_paginate("fuel-type-data/data", {
-        "facets[respondent][]": _ISONE_RESPONDENT,
-        "start": start,
-        "end": end,
-        "frequency": "hourly",
-        "data[]": "value",
-        "sort[0][column]": "period",
-        "sort[0][direction]": "asc",
-        "length": 5000,
-    })
+    rows = _eia.get_fuel_mix(_ISONE_RESPONDENT, target)
     return pd.DataFrame(rows)
 
 
 def get_fuel_mix_range(start: date, end: date) -> pd.DataFrame:
     """Hourly fuel mix for ISONE over a date range via EIA."""
-    rows = _eia_paginate("fuel-type-data/data", {
+    rows = _eia.paginate("fuel-type-data/data", {
         "facets[respondent][]": _ISONE_RESPONDENT,
         "start": f"{start.strftime('%Y-%m-%d')}T00",
         "end":   f"{end.strftime('%Y-%m-%d')}T23",
@@ -127,7 +84,7 @@ def get_load(start: date, end: date | None = None) -> pd.DataFrame:
     Requires EIA_API_KEY env var.
     """
     end = end or start
-    rows = _eia_paginate("region-data/data", {
+    rows = _eia.paginate("region-data/data", {
         "facets[respondent][]": _ISONE_RESPONDENT,
         "facets[type][]": "D",
         "start": f"{start.strftime('%Y-%m-%d')}T00",
@@ -144,7 +101,7 @@ def get_load(start: date, end: date | None = None) -> pd.DataFrame:
 def get_load_forecast(start: date, end: date | None = None) -> pd.DataFrame:
     """Hourly day-ahead load forecast for ISONE via EIA."""
     end = end or start
-    rows = _eia_paginate("region-data/data", {
+    rows = _eia.paginate("region-data/data", {
         "facets[respondent][]": _ISONE_RESPONDENT,
         "facets[type][]": "DF",
         "start": f"{start.strftime('%Y-%m-%d')}T00",

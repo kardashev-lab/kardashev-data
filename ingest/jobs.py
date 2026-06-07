@@ -219,6 +219,50 @@ def ingest_isone_load(target: date | None = None):
     log.info("ISONE load: %d rows", n)
 
 
+# EIA respondent code → ISO label stored in kardashev-data
+# Covers BAs not already ingested from native ISO sources
+_EIA_LOAD_REGIONS: dict[str, str] = {
+    "ERCO": "ERCOT",
+    "PJM":  "PJM",
+    "MISO": "MISO",
+    "SWPP": "SPP",
+    "BPAT": "BPAT",
+    "TVA":  "TVA",
+    "SOCO": "SOCO",
+    "FPL":  "FPL",
+    "DUK":  "DUK",
+    "SRP":  "SRP",
+    "PSCO": "PSCO",
+    "PACE": "PACE",
+}
+
+
+def ingest_eia_load_all():
+    """Hourly demand for all EIA-covered BAs not ingested via native ISO source."""
+    from iso_data import eia
+    from ingest.writer import upsert_load
+    rows: list[dict] = []
+    for eia_code, iso_name in _EIA_LOAD_REGIONS.items():
+        try:
+            data = eia.get_demand(eia_code, hours=3)
+            for item in data:
+                val = item.get("value")
+                if val is None:
+                    continue
+                rows.append({
+                    "ts": pd.to_datetime(item["period"]),
+                    "iso": iso_name,
+                    "zone": iso_name,
+                    "mw_actual": float(val),
+                    "mw_forecast": None,
+                })
+        except Exception as exc:
+            log.warning("EIA load %s failed: %s", iso_name, exc)
+    if rows:
+        n = upsert_load(rows)
+        log.info("EIA load all BAs: %d rows", n)
+
+
 # ---------------------------------------------------------------------------
 # Interconnection queue
 # ---------------------------------------------------------------------------

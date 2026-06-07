@@ -25,6 +25,7 @@ async def get_load(
     zone: Optional[str] = Query(None, description="Zone name. Omit for system total."),
     start: Optional[date] = Query(None),
     end: Optional[date] = Query(None),
+    hours: int = Query(24, ge=1, le=720, description="Hours of history when start/end not given."),
     limit: int = Query(10_000, le=100_000),
 ):
     params: dict = {"iso": iso.upper(), "lim": limit}
@@ -37,7 +38,8 @@ async def get_load(
         start_clause = "AND ts >= :start_ts"
         params["start_ts"] = datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc)
     else:
-        start_clause = "AND ts >= now() - interval '24 hours'"
+        start_clause = "AND ts >= now() - :hours * interval '1 hour'"
+        params["hours"] = hours
 
     end_clause = ""
     if end:
