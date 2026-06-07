@@ -95,11 +95,12 @@ def ingest_isone_fuel_mix(target: date | None = None):
         return
     rows = []
     for _, row in df.iterrows():
+        # EIA shape: period="2026-06-01T00", fueltype="NG", value=MW
         rows.append({
-            "ts": pd.to_datetime(row.get("BeginDate")),
+            "ts": pd.to_datetime(row.get("period")),
             "iso": "ISONE",
-            "fuel_type": row.get("FuelCategoryRollup", row.get("FuelCategory", "Unknown")),
-            "mw": float(row.get("GenMw", 0) or 0),
+            "fuel_type": str(row.get("fueltype", row.get("type-name", "Unknown"))),
+            "mw": float(row.get("value", 0) or 0),
         })
     n = upsert_fuel_mix(rows)
     log.info("ISONE fuel mix: %d rows", n)
@@ -206,12 +207,13 @@ def ingest_isone_load(target: date | None = None):
         return
     rows = []
     for _, row in df.iterrows():
+        # EIA shape: period="2026-06-01T00", type="D", value=MWh
         rows.append({
-            "ts": pd.to_datetime(row.get("BeginDate")),
+            "ts": pd.to_datetime(row.get("period")),
             "iso": "ISONE",
             "zone": "ISONE",
-            "mw_actual": float(row.get("Load", 0) or 0),
-            "mw_forecast": float(row.get("Forecast", 0) or 0) if "Forecast" in row else None,
+            "mw_actual": float(row.get("value", 0) or 0),
+            "mw_forecast": None,
         })
     n = upsert_load(rows)
     log.info("ISONE load: %d rows", n)

@@ -1,37 +1,41 @@
 """
 ISONE (ISO New England) raw data client.
 
-Sources (no auth required):
-  Fuel mix hist  : https://www.iso-ne.com/transform/csv/genfuelmix
-                   ?start={YYYYMMDD}&end={YYYYMMDD}
-                   Requires browser-like headers (returns 403 otherwise).
-  Fuel mix live  : https://www.iso-ne.com/transform/csv/genfuelmix/current
-  Generation     : https://www.iso-ne.com/transform/csv/gensched
-                   ?start={YYYYMMDD}&end={YYYYMMDD}
-  Load actual    : https://www.iso-ne.com/transform/csv/systemload
-                   ?start={YYYYMMDD}&end={YYYYMMDD}
-  Load forecast  : https://www.iso-ne.com/transform/csv/hourlyloadforecast
-                   ?start={YYYYMMDD}&end={YYYYMMDD}
-  LMP (5-min)    : https://www.iso-ne.com/transform/csv/fiveminutelmp
-                   ?start={YYYYMMDD}&end={YYYYMMDD}&location={NODE_ID}
-  LMP (hourly)   : https://www.iso-ne.com/transform/csv/hourlylmp
-                   ?start={YYYYMMDD}&end={YYYYMMDD}&location={NODE_ID}
-  Interconnection: https://www.iso-ne.com/transform/csv/interconnectionqueue
-  Capacity market: https://www.iso-ne.com/transform/csv/capacitymarket
-  WebSocket RT   : wss://www.iso-ne.com/ws/wsclient  (subscribe: gen_mix_rt, load_rt)
+Primary source — EIA Grid Monitor API (free key required):
+  https://www.eia.gov/opendata/register.php
+  Set EIA_API_KEY environment variable.
+  Respondent code: ISNE
 
-NOTE: Transform CSV endpoints return 403 without proper Accept / Referer headers.
-      This module sets them automatically via _isone_session().
+Fallback: ISONE transform/csv endpoints now require an authenticated
+session (403 without login cookies) so they are no longer used for
+fuel mix or load. LMP and queue endpoints are kept as-is since they
+may work with future auth support.
+
+EIA fuel-type data endpoint:
+  GET https://api.eia.gov/v2/electricity/rto/fuel-type-data/data/
+      ?api_key=KEY
+      &facets[respondent][]=ISNE
+      &start=2026-06-01T00
+      &end=2026-06-01T23
+      &frequency=hourly
+      &data[]=value
+      &sort[0][column]=period
+      &sort[0][direction]=asc
+      &length=5000
 """
 from __future__ import annotations
 
 import io
+import os
 from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
 
 from . import _http
+
+_EIA_BASE = "https://api.eia.gov/v2/electricity/rto"
+_ISONE_RESPONDENT = "ISNE"
 
 _BASE_TRANSFORM = "https://www.iso-ne.com/transform/csv"
 
@@ -41,6 +45,122 @@ _ISONE_HEADERS = {
     "Origin": "https://www.iso-ne.com",
 }
 
+
+def _eia_api_key() -> str:
+    key = os.environ.get("EIA_API_KEY", "")
+    if not key:
+        raise RuntimeError(
+            "EIA_API_KEY not set. Register free at https://www.eia.gov/opendata/register.php"
+        )
+    return key
+
+
+def _eia_paginate(endpoint: str, params: dict[str, Any]) -> list[dict]:
+    """Fetch all pages from an EIA v2 endpoint."""
+    params = dict(params)
+    params["api_key"] = _eia_api_key()
+    url = f"{_EIA_BASE}/{endpoint}"
+    rows: list[dict] = []
+    offset = 0
+    length = int(params.get("length", 5000))
+    while True:
+        params["offset"] = offset
+        r = _http.get(url, params=params)
+        body = r.json()
+        data = body.get("response", {}).get("data", [])
+        rows.extend(data)
+        total = body.get("response", {}).get("total", len(rows))
+        if len(rows) >= total or not data:
+            break
+        offset += length
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Fuel mix (via EIA)
+# ---------------------------------------------------------------------------
+
+def get_fuel_mix(target: date) -> pd.DataFrame:
+    """
+    Hourly fuel mix for ISONE on target date via EIA Grid Monitor API.
+    Columns: period (UTC hour), fueltype, value (MW), respondent
+    Requires EIA_API_KEY env var.
+    """
+    start = f"{target.strftime('%Y-%m-%d')}T00"
+    end   = f"{target.strftime('%Y-%m-%d')}T23"
+    rows = _eia_paginate("fuel-type-data/data", {
+        "facets[respondent][]": _ISONE_RESPONDENT,
+        "start": start,
+        "end": end,
+        "frequency": "hourly",
+        "data[]": "value",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "asc",
+        "length": 5000,
+    })
+    return pd.DataFrame(rows)
+
+
+def get_fuel_mix_range(start: date, end: date) -> pd.DataFrame:
+    """Hourly fuel mix for ISONE over a date range via EIA."""
+    rows = _eia_paginate("fuel-type-data/data", {
+        "facets[respondent][]": _ISONE_RESPONDENT,
+        "start": f"{start.strftime('%Y-%m-%d')}T00",
+        "end":   f"{end.strftime('%Y-%m-%d')}T23",
+        "frequency": "hourly",
+        "data[]": "value",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "asc",
+        "length": 5000,
+    })
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
+# Load (via EIA)
+# ---------------------------------------------------------------------------
+
+def get_load(start: date, end: date | None = None) -> pd.DataFrame:
+    """
+    Hourly actual demand for ISONE via EIA Grid Monitor.
+    Columns: period (UTC hour), value (MWh), respondent
+    Requires EIA_API_KEY env var.
+    """
+    end = end or start
+    rows = _eia_paginate("region-data/data", {
+        "facets[respondent][]": _ISONE_RESPONDENT,
+        "facets[type][]": "D",
+        "start": f"{start.strftime('%Y-%m-%d')}T00",
+        "end":   f"{end.strftime('%Y-%m-%d')}T23",
+        "frequency": "hourly",
+        "data[]": "value",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "asc",
+        "length": 5000,
+    })
+    return pd.DataFrame(rows)
+
+
+def get_load_forecast(start: date, end: date | None = None) -> pd.DataFrame:
+    """Hourly day-ahead load forecast for ISONE via EIA."""
+    end = end or start
+    rows = _eia_paginate("region-data/data", {
+        "facets[respondent][]": _ISONE_RESPONDENT,
+        "facets[type][]": "DF",
+        "start": f"{start.strftime('%Y-%m-%d')}T00",
+        "end":   f"{end.strftime('%Y-%m-%d')}T23",
+        "frequency": "hourly",
+        "data[]": "value",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "asc",
+        "length": 5000,
+    })
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
+# LMP prices (ISONE transform CSV — may require auth)
+# ---------------------------------------------------------------------------
 
 def _isone_session():
     return _http.session(extra_headers=_ISONE_HEADERS)
@@ -61,77 +181,18 @@ def _date_params(start: date, end: date | None = None) -> dict:
     return p
 
 
-# ---------------------------------------------------------------------------
-# Fuel mix
-# ---------------------------------------------------------------------------
-
-def get_fuel_mix(target: date) -> pd.DataFrame:
-    """
-    5-minute real-time fuel mix for target date.
-    Columns: BeginDate, GenMw, FuelCategoryRollup, FuelCategory, ...
-    """
-    return _transform_csv("genfuelmix", _date_params(target, target))
-
-
-def get_fuel_mix_range(start: date, end: date) -> pd.DataFrame:
-    """Fuel mix for a date range (multi-day)."""
-    return _transform_csv("genfuelmix", _date_params(start, end))
-
-
-def get_fuel_mix_current() -> pd.DataFrame:
-    """Latest real-time fuel mix snapshot."""
-    url = f"{_BASE_TRANSFORM}/genfuelmix/current"
-    s = _isone_session()
-    r = s.get(url, timeout=30)
-    r.raise_for_status()
-    return pd.read_csv(io.StringIO(r.text))
-
-
-# ---------------------------------------------------------------------------
-# Load
-# ---------------------------------------------------------------------------
-
-def get_load(start: date, end: date | None = None) -> pd.DataFrame:
-    """
-    Hourly actual system load (MW).
-    Columns: BeginDate, Load, NetLoad, ...
-    """
-    return _transform_csv("systemload", _date_params(start, end or start))
-
-
-def get_load_forecast(start: date, end: date | None = None) -> pd.DataFrame:
-    """Hourly day-ahead load forecast."""
-    return _transform_csv("hourlyloadforecast", _date_params(start, end or start))
-
-
-# ---------------------------------------------------------------------------
-# LMP prices
-# ---------------------------------------------------------------------------
-
 def get_lmp_fiveminute(location: str | int, start: date, end: date | None = None) -> pd.DataFrame:
-    """
-    5-minute real-time LMP for a location node.
-    location: node ID (int) or node name string.
-    """
+    """5-minute real-time LMP for a location node (requires ISONE session)."""
     params = _date_params(start, end or start)
     params["location"] = str(location)
     return _transform_csv("fiveminutelmp", params)
 
 
 def get_lmp_hourly(location: str | int, start: date, end: date | None = None) -> pd.DataFrame:
-    """Hourly day-ahead LMP for a location node."""
+    """Hourly day-ahead LMP for a location node (requires ISONE session)."""
     params = _date_params(start, end or start)
     params["location"] = str(location)
     return _transform_csv("hourlylmp", params)
-
-
-# ---------------------------------------------------------------------------
-# Generation schedule
-# ---------------------------------------------------------------------------
-
-def get_generation_schedule(start: date, end: date | None = None) -> pd.DataFrame:
-    """Scheduled generation output by unit."""
-    return _transform_csv("gensched", _date_params(start, end or start))
 
 
 # ---------------------------------------------------------------------------
@@ -139,12 +200,12 @@ def get_generation_schedule(start: date, end: date | None = None) -> pd.DataFram
 # ---------------------------------------------------------------------------
 
 def get_interconnection_queue() -> pd.DataFrame:
-    """ISONE interconnection queue (current snapshot)."""
+    """ISONE interconnection queue (requires ISONE session)."""
     return _transform_csv("interconnectionqueue", {})
 
 
 def get_capacity_market() -> pd.DataFrame:
-    """Forward Capacity Market results."""
+    """Forward Capacity Market results (requires ISONE session)."""
     return _transform_csv("capacitymarket", {})
 
 

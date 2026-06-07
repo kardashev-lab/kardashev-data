@@ -2,21 +2,26 @@
 NYISO (New York ISO) raw data client.
 
 Sources (no auth required) — all public CSV at mis.nyiso.com/public/csv/:
-  Fuel mix (RT)    : rtfuelmix/{YYYYMMDD}rtfuelmix.csv
-  Load (actual)    : pal/{YYYYMMDD}pal.csv          (actual load, 5-min)
+  Fuel mix (RT)    : rtfuelmix/{YYYYMMDD}rtfuelmix.csv  (daily, ~11 days rolling)
+                     rtfuelmix/{YYYYMM}01rtfuelmix_csv.zip  (monthly archive)
+  Load (actual)    : pal/{YYYYMMDD}pal.csv  /  pal/{YYYYMM}01pal_csv.zip
   Load (DA)        : damlbmp/{YYYYMMDD}damlbmp_zone.csv
   LMP real-time    : realtime/{YYYYMMDD}realtime_zone.csv
-  LMP 5-min        : realtime/{YYYYMMDD}realtime_zone.csv
   Behind-meter solar: btmactualforecast/{YYYYMMDD}btmactualforecast.csv
   Generator data   : generator/generator.csv
   Interconnection  : interconnections/interconnections.csv
+
+Note: daily CSV files are only retained for ~11 days. Older data must come
+from the monthly ZIP archives (same base URL, first-of-month filename).
 """
 from __future__ import annotations
 
 import io
+import zipfile
 from datetime import date
 
 import pandas as pd
+import requests
 
 from . import _http
 
@@ -30,6 +35,23 @@ def _csv(dataset: str, target: date, suffix: str = "") -> pd.DataFrame:
     return pd.read_csv(io.StringIO(r.text))
 
 
+def _csv_with_zip_fallback(dataset: str, target: date, suffix: str) -> pd.DataFrame:
+    """Try daily CSV; on 404 fall back to monthly ZIP archive."""
+    try:
+        return _csv(dataset, target, suffix)
+    except requests.HTTPError as exc:
+        if exc.response is None or exc.response.status_code != 404:
+            raise
+    # Monthly ZIP: named {YYYYMM}01{suffix}_csv.zip, contains {YYYYMMDD}{suffix}.csv
+    zip_url = f"{_BASE}/{dataset}/{target.strftime('%Y%m')}01{suffix}_csv.zip"
+    r = _http.get(zip_url)
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        fname = f"{target.strftime('%Y%m%d')}{suffix}.csv"
+        if fname not in zf.namelist():
+            raise FileNotFoundError(f"NYISO: {fname} not in monthly ZIP")
+        return pd.read_csv(io.BytesIO(zf.read(fname)))
+
+
 # ---------------------------------------------------------------------------
 # Fuel mix
 # ---------------------------------------------------------------------------
@@ -38,8 +60,9 @@ def get_fuel_mix(target: date) -> pd.DataFrame:
     """
     5-minute real-time fuel mix by category for target date.
     Columns: Time Stamp, Time Zone, Fuel Category, Gen MW
+    Falls back to monthly ZIP for dates older than ~11 days.
     """
-    return _csv("rtfuelmix", target, "rtfuelmix")
+    return _csv_with_zip_fallback("rtfuelmix", target, "rtfuelmix")
 
 
 def get_fuel_mix_day_ahead(target: date) -> pd.DataFrame:
@@ -55,8 +78,9 @@ def get_load(target: date) -> pd.DataFrame:
     """
     5-minute actual load by zone for target date.
     Columns: Time Stamp, Time Zone, Name, PTID, Load
+    Falls back to monthly ZIP for dates older than ~11 days.
     """
-    return _csv("pal", target, "pal")
+    return _csv_with_zip_fallback("pal", target, "pal")
 
 
 def get_load_forecast(target: date) -> pd.DataFrame:
