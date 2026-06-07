@@ -1012,7 +1012,7 @@ def ingest_spp_lmp_rt():
     from iso_data import spp
     from ingest.writer import upsert_lmp
 
-    df = spp.get_gen_mix_latest("rtbm-lmp-by-location")
+    df = spp.get_lmp_rtbm_latest()
     if df.empty:
         return
 
@@ -1393,9 +1393,9 @@ def ingest_pjm_lmp_da():
 # ---------------------------------------------------------------------------
 
 _CAISO_PRICE_AREAS: list[tuple[str, str]] = [
-    ("SLAP_SP15-APND", "SP15"),   # Southern California
-    ("SLAP_NP15-APND", "NP15"),   # Northern California
-    ("SLAP_ZP26-APND", "ZP26"),   # Central California
+    ("TH_SP15_GEN-APND", "SP15"),   # Southern California
+    ("TH_NP15_GEN-APND", "NP15"),   # Northern California
+    ("TH_ZP26_GEN-APND", "ZP26"),   # Central California
 ]
 
 
@@ -1409,12 +1409,13 @@ def _caiso_oasis_to_lmp_rows(
         (c for c in df.columns if "INTERVALSTART" in c.upper()),
         next((c for c in df.columns if "time" in c.lower()), None),
     )
-    if not ts_col or "LMP_TYPE" not in df.columns or "PRC" not in df.columns:
+    val_col = "MW" if "MW" in df.columns else "PRC" if "PRC" in df.columns else None
+    if not ts_col or "LMP_TYPE" not in df.columns or not val_col:
         return []
     try:
         pivot = (
-            df[[ts_col, "LMP_TYPE", "PRC"]]
-            .pivot_table(index=ts_col, columns="LMP_TYPE", values="PRC", aggfunc="first")
+            df[[ts_col, "LMP_TYPE", val_col]]
+            .pivot_table(index=ts_col, columns="LMP_TYPE", values=val_col, aggfunc="first")
             .reset_index()
         )
     except Exception as exc:

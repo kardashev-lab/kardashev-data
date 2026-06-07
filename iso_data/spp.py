@@ -95,6 +95,15 @@ def get_gen_mix_latest(endpoint: str = "rtbm-lmp-by-location") -> pd.DataFrame:
     return pd.read_csv(io.StringIO(r.text))
 
 
+def get_lmp_rtbm_latest() -> pd.DataFrame:
+    """Latest 5-min RTBM LMP by settlement location.
+    Columns: Interval, GMTIntervalEnd, Settlement Location, Pnode, LMP, MLC, MCC, MEC, BAA
+    """
+    url = f"{_FILE_BROWSER}/rtbm-lmp-by-location"
+    r = _http.get(url, params={"path": "/RTBM-LMP-SL-latestInterval.csv"})
+    return pd.read_csv(io.StringIO(r.text))
+
+
 # ---------------------------------------------------------------------------
 # Load / demand
 # ---------------------------------------------------------------------------
