@@ -1016,14 +1016,20 @@ def ingest_spp_lmp_rt():
     if df.empty:
         return
 
+    seen: set[tuple] = set()
     rows = []
     for _, row in df.iterrows():
         try:
             ts = pd.to_datetime(row["GMTIntervalEnd"], utc=True)
+            node_id = str(row.get("Settlement Location", ""))
+            key = (ts, node_id)
+            if key in seen:
+                continue
+            seen.add(key)
             rows.append({
                 "ts": ts, "iso": "SPP",
-                "node_id": str(row.get("Pnode", row.get("Settlement Location", ""))),
-                "node_name": str(row.get("Settlement Location", "")),
+                "node_id": node_id,
+                "node_name": node_id,
                 "market": "RT",
                 "lmp": float(row.get("LMP", 0) or 0),
                 "energy": float(row.get("MEC", 0) or 0),
