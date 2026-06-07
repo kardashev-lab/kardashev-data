@@ -272,59 +272,63 @@ def start():
     _startup("interchange",      run_interchange)
 
     while True:
-        now   = _utcnow()
-        min5  = now.minute // 5          # 0-11, changes every 5 min
-        min15 = now.minute // 15         # 0-3,  changes every 15 min
-        hour  = now.hour                 # 0-23
-        mins  = _minutes_since_midnight(now)
-        day   = now.toordinal()
-        week  = now.isocalendar()[1]     # ISO week number (1-53)
+        try:
+            now   = _utcnow()
+            min5  = now.minute // 5          # 0-11, changes every 5 min
+            min15 = now.minute // 15         # 0-3,  changes every 15 min
+            hour  = now.hour                 # 0-23
+            mins  = _minutes_since_midnight(now)
+            day   = now.toordinal()
+            week  = now.isocalendar()[1]     # ISO week number (1-53)
 
-        if min5 != last_5min:
-            last_5min = min5
-            log.info("tick: 5-min data (fuel mix, load, LMP, wind/solar, battery, BPA, constraints)")
-            run_fuel_mix()
-            run_spp_fuel_mix()
-            run_realtime_load()
-            run_lmp_rt()
-            run_wind_solar()
-            run_pjm_wind_solar()
-            run_battery()
-            run_btm_solar()
-            run_bpa()
-            run_binding_constraints()
+            if min5 != last_5min:
+                last_5min = min5
+                log.info("tick: 5-min data (fuel mix, load, LMP, wind/solar, battery, BPA, constraints)")
+                run_fuel_mix()
+                run_spp_fuel_mix()
+                run_realtime_load()
+                run_lmp_rt()
+                run_wind_solar()
+                run_pjm_wind_solar()
+                run_battery()
+                run_btm_solar()
+                run_bpa()
+                run_binding_constraints()
 
-        if min15 != last_15min:
-            last_15min = min15
-            run_ercot_fuel_mix()
+            if min15 != last_15min:
+                last_15min = min15
+                run_ercot_fuel_mix()
 
-        if hour != last_hour:
-            last_hour = hour
-            log.info("tick: hourly data (load, DA LMP, forecasts, margins, temperatures, interchange)")
-            run_load()
-            run_lmp_da()
-            run_load_forecasts()
-            run_reserve_margins()
-            run_temperatures()
-            run_interchange()
+            if hour != last_hour:
+                last_hour = hour
+                log.info("tick: hourly data (load, DA LMP, forecasts, margins, temperatures, interchange)")
+                run_load()
+                run_lmp_da()
+                run_load_forecasts()
+                run_reserve_margins()
+                run_temperatures()
+                run_interchange()
 
-        if hour == 6 and day != last_curtailment_day:
-            last_curtailment_day = day
-            log.info("tick: daily curtailment + nat gas prices + gas storage")
-            run_curtailment()
-            run_nat_gas()
-            run_gas_storage()
+            if hour == 6 and day != last_curtailment_day:
+                last_curtailment_day = day
+                log.info("tick: daily curtailment + nat gas prices + gas storage")
+                run_curtailment()
+                run_nat_gas()
+                run_gas_storage()
 
-        if hour == 7 and day != last_queue_day:
-            last_queue_day = day
-            log.info("tick: interconnection queues (NYISO + PJM + ISONE)")
-            run_queue()
-            run_queue_all()
+            if hour == 7 and day != last_queue_day:
+                last_queue_day = day
+                log.info("tick: interconnection queues (NYISO + PJM + ISONE)")
+                run_queue()
+                run_queue_all()
 
-        if hour == 8 and week != last_static_week:
-            last_static_week = week
-            log.info("tick: weekly EIA static data (EIA-923, EIA-860, EIA-861)")
-            run_eia_static()
+            if hour == 8 and week != last_static_week:
+                last_static_week = week
+                log.info("tick: weekly EIA static data (EIA-923, EIA-860, EIA-861)")
+                run_eia_static()
+
+        except Exception as exc:
+            log.error("Scheduler tick error (continuing): %s", exc, exc_info=True)
 
         time.sleep(30)
 
