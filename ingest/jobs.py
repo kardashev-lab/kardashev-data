@@ -1300,3 +1300,174 @@ def ingest_miso_binding_constraints():
              for r in rows],
         )
     log.info("MISO binding constraints: %d rows", len(rows))
+
+
+# ---------------------------------------------------------------------------
+# PJM LMP prices  (RT 5-min + DA hourly for major trading hubs)
+# ---------------------------------------------------------------------------
+
+_PJM_HUBS: list[tuple[str, str]] = [
+    ("33092371", "Western Hub"),
+    ("50969827", "Eastern Hub"),
+    ("34508503", "AEP-Dayton Hub"),
+    ("33092396", "ComEd Hub"),
+]
+
+
+def ingest_pjm_lmp_rt():
+    """PJM RT 5-min LMP for major trading hubs via Dataminer API."""
+    from iso_data import pjm
+    from ingest.writer import upsert_lmp
+    today = date.today()
+    rows: list[dict] = []
+    for pnode_id, hub_name in _PJM_HUBS:
+        try:
+            df = pjm.get_lmp_rt_fiveminute(pnode_id, today)
+            if df.empty:
+                continue
+            for _, row in df.iterrows():
+                try:
+                    ts = pd.to_datetime(
+                        row.get("datetime_beginning_utc") or row.get("datetime_beginning_ept"),
+                        utc=True,
+                    )
+                    if pd.isnull(ts):
+                        continue
+                    rows.append({
+                        "ts": ts, "iso": "PJM",
+                        "node_id": str(pnode_id),
+                        "node_name": hub_name,
+                        "market": "RT",
+                        "lmp":        float(row.get("total_lmp_rt",           0) or 0),
+                        "energy":     float(row.get("system_energy_price_rt", 0) or 0),
+                        "congestion": float(row.get("congestion_price_rt",    0) or 0),
+                        "loss":       float(row.get("marginal_loss_price_rt", 0) or 0),
+                    })
+                except Exception:
+                    continue
+        except Exception as exc:
+            log.warning("PJM RT LMP %s (%s): %s", hub_name, pnode_id, exc)
+    n = upsert_lmp(rows)
+    log.info("PJM RT LMP: %d rows", n)
+
+
+def ingest_pjm_lmp_da():
+    """PJM DA hourly LMP for major trading hubs."""
+    from iso_data import pjm
+    from ingest.writer import upsert_lmp
+    today = date.today()
+    rows: list[dict] = []
+    for pnode_id, hub_name in _PJM_HUBS:
+        try:
+            df = pjm.get_lmp_da_hourly(pnode_id, today)
+            if df.empty:
+                continue
+            for _, row in df.iterrows():
+                try:
+                    ts = pd.to_datetime(
+                        row.get("datetime_beginning_utc") or row.get("datetime_beginning_ept"),
+                        utc=True,
+                    )
+                    if pd.isnull(ts):
+                        continue
+                    rows.append({
+                        "ts": ts, "iso": "PJM",
+                        "node_id": str(pnode_id),
+                        "node_name": hub_name,
+                        "market": "DA",
+                        "lmp":        float(row.get("total_lmp_da",           0) or 0),
+                        "energy":     float(row.get("system_energy_price_da", 0) or 0),
+                        "congestion": float(row.get("congestion_price_da",    0) or 0),
+                        "loss":       float(row.get("marginal_loss_price_da", 0) or 0),
+                    })
+                except Exception:
+                    continue
+        except Exception as exc:
+            log.warning("PJM DA LMP %s (%s): %s", hub_name, pnode_id, exc)
+    n = upsert_lmp(rows)
+    log.info("PJM DA LMP: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# CAISO LMP prices  (RT 5-min + DA hourly for price areas via OASIS)
+# ---------------------------------------------------------------------------
+
+_CAISO_PRICE_AREAS: list[tuple[str, str]] = [
+    ("SLAP_SP15-APND", "SP15"),   # Southern California
+    ("SLAP_NP15-APND", "NP15"),   # Northern California
+    ("SLAP_ZP26-APND", "ZP26"),   # Central California
+]
+
+
+def _caiso_oasis_to_lmp_rows(
+    df: pd.DataFrame, node_id: str, node_name: str, market: str
+) -> list[dict]:
+    """Pivot CAISO OASIS LMP_TYPE wide format into upsert rows."""
+    if df.empty:
+        return []
+    ts_col = next(
+        (c for c in df.columns if "INTERVALSTART" in c.upper()),
+        next((c for c in df.columns if "time" in c.lower()), None),
+    )
+    if not ts_col or "LMP_TYPE" not in df.columns or "PRC" not in df.columns:
+        return []
+    try:
+        pivot = (
+            df[[ts_col, "LMP_TYPE", "PRC"]]
+            .pivot_table(index=ts_col, columns="LMP_TYPE", values="PRC", aggfunc="first")
+            .reset_index()
+        )
+    except Exception as exc:
+        log.warning("CAISO OASIS pivot failed for %s: %s", node_name, exc)
+        return []
+    rows: list[dict] = []
+    for _, row in pivot.iterrows():
+        try:
+            ts = pd.to_datetime(row[ts_col], utc=True)
+            if pd.isnull(ts):
+                continue
+            rows.append({
+                "ts": ts, "iso": "CAISO",
+                "node_id": node_id,
+                "node_name": node_name,
+                "market": market,
+                "lmp":        float(row.get("LMP", 0) or 0),
+                "energy":     float(row.get("MCE", 0) or 0),
+                "congestion": float(row.get("MCC", 0) or 0),
+                "loss":       float(row.get("MCL", 0) or 0),
+            })
+        except Exception:
+            continue
+    return rows
+
+
+def ingest_caiso_lmp_rt():
+    """CAISO RT 5-min LMP for SP15, NP15, ZP26 via OASIS."""
+    from iso_data import caiso
+    from ingest.writer import upsert_lmp
+    today = date.today()
+    all_rows: list[dict] = []
+    for node_id, node_name in _CAISO_PRICE_AREAS:
+        try:
+            df = caiso.get_lmp_rtm(node_id, today, today)
+            all_rows.extend(_caiso_oasis_to_lmp_rows(df, node_id, node_name, "RT"))
+        except Exception as exc:
+            log.warning("CAISO RT LMP %s: %s", node_name, exc)
+    n = upsert_lmp(all_rows)
+    log.info("CAISO RT LMP: %d rows", n)
+
+
+def ingest_caiso_lmp_da():
+    """CAISO DA hourly LMP for SP15, NP15, ZP26 via OASIS."""
+    from iso_data import caiso
+    from ingest.writer import upsert_lmp
+    today = date.today()
+    all_rows: list[dict] = []
+    for node_id, node_name in _CAISO_PRICE_AREAS:
+        try:
+            df = caiso.get_lmp_dam(node_id, today, today)
+            all_rows.extend(_caiso_oasis_to_lmp_rows(df, node_id, node_name, "DA"))
+        except Exception as exc:
+            log.warning("CAISO DA LMP %s: %s", node_name, exc)
+    n = upsert_lmp(all_rows)
+    log.info("CAISO DA LMP: %d rows", n)

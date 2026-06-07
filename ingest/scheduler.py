@@ -85,14 +85,21 @@ def run_curtailment():
 
 
 def run_lmp_rt():
-    from ingest.jobs import ingest_nyiso_lmp_rt, ingest_spp_lmp_rt
-    _run("nyiso_lmp_rt", ingest_nyiso_lmp_rt)
-    _run("spp_lmp_rt",   ingest_spp_lmp_rt)
+    from ingest.jobs import (
+        ingest_nyiso_lmp_rt, ingest_spp_lmp_rt,
+        ingest_pjm_lmp_rt, ingest_caiso_lmp_rt,
+    )
+    _run("nyiso_lmp_rt",  ingest_nyiso_lmp_rt)
+    _run("spp_lmp_rt",    ingest_spp_lmp_rt)
+    _run("pjm_lmp_rt",   ingest_pjm_lmp_rt)
+    _run("caiso_lmp_rt", ingest_caiso_lmp_rt)
 
 
 def run_lmp_da():
-    from ingest.jobs import ingest_nyiso_lmp_da
-    _run("nyiso_lmp_da", ingest_nyiso_lmp_da)
+    from ingest.jobs import ingest_nyiso_lmp_da, ingest_pjm_lmp_da, ingest_caiso_lmp_da
+    _run("nyiso_lmp_da",  ingest_nyiso_lmp_da)
+    _run("pjm_lmp_da",   ingest_pjm_lmp_da)
+    _run("caiso_lmp_da", ingest_caiso_lmp_da)
 
 
 def run_wind_solar():
