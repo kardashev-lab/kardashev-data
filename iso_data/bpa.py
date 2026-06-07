@@ -36,9 +36,12 @@ def get_balancesheet() -> pd.DataFrame:
         if len(parts) < 7:
             continue
         try:
-            ts = datetime.strptime(parts[0].strip(), "%m/%d/%Y %H:%M")
-            ts = ts.replace(tzinfo=timezone.utc)  # BPA timestamps are PST; treat as UTC for storage
-        except ValueError:
+            import pytz
+            _PT = pytz.timezone("US/Pacific")
+            ts_naive = datetime.strptime(parts[0].strip(), "%m/%d/%Y %H:%M")
+            # is_dst=False: during DST ambiguity pick standard time (safe default)
+            ts = _PT.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
             continue
         try:
             rows.append({

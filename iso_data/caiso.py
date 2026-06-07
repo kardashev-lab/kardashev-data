@@ -132,12 +132,20 @@ def get_fuel_mix(target: date | None = None) -> pd.DataFrame:
     else:
         url = f"https://www.caiso.com/outlook/history/{target.strftime('%Y%m%d')}/fuelsource.csv"
 
+    import pytz
+    _PT = pytz.timezone("US/Pacific")
     df = _http.get_csv(url)
     df.columns = [c.strip().replace(" ", "_") for c in df.columns]
     df = df.rename(columns={"Time": "timestamp"})
-    df["timestamp"] = pd.to_datetime(
-        target.isoformat() + " " + df["timestamp"] if target else df["timestamp"],
-        errors="coerce",
+    raw_ts = (
+        target.isoformat() + " " + df["timestamp"].astype(str)
+        if target else df["timestamp"].astype(str)
+    )
+    # Localize Pacific → UTC so all downstream consumers get tz-aware timestamps
+    df["timestamp"] = (
+        pd.to_datetime(raw_ts, errors="coerce")
+        .dt.tz_localize(_PT, ambiguous="infer", nonexistent="shift_forward")
+        .dt.tz_convert("UTC")
     )
     return df
 

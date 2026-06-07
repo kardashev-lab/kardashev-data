@@ -36,6 +36,8 @@ _MARKET_REPORTS = "https://docs.misoenergy.org/marketreports"
 # ---------------------------------------------------------------------------
 
 def _parse_fuel_mix_response(data: dict) -> pd.DataFrame:
+    import pytz
+    _EST = pytz.timezone("US/Eastern")
     fuel_types = data.get("Fuel", {}).get("Type", [])
     rows = []
     for ft in fuel_types:
@@ -47,7 +49,12 @@ def _parse_fuel_mix_response(data: dict) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     if df.empty:
         return df
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    # INTERVALEST timestamps are Eastern time — convert to UTC-aware
+    df["timestamp"] = (
+        pd.to_datetime(df["timestamp"])
+        .dt.tz_localize(_EST, ambiguous="infer", nonexistent="shift_forward")
+        .dt.tz_convert("UTC")
+    )
     return df.pivot(index="timestamp", columns="category", values="mw").reset_index()
 
 

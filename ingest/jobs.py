@@ -36,13 +36,20 @@ def ingest_caiso_fuel_mix(target: date | None = None):
 def ingest_nyiso_fuel_mix(target: date):
     from iso_data import nyiso
     from ingest.writer import upsert_fuel_mix
+    import pytz
+    _eastern = pytz.timezone("US/Eastern")
     df = nyiso.get_fuel_mix(target)
     if df.empty:
         return
     rows = []
     for _, row in df.iterrows():
+        try:
+            ts_naive = pd.to_datetime(row.get("Time Stamp"))
+            ts = _eastern.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
+            ts = pd.to_datetime(row.get("Time Stamp"), utc=True)
         rows.append({
-            "ts": pd.to_datetime(row.get("Time Stamp")),
+            "ts": ts,
             "iso": "NYISO",
             "fuel_type": row.get("Fuel Category", "Unknown"),
             "mw": float(row.get("Gen MW", 0) or 0),
@@ -75,13 +82,22 @@ def ingest_ercot_fuel_mix():
     if df.empty:
         return
     rows = []
-    ts_col = next((c for c in df.columns if "time" in c.lower() or "date" in c.lower()), None)
-    fuel_cols = [c for c in df.columns if c != ts_col and "mw" in c.lower()]
+    # ERCOT dashboard may use "epoch" (Unix ms), "timestamp" (ISO), or "time"/"date" columns
+    epoch_col = next((c for c in df.columns if c.lower() == "epoch"), None)
+    ts_col    = next((c for c in df.columns if "time" in c.lower() or "date" in c.lower()), None)
+    fuel_cols = [c for c in df.columns if c not in (epoch_col, ts_col) and "mw" in c.lower()]
     for _, row in df.iterrows():
+        # Prefer epoch (ms) → UTC; fall back to string timestamp; fall back to now()
+        if epoch_col and pd.notna(row.get(epoch_col)):
+            ts = datetime.fromtimestamp(float(row[epoch_col]) / 1000, tz=timezone.utc)
+        elif ts_col and pd.notna(row.get(ts_col)):
+            ts = pd.to_datetime(row[ts_col], utc=True)
+        else:
+            ts = datetime.now(timezone.utc)
         for col in fuel_cols:
             if pd.notna(row.get(col)):
                 fuel = col.replace("MW", "").replace("_", " ").strip()
-                rows.append({"ts": row.get(ts_col, datetime.now(timezone.utc)), "iso": "ERCOT", "fuel_type": fuel, "mw": float(row[col])})
+                rows.append({"ts": ts, "iso": "ERCOT", "fuel_type": fuel, "mw": float(row[col])})
     n = upsert_fuel_mix(rows)
     log.info("ERCOT fuel mix: %d rows", n)
 
@@ -89,15 +105,22 @@ def ingest_ercot_fuel_mix():
 def ingest_isone_fuel_mix(target: date | None = None):
     from iso_data import isone
     from ingest.writer import upsert_fuel_mix
+    import pytz
+    _eastern = pytz.timezone("US/Eastern")
     t = target or date.today()
     df = isone.get_fuel_mix(t)
     if df.empty:
         return
     rows = []
     for _, row in df.iterrows():
-        # EIA shape: period="2026-06-01T00", fueltype="NG", value=MW
+        # EIA returns "2026-06-01T00" in local Eastern time for ISONE
+        try:
+            ts_naive = pd.to_datetime(row.get("period"))
+            ts = _eastern.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
+            ts = pd.to_datetime(row.get("period"), utc=True)
         rows.append({
-            "ts": pd.to_datetime(row.get("period")),
+            "ts": ts,
             "iso": "ISONE",
             "fuel_type": str(row.get("fueltype", row.get("type-name", "Unknown"))),
             "mw": float(row.get("value", 0) or 0),
@@ -162,14 +185,27 @@ def ingest_ercot_curtailment(target: date):
 def ingest_caiso_load(target: date | None = None):
     from iso_data import caiso
     from ingest.writer import upsert_load
+    import pytz
+    _PT = pytz.timezone("US/Pacific")
     df = caiso.get_load(target)
     if df.empty:
         return
     df.columns = [c.strip() for c in df.columns]
+    today = target or date.today()
     rows = []
     for _, row in df.iterrows():
+        raw_t = row.get("Time", row.get("timestamp"))
+        try:
+            # demand.csv "Time" column: "12:00 AM" (current) or "6/7/2026 12:00 AM" (history)
+            ts_naive = pd.to_datetime(
+                f"{today.isoformat()} {raw_t}" if len(str(raw_t)) <= 8 else str(raw_t),
+                errors="coerce",
+            )
+            ts = _PT.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
+            continue
         rows.append({
-            "ts": pd.to_datetime(row.get("Time", row.get("timestamp"))),
+            "ts": ts,
             "iso": "CAISO",
             "zone": "CAISO",
             "mw_actual": float(row["Current demand"]) if "Current demand" in row else None,
@@ -182,13 +218,20 @@ def ingest_caiso_load(target: date | None = None):
 def ingest_nyiso_load(target: date):
     from iso_data import nyiso
     from ingest.writer import upsert_load
+    import pytz
+    _eastern = pytz.timezone("US/Eastern")
     df = nyiso.get_load(target)
     if df.empty:
         return
     rows = []
     for _, row in df.iterrows():
+        try:
+            ts_naive = pd.to_datetime(row.get("Time Stamp"))
+            ts = _eastern.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
+            ts = pd.to_datetime(row.get("Time Stamp"), utc=True)
         rows.append({
-            "ts": pd.to_datetime(row.get("Time Stamp")),
+            "ts": ts,
             "iso": "NYISO",
             "zone": str(row.get("Name", "NYISO")),
             "mw_actual": float(row.get("Load", 0) or 0),
@@ -201,15 +244,22 @@ def ingest_nyiso_load(target: date):
 def ingest_isone_load(target: date | None = None):
     from iso_data import isone
     from ingest.writer import upsert_load
+    import pytz
+    _eastern = pytz.timezone("US/Eastern")
     t = target or date.today()
     df = isone.get_load(t)
     if df.empty:
         return
     rows = []
     for _, row in df.iterrows():
-        # EIA shape: period="2026-06-01T00", type="D", value=MWh
+        # EIA returns "2026-06-01T00" in local Eastern time for ISONE
+        try:
+            ts_naive = pd.to_datetime(row.get("period"))
+            ts = _eastern.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
+            ts = pd.to_datetime(row.get("period"), utc=True)
         rows.append({
-            "ts": pd.to_datetime(row.get("period")),
+            "ts": ts,
             "iso": "ISONE",
             "zone": "ISONE",
             "mw_actual": float(row.get("value", 0) or 0),
@@ -235,6 +285,26 @@ _EIA_LOAD_REGIONS: dict[str, str] = {
     "SRP":  "SRP",
     "PSCO": "PSCO",
     "PACE": "PACE",
+}
+
+# EIA Grid Monitor reports in LOCAL time per BA — not UTC.
+# Map each respondent code to its IANA timezone string.
+_EIA_LOAD_TZ: dict[str, str] = {
+    "CISO": "US/Pacific",    # CAISO → Pacific
+    "ERCO": "US/Central",    # ERCOT → Central
+    "PJM":  "US/Eastern",    # PJM → Eastern
+    "MISO": "US/Central",    # MISO → Central
+    "SWPP": "US/Central",    # SPP → Central
+    "BPAT": "US/Pacific",    # BPA/Bonneville → Pacific
+    "TVA":  "US/Eastern",    # TVA → Eastern
+    "SOCO": "US/Eastern",    # Southern Co → Eastern
+    "FPL":  "US/Eastern",    # FPL/NextEra → Eastern
+    "DUK":  "US/Eastern",    # Duke Energy → Eastern
+    "SRP":  "US/Arizona",    # SRP → Arizona (Mountain, no DST)
+    "PSCO": "US/Mountain",   # Xcel/PSCO → Mountain
+    "PACE": "US/Mountain",   # PacifiCorp East → Mountain
+    "NYIS": "US/Eastern",    # NYISO → Eastern
+    "ISNE": "US/Eastern",    # ISONE → Eastern
 }
 
 
@@ -299,7 +369,14 @@ def ingest_realtime_load_all():
         from iso_data import nyiso
         df = nyiso.get_load(date.today())
         if not df.empty:
-            df["ts"] = pd.to_datetime(df["Time Stamp"])
+            import pytz as _pytz
+            _eastern = _pytz.timezone("US/Eastern")
+            def _to_utc(ts_str):
+                try:
+                    return _eastern.localize(pd.to_datetime(ts_str), is_dst=False).astimezone(timezone.utc)
+                except Exception:
+                    return pd.to_datetime(ts_str, utc=True)
+            df["ts"] = df["Time Stamp"].apply(_to_utc)
             totals = df.groupby("ts")["Load"].sum().reset_index()
             for _, row in totals.iterrows():
                 rows.append({"ts": row["ts"], "iso": "NYISO", "zone": "NYISO",
@@ -315,22 +392,27 @@ def ingest_realtime_load_all():
 
 def ingest_eia_load_all(hours: int = 3):
     """Hourly demand for all EIA-covered BAs. Use hours>3 for backfills."""
+    import pytz
     from iso_data import eia
     from ingest.writer import upsert_load
     rows: list[dict] = []
     for eia_code, iso_name in _EIA_LOAD_REGIONS.items():
+        tz = pytz.timezone(_EIA_LOAD_TZ.get(eia_code, "UTC"))
         try:
             data = eia.get_demand(eia_code, hours=hours)
             for item in data:
                 val = item.get("value")
                 if val is None:
                     continue
+                try:
+                    # EIA period format "YYYY-MM-DDTHH" is local time for this BA
+                    ts_naive = datetime.strptime(item["period"], "%Y-%m-%dT%H")
+                    ts = tz.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+                except Exception:
+                    ts = pd.to_datetime(item["period"], utc=True)
                 rows.append({
-                    "ts": pd.to_datetime(item["period"]),
-                    "iso": iso_name,
-                    "zone": iso_name,
-                    "mw_actual": float(val),
-                    "mw_forecast": None,
+                    "ts": ts, "iso": iso_name, "zone": iso_name,
+                    "mw_actual": float(val), "mw_forecast": None,
                 })
         except Exception as exc:
             log.warning("EIA load %s failed: %s", iso_name, exc)
@@ -628,7 +710,7 @@ def ingest_nyiso_btm_solar():
             import pytz
             eastern = pytz.timezone("US/Eastern")
             ts_naive = pd.to_datetime(r[ts_col])
-            ts = eastern.localize(ts_naive).astimezone(timezone.utc)
+            ts = eastern.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
             actual   = r.get("BTM Solar Actual (MW)", r.get("actual"))
             forecast = r.get("BTM Solar Forecast (MW)", r.get("forecast"))
             rows.append({
