@@ -28,6 +28,16 @@ from api.routes import curtailment, fuel_mix, isos, lmp, load, queue
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Run migration in background thread — uvicorn binds immediately so health check passes
+    import asyncio, threading
+    def _migrate():
+        try:
+            from db.migrate import run
+            run()
+        except Exception as exc:
+            import logging
+            logging.getLogger("migrate").error("Migration error: %s", exc)
+    threading.Thread(target=_migrate, daemon=True).start()
     yield
     from api.db import get_engine
     await get_engine().dispose()
