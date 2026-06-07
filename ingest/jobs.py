@@ -222,6 +222,7 @@ def ingest_isone_load(target: date | None = None):
 # EIA respondent code → ISO label stored in kardashev-data
 # Covers BAs not already ingested from native ISO sources
 _EIA_LOAD_REGIONS: dict[str, str] = {
+    "CISO": "CAISO",
     "ERCO": "ERCOT",
     "PJM":  "PJM",
     "MISO": "MISO",
@@ -237,14 +238,14 @@ _EIA_LOAD_REGIONS: dict[str, str] = {
 }
 
 
-def ingest_eia_load_all():
-    """Hourly demand for all EIA-covered BAs not ingested via native ISO source."""
+def ingest_eia_load_all(hours: int = 3):
+    """Hourly demand for all EIA-covered BAs. Use hours>3 for backfills."""
     from iso_data import eia
     from ingest.writer import upsert_load
     rows: list[dict] = []
     for eia_code, iso_name in _EIA_LOAD_REGIONS.items():
         try:
-            data = eia.get_demand(eia_code, hours=3)
+            data = eia.get_demand(eia_code, hours=hours)
             for item in data:
                 val = item.get("value")
                 if val is None:
