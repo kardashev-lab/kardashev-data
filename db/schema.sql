@@ -1,8 +1,9 @@
--- Kardashev Data Platform — TimescaleDB schema
+-- Kardashev Data Platform — PostgreSQL schema (Railway-compatible)
 -- Run once against a fresh database:
 --   psql $DATABASE_URL -f db/schema.sql
-
-CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+--
+-- TimescaleDB note: schema uses plain Postgres. Partitioning via BRIN indexes
+-- on ts gives good range-query performance up to ~500M rows without hypertables.
 
 -- ---------------------------------------------------------------------------
 -- Fuel mix  (5-min intervals per ISO per fuel type)
@@ -14,8 +15,9 @@ CREATE TABLE IF NOT EXISTS fuel_mix (
     mw          DOUBLE PRECISION,
     CONSTRAINT  fuel_mix_pk PRIMARY KEY (ts, iso, fuel_type)
 );
-SELECT create_hypertable('fuel_mix', 'ts', if_not_exists => TRUE);
-CREATE INDEX IF NOT EXISTS fuel_mix_iso_fuel ON fuel_mix (iso, fuel_type, ts DESC);
+-- BRIN for range scans; btree for point lookups by ISO
+CREATE INDEX IF NOT EXISTS fuel_mix_ts_brin   ON fuel_mix USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS fuel_mix_iso_fuel  ON fuel_mix (iso, fuel_type, ts DESC);
 
 -- ---------------------------------------------------------------------------
 -- LMP prices  (real-time 5-min + day-ahead hourly)
@@ -32,8 +34,8 @@ CREATE TABLE IF NOT EXISTS lmp (
     loss        DOUBLE PRECISION,
     CONSTRAINT  lmp_pk PRIMARY KEY (ts, iso, node_id, market)
 );
-SELECT create_hypertable('lmp', 'ts', if_not_exists => TRUE);
-CREATE INDEX IF NOT EXISTS lmp_iso_node ON lmp (iso, node_id, market, ts DESC);
+CREATE INDEX IF NOT EXISTS lmp_ts_brin   ON lmp USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS lmp_iso_node  ON lmp (iso, node_id, market, ts DESC);
 
 -- ---------------------------------------------------------------------------
 -- Load  (actual + forecast by zone)
@@ -46,8 +48,8 @@ CREATE TABLE IF NOT EXISTS load_data (
     mw_forecast DOUBLE PRECISION,
     CONSTRAINT  load_pk PRIMARY KEY (ts, iso, zone)
 );
-SELECT create_hypertable('load_data', 'ts', if_not_exists => TRUE);
-CREATE INDEX IF NOT EXISTS load_iso_zone ON load_data (iso, zone, ts DESC);
+CREATE INDEX IF NOT EXISTS load_ts_brin   ON load_data USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS load_iso_zone  ON load_data (iso, zone, ts DESC);
 
 -- ---------------------------------------------------------------------------
 -- Curtailment  (daily totals; hourly detail in curtailment_hourly)
@@ -71,7 +73,7 @@ CREATE TABLE IF NOT EXISTS curtailment_hourly (
     total_mwh   DOUBLE PRECISION DEFAULT 0,
     CONSTRAINT  curtailment_hourly_pk PRIMARY KEY (ts, iso, hour)
 );
-SELECT create_hypertable('curtailment_hourly', 'ts', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS curtailment_hourly_ts_brin ON curtailment_hourly USING BRIN (ts);
 
 -- ---------------------------------------------------------------------------
 -- Interconnection queue  (snapshot table, overwritten on each fetch)
@@ -119,19 +121,5 @@ CREATE TABLE IF NOT EXISTS binding_constraints (
     shadow_price    DOUBLE PRECISION,
     CONSTRAINT      bc_pk PRIMARY KEY (ts, iso, market, constraint_name)
 );
-SELECT create_hypertable('binding_constraints', 'ts', if_not_exists => TRUE);
-
--- ---------------------------------------------------------------------------
--- Compression policies  (7-day chunks, compress older than 7 days)
--- ---------------------------------------------------------------------------
-ALTER TABLE fuel_mix             SET (timescaledb.compress, timescaledb.compress_segmentby = 'iso,fuel_type');
-ALTER TABLE lmp                  SET (timescaledb.compress, timescaledb.compress_segmentby = 'iso,node_id,market');
-ALTER TABLE load_data            SET (timescaledb.compress, timescaledb.compress_segmentby = 'iso,zone');
-ALTER TABLE curtailment_hourly   SET (timescaledb.compress, timescaledb.compress_segmentby = 'iso');
-ALTER TABLE binding_constraints  SET (timescaledb.compress, timescaledb.compress_segmentby = 'iso,market');
-
-SELECT add_compression_policy('fuel_mix',           INTERVAL '7 days', if_not_exists => TRUE);
-SELECT add_compression_policy('lmp',                INTERVAL '7 days', if_not_exists => TRUE);
-SELECT add_compression_policy('load_data',          INTERVAL '7 days', if_not_exists => TRUE);
-SELECT add_compression_policy('curtailment_hourly', INTERVAL '7 days', if_not_exists => TRUE);
-SELECT add_compression_policy('binding_constraints',INTERVAL '7 days', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS bc_ts_brin  ON binding_constraints USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS bc_iso      ON binding_constraints (iso, market, ts DESC);

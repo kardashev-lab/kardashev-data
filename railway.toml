@@ -1,0 +1,25 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+# ---------------------------------------------------------------------------
+# This file configures the BUILD. Railway services are configured separately
+# in the Railway dashboard. Create two services from this repo:
+#
+#   Service 1 — "api"
+#     Start command: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+#     Health check:  GET /health
+#
+#   Service 2 — "ingest"
+#     Start command: python -m ingest.scheduler
+#     Health check:  (none — long-running daemon)
+#
+# Both services share the same Dockerfile.
+# Both get DATABASE_URL injected from the Railway Postgres addon.
+# ---------------------------------------------------------------------------
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
