@@ -175,4 +175,10 @@ if __name__ == "__main__":
         days_arg = int(sys.argv[3]) if len(sys.argv) > 3 else 90
         backfill(iso_arg, days_arg)
     else:
-        start()
+        try:
+            start()
+        except Exception as exc:
+            import traceback
+            print("SCHEDULER CRASH:", exc, flush=True)
+            traceback.print_exc()
+            sys.exit(1)
