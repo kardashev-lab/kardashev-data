@@ -200,3 +200,32 @@ CREATE TABLE IF NOT EXISTS reserve_margins (
     CONSTRAINT   rsv_pk PRIMARY KEY (ts, iso)
 );
 CREATE INDEX IF NOT EXISTS rsv_ts_brin ON reserve_margins USING BRIN (ts);
+
+-- ---------------------------------------------------------------------------
+-- BPA real-time balancing area  (5-min wind, hydro, thermal, load)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS bpa_balancesheet (
+    ts                  TIMESTAMPTZ      NOT NULL PRIMARY KEY,
+    load_mw             DOUBLE PRECISION,
+    wind_mw             DOUBLE PRECISION,
+    hydro_mw            DOUBLE PRECISION,
+    thermal_mw          DOUBLE PRECISION,
+    nuclear_mw          DOUBLE PRECISION,
+    net_interchange_mw  DOUBLE PRECISION
+);
+CREATE INDEX IF NOT EXISTS bpa_ts_brin ON bpa_balancesheet USING BRIN (ts);
+
+-- ---------------------------------------------------------------------------
+-- Grid-area temperature  (hourly, via Open-Meteo)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS grid_temperature (
+    ts           TIMESTAMPTZ      NOT NULL,
+    iso          TEXT             NOT NULL,
+    city         TEXT             NOT NULL,
+    temp_f       DOUBLE PRECISION,
+    humidity_pct DOUBLE PRECISION,
+    wind_mph     DOUBLE PRECISION,
+    CONSTRAINT   temp_pk PRIMARY KEY (ts, iso, city)
+);
+CREATE INDEX IF NOT EXISTS temp_ts_brin ON grid_temperature USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS temp_iso     ON grid_temperature (iso, ts DESC);

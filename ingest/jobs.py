@@ -953,3 +953,80 @@ def ingest_spp_lmp_rt():
 
     n = upsert_lmp(rows)
     log.info("SPP RTBM LMP: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# BPA real-time balancing area  (#8 / #16)
+# ---------------------------------------------------------------------------
+
+def ingest_bpa_balancesheet():
+    """BPA 5-min wind, hydro, thermal, load from public balance sheet."""
+    from iso_data import bpa
+    from ingest.writer import upsert_bpa_balancesheet
+    df = bpa.get_balancesheet()
+    if df.empty:
+        return
+    rows = df.to_dict("records")
+    n = upsert_bpa_balancesheet(rows)
+    log.info("BPA balancesheet: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# Grid-area temperature  (#9)
+# ---------------------------------------------------------------------------
+
+def ingest_grid_temperatures():
+    """Hourly temperature at representative grid-hub cities via Open-Meteo."""
+    from iso_data import weather
+    from ingest.writer import upsert_grid_temperature
+    rows = weather.get_hourly_temperatures(hours=24)
+    n = upsert_grid_temperature(rows)
+    log.info("Grid temperatures: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# MISO binding constraints  (#17)
+# ---------------------------------------------------------------------------
+
+def ingest_miso_binding_constraints():
+    """MISO real-time binding constraints from public API."""
+    from iso_data import miso
+    from ingest.writer import cursor
+    import psycopg2.extras
+
+    df = miso.get_binding_constraints_realtime()
+    if df.empty:
+        return
+
+    now = datetime.now(timezone.utc)
+    rows = []
+    for r in df.to_dict("records"):
+        try:
+            name = str(r.get("ConstraintName", r.get("constraint_name", "Unknown")))
+            price = r.get("ShadowPrice", r.get("shadow_price"))
+            rows.append({
+                "ts":              now,
+                "iso":             "MISO",
+                "market":          "RT",
+                "constraint_name": name,
+                "shadow_price":    float(price) if price is not None else None,
+            })
+        except Exception:
+            continue
+
+    if not rows:
+        return
+
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO binding_constraints (ts, iso, market, constraint_name, shadow_price)
+            VALUES %s
+            ON CONFLICT (ts, iso, market, constraint_name) DO UPDATE
+              SET shadow_price = EXCLUDED.shadow_price
+            """,
+            [(r["ts"], r["iso"], r["market"], r["constraint_name"], r.get("shadow_price"))
+             for r in rows],
+        )
+    log.info("MISO binding constraints: %d rows", len(rows))

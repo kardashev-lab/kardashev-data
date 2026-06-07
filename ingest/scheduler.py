@@ -11,9 +11,12 @@ Schedule (UTC):
                    + NYISO RT LMP + SPP RTBM LMP
                    + ERCOT/PJM wind+solar forecast (gen_forecast)
                    + CAISO battery storage + NYISO BTM solar
+                   + BPA 5-min balancesheet (wind, hydro, thermal, load)
+                   + MISO RT binding constraints
     Every 15 min : ERCOT fuel mix
     Every hour   : EIA load (ISONE/PJM/BPAT/TVA/SOCO/FPL/DUK/SRP/PSCO/PACE)
                    + NYISO DA LMP + PJM/ISONE load forecast + PJM reserve margins
+                   + grid-area temperatures via Open-Meteo
     Daily 06:00  : Curtailment (CAISO, SPP, ERCOT) + EIA nat gas prices + EIA gas storage
     Daily 07:00  : Interconnection queues (NYISO, PJM, ISONE)
 """
@@ -143,6 +146,21 @@ def run_reserve_margins():
     _run("pjm_reserve_margins", ingest_pjm_reserve_margins)
 
 
+def run_bpa():
+    from ingest.jobs import ingest_bpa_balancesheet
+    _run("bpa_balancesheet", ingest_bpa_balancesheet)
+
+
+def run_temperatures():
+    from ingest.jobs import ingest_grid_temperatures
+    _run("grid_temperatures", ingest_grid_temperatures)
+
+
+def run_binding_constraints():
+    from ingest.jobs import ingest_miso_binding_constraints
+    _run("miso_binding_constraints", ingest_miso_binding_constraints)
+
+
 def run_queue():
     from ingest.jobs import ingest_nyiso_queue
     _run("nyiso_queue", ingest_nyiso_queue)
@@ -200,7 +218,7 @@ def start():
     last_queue_day       = -1
 
     # Run immediately on startup
-    log.info("Initial fuel mix + realtime load + LMP + wind/solar + battery + gas + forecasts")
+    log.info("Initial startup: all data sources")
     run_fuel_mix()
     run_ercot_fuel_mix()
     run_spp_fuel_mix()
@@ -215,6 +233,9 @@ def start():
     run_gas_storage()
     run_load_forecasts()
     run_reserve_margins()
+    run_bpa()
+    run_temperatures()
+    run_binding_constraints()
 
     while True:
         now   = _utcnow()
@@ -226,7 +247,7 @@ def start():
 
         if min5 != last_5min:
             last_5min = min5
-            log.info("tick: 5-min fuel mix + realtime load + LMP + wind/solar + battery + SPP")
+            log.info("tick: 5-min data (fuel mix, load, LMP, wind/solar, battery, BPA, constraints)")
             run_fuel_mix()
             run_spp_fuel_mix()
             run_realtime_load()
@@ -235,6 +256,8 @@ def start():
             run_pjm_wind_solar()
             run_battery()
             run_btm_solar()
+            run_bpa()
+            run_binding_constraints()
 
         if min15 != last_15min:
             last_15min = min15
@@ -242,11 +265,12 @@ def start():
 
         if hour != last_hour:
             last_hour = hour
-            log.info("tick: hourly load + DA LMP + load forecasts + reserve margins")
+            log.info("tick: hourly data (load, DA LMP, forecasts, margins, temperatures)")
             run_load()
             run_lmp_da()
             run_load_forecasts()
             run_reserve_margins()
+            run_temperatures()
 
         if hour == 6 and day != last_curtailment_day:
             last_curtailment_day = day

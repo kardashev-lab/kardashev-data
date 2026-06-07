@@ -173,6 +173,50 @@ def upsert_battery_storage(rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_bpa_balancesheet(rows: list[dict]) -> int:
+    """rows: [{ts, load_mw, wind_mw, hydro_mw, thermal_mw, nuclear_mw, net_interchange_mw}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO bpa_balancesheet
+              (ts, load_mw, wind_mw, hydro_mw, thermal_mw, nuclear_mw, net_interchange_mw)
+            VALUES %s
+            ON CONFLICT (ts) DO UPDATE
+              SET load_mw = EXCLUDED.load_mw, wind_mw = EXCLUDED.wind_mw,
+                  hydro_mw = EXCLUDED.hydro_mw, thermal_mw = EXCLUDED.thermal_mw,
+                  nuclear_mw = EXCLUDED.nuclear_mw,
+                  net_interchange_mw = EXCLUDED.net_interchange_mw
+            """,
+            [(r["ts"], r.get("load_mw"), r.get("wind_mw"), r.get("hydro_mw"),
+              r.get("thermal_mw"), r.get("nuclear_mw"), r.get("net_interchange_mw"))
+             for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_grid_temperature(rows: list[dict]) -> int:
+    """rows: [{ts, iso, city, temp_f, humidity_pct, wind_mph}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO grid_temperature (ts, iso, city, temp_f, humidity_pct, wind_mph)
+            VALUES %s
+            ON CONFLICT (ts, iso, city) DO UPDATE
+              SET temp_f = EXCLUDED.temp_f, humidity_pct = EXCLUDED.humidity_pct,
+                  wind_mph = EXCLUDED.wind_mph
+            """,
+            [(r["ts"], r["iso"], r["city"], r.get("temp_f"), r.get("humidity_pct"), r.get("wind_mph"))
+             for r in rows],
+        )
+    return len(rows)
+
+
 def upsert_btm_solar(rows: list[dict]) -> int:
     """rows: [{ts, iso, mw_actual, mw_forecast}]"""
     if not rows:
