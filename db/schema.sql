@@ -123,3 +123,80 @@ CREATE TABLE IF NOT EXISTS binding_constraints (
 );
 CREATE INDEX IF NOT EXISTS bc_ts_brin  ON binding_constraints USING BRIN (ts);
 CREATE INDEX IF NOT EXISTS bc_iso      ON binding_constraints (iso, market, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- Generation forecast  (wind + solar actual vs. grid operator forecast)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS gen_forecast (
+    ts           TIMESTAMPTZ      NOT NULL,
+    iso          TEXT             NOT NULL,
+    fuel_type    TEXT             NOT NULL,   -- 'Wind' | 'Solar'
+    mw_actual    DOUBLE PRECISION,
+    mw_potential DOUBLE PRECISION,            -- WGRPP (wind) / PVGRPP (solar)
+    CONSTRAINT   gen_forecast_pk PRIMARY KEY (ts, iso, fuel_type)
+);
+CREATE INDEX IF NOT EXISTS gf_ts_brin ON gen_forecast USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS gf_iso     ON gen_forecast (iso, fuel_type, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- Natural gas spot prices  (EIA Henry Hub + regional hubs)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS nat_gas_prices (
+    ts           TIMESTAMPTZ      NOT NULL,
+    hub          TEXT             NOT NULL,   -- 'Henry Hub', 'Algonquin', etc.
+    price_usd    DOUBLE PRECISION,            -- $/MMBtu
+    series_id    TEXT,
+    CONSTRAINT   ngp_pk PRIMARY KEY (ts, hub)
+);
+CREATE INDEX IF NOT EXISTS ngp_ts_brin ON nat_gas_prices USING BRIN (ts);
+
+-- ---------------------------------------------------------------------------
+-- Battery storage  (CAISO 5-min charge/discharge)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS battery_storage (
+    ts             TIMESTAMPTZ      NOT NULL,
+    iso            TEXT             NOT NULL,
+    mw_charging    DOUBLE PRECISION,          -- positive = charging (consuming)
+    mw_discharging DOUBLE PRECISION,          -- positive = discharging (generating)
+    mwh_state      DOUBLE PRECISION,          -- state of charge if available
+    CONSTRAINT     batt_pk PRIMARY KEY (ts, iso)
+);
+CREATE INDEX IF NOT EXISTS batt_ts_brin ON battery_storage USING BRIN (ts);
+
+-- ---------------------------------------------------------------------------
+-- Behind-the-meter solar  (NYISO hourly actual vs. forecast)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS btm_solar (
+    ts           TIMESTAMPTZ      NOT NULL,
+    iso          TEXT             NOT NULL,
+    mw_actual    DOUBLE PRECISION,
+    mw_forecast  DOUBLE PRECISION,
+    CONSTRAINT   btm_pk PRIMARY KEY (ts, iso)
+);
+CREATE INDEX IF NOT EXISTS btm_ts_brin ON btm_solar USING BRIN (ts);
+
+-- ---------------------------------------------------------------------------
+-- EIA weekly natural gas storage  (region-level Bcf)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS gas_storage (
+    ts           TIMESTAMPTZ      NOT NULL,   -- report week ending date
+    region       TEXT             NOT NULL,   -- 'US Lower 48', 'East', 'Midwest', etc.
+    bcf          DOUBLE PRECISION,            -- working gas in storage (Bcf)
+    series_id    TEXT,
+    CONSTRAINT   gst_pk PRIMARY KEY (ts, region)
+);
+CREATE INDEX IF NOT EXISTS gst_ts_brin ON gas_storage USING BRIN (ts);
+
+-- ---------------------------------------------------------------------------
+-- Capacity reserve margins  (ISO-level, sourced from PJM & ISONE APIs)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reserve_margins (
+    ts           TIMESTAMPTZ      NOT NULL,
+    iso          TEXT             NOT NULL,
+    required_pct DOUBLE PRECISION,           -- required reserve margin %
+    actual_pct   DOUBLE PRECISION,           -- actual reserve margin %
+    installed_mw DOUBLE PRECISION,
+    peak_mw      DOUBLE PRECISION,
+    CONSTRAINT   rsv_pk PRIMARY KEY (ts, iso)
+);
+CREATE INDEX IF NOT EXISTS rsv_ts_brin ON reserve_margins USING BRIN (ts);

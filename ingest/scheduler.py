@@ -6,11 +6,16 @@ Run:
     python -m ingest.scheduler backfill CAISO 90
 
 Schedule (UTC):
-    Every 5 min  : CAISO, NYISO, MISO, ISONE fuel mix + CAISO/ERCOT/MISO/NYISO realtime load
+    Every 5 min  : CAISO/NYISO/MISO/ISONE/SPP fuel mix
+                   + CAISO/ERCOT/MISO/NYISO realtime load (5-min native)
+                   + NYISO RT LMP + SPP RTBM LMP
+                   + ERCOT/PJM wind+solar forecast (gen_forecast)
+                   + CAISO battery storage + NYISO BTM solar
     Every 15 min : ERCOT fuel mix
-    Every hour   : ISONE/SPP/PJM/BPAT/TVA/SOCO/FPL/DUK/SRP/PSCO/PACE load (via EIA)
-    Daily 06:00  : Curtailment for yesterday (CAISO, SPP, ERCOT)
-    Daily 07:00  : Interconnection queue (NYISO)
+    Every hour   : EIA load (ISONE/PJM/BPAT/TVA/SOCO/FPL/DUK/SRP/PSCO/PACE)
+                   + NYISO DA LMP + PJM/ISONE load forecast + PJM reserve margins
+    Daily 06:00  : Curtailment (CAISO, SPP, ERCOT) + EIA nat gas prices + EIA gas storage
+    Daily 07:00  : Interconnection queues (NYISO, PJM, ISONE)
 """
 from __future__ import annotations
 
@@ -75,6 +80,69 @@ def run_curtailment():
     _run("ercot_curtailment", ingest_ercot_curtailment, yesterday)
 
 
+def run_lmp_rt():
+    from ingest.jobs import ingest_nyiso_lmp_rt, ingest_spp_lmp_rt
+    _run("nyiso_lmp_rt", ingest_nyiso_lmp_rt)
+    _run("spp_lmp_rt",   ingest_spp_lmp_rt)
+
+
+def run_lmp_da():
+    from ingest.jobs import ingest_nyiso_lmp_da
+    _run("nyiso_lmp_da", ingest_nyiso_lmp_da)
+
+
+def run_wind_solar():
+    from ingest.jobs import ingest_ercot_wind_solar
+    _run("ercot_wind_solar", ingest_ercot_wind_solar)
+
+
+def run_nat_gas():
+    from ingest.jobs import ingest_eia_nat_gas_prices
+    _run("eia_nat_gas", ingest_eia_nat_gas_prices)
+
+
+def run_battery():
+    from ingest.jobs import ingest_caiso_battery
+    _run("caiso_battery", ingest_caiso_battery)
+
+
+def run_spp_fuel_mix():
+    from ingest.jobs import ingest_spp_fuel_mix
+    _run("spp_fuel_mix", ingest_spp_fuel_mix)
+
+
+def run_pjm_wind_solar():
+    from ingest.jobs import ingest_pjm_wind_solar
+    _run("pjm_wind_solar", ingest_pjm_wind_solar)
+
+
+def run_load_forecasts():
+    from ingest.jobs import ingest_pjm_load_forecast, ingest_isone_load_forecast
+    _run("pjm_load_forecast",   ingest_pjm_load_forecast)
+    _run("isone_load_forecast", ingest_isone_load_forecast)
+
+
+def run_btm_solar():
+    from ingest.jobs import ingest_nyiso_btm_solar
+    _run("nyiso_btm_solar", ingest_nyiso_btm_solar)
+
+
+def run_gas_storage():
+    from ingest.jobs import ingest_eia_gas_storage
+    _run("eia_gas_storage", ingest_eia_gas_storage)
+
+
+def run_queue_all():
+    from ingest.jobs import ingest_pjm_queue, ingest_isone_queue
+    _run("pjm_queue",   ingest_pjm_queue)
+    _run("isone_queue", ingest_isone_queue)
+
+
+def run_reserve_margins():
+    from ingest.jobs import ingest_pjm_reserve_margins
+    _run("pjm_reserve_margins", ingest_pjm_reserve_margins)
+
+
 def run_queue():
     from ingest.jobs import ingest_nyiso_queue
     _run("nyiso_queue", ingest_nyiso_queue)
@@ -132,10 +200,21 @@ def start():
     last_queue_day       = -1
 
     # Run immediately on startup
-    log.info("Initial fuel mix + realtime load fetch")
+    log.info("Initial fuel mix + realtime load + LMP + wind/solar + battery + gas + forecasts")
     run_fuel_mix()
     run_ercot_fuel_mix()
+    run_spp_fuel_mix()
     run_realtime_load()
+    run_lmp_rt()
+    run_lmp_da()
+    run_wind_solar()
+    run_pjm_wind_solar()
+    run_battery()
+    run_btm_solar()
+    run_nat_gas()
+    run_gas_storage()
+    run_load_forecasts()
+    run_reserve_margins()
 
     while True:
         now   = _utcnow()
@@ -147,9 +226,15 @@ def start():
 
         if min5 != last_5min:
             last_5min = min5
-            log.info("tick: 5-min fuel mix + realtime load")
+            log.info("tick: 5-min fuel mix + realtime load + LMP + wind/solar + battery + SPP")
             run_fuel_mix()
+            run_spp_fuel_mix()
             run_realtime_load()
+            run_lmp_rt()
+            run_wind_solar()
+            run_pjm_wind_solar()
+            run_battery()
+            run_btm_solar()
 
         if min15 != last_15min:
             last_15min = min15
@@ -157,18 +242,24 @@ def start():
 
         if hour != last_hour:
             last_hour = hour
-            log.info("tick: hourly load")
+            log.info("tick: hourly load + DA LMP + load forecasts + reserve margins")
             run_load()
+            run_lmp_da()
+            run_load_forecasts()
+            run_reserve_margins()
 
         if hour == 6 and day != last_curtailment_day:
             last_curtailment_day = day
-            log.info("tick: daily curtailment")
+            log.info("tick: daily curtailment + nat gas prices + gas storage")
             run_curtailment()
+            run_nat_gas()
+            run_gas_storage()
 
         if hour == 7 and day != last_queue_day:
             last_queue_day = day
-            log.info("tick: interconnection queue")
+            log.info("tick: interconnection queues (NYISO + PJM + ISONE)")
             run_queue()
+            run_queue_all()
 
         time.sleep(30)
 

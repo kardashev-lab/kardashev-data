@@ -14,6 +14,12 @@ Endpoints:
     GET  /curtailment/summary Cross-ISO 30-day summary
     GET  /lmp               LMP prices (RT + DA)
     GET  /load              Actual + forecast demand
+    GET  /generation/wind-solar      Wind + solar actual vs. forecast (ERCOT, PJM)
+    GET  /generation/battery         Battery storage charge/discharge (CAISO)
+    GET  /generation/btm-solar       Behind-the-meter solar (NYISO)
+    GET  /generation/reserve-margins Capacity reserve margins (PJM)
+    GET  /natural-gas                Daily natural gas spot prices by hub
+    GET  /natural-gas/storage        Weekly EIA gas storage (Bcf) by region
     GET  /interconnection-queue Active queue with filters
     GET  /isos              ISO catalog with dataset coverage
     GET  /health            Uptime check
@@ -26,7 +32,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import carbon, curtailment, fuel_mix, isos, lmp, load, queue
+from api.routes import carbon, curtailment, fuel_mix, generation, isos, lmp, load, nat_gas, queue
 
 
 @asynccontextmanager
@@ -92,6 +98,8 @@ app.include_router(carbon.router)
 app.include_router(curtailment.router)
 app.include_router(lmp.router)
 app.include_router(load.router)
+app.include_router(generation.router)
+app.include_router(nat_gas.router)
 app.include_router(queue.router)
 app.include_router(isos.router)
 

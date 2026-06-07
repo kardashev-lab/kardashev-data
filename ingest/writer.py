@@ -118,6 +118,116 @@ def upsert_curtailment_hourly(rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_gen_forecast(rows: list[dict]) -> int:
+    """rows: [{ts, iso, fuel_type, mw_actual, mw_potential}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO gen_forecast (ts, iso, fuel_type, mw_actual, mw_potential)
+            VALUES %s
+            ON CONFLICT (ts, iso, fuel_type) DO UPDATE
+              SET mw_actual = EXCLUDED.mw_actual, mw_potential = EXCLUDED.mw_potential
+            """,
+            [(r["ts"], r["iso"], r["fuel_type"], r.get("mw_actual"), r.get("mw_potential")) for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_nat_gas_prices(rows: list[dict]) -> int:
+    """rows: [{ts, hub, price_usd, series_id}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO nat_gas_prices (ts, hub, price_usd, series_id)
+            VALUES %s
+            ON CONFLICT (ts, hub) DO UPDATE SET price_usd = EXCLUDED.price_usd
+            """,
+            [(r["ts"], r["hub"], r.get("price_usd"), r.get("series_id")) for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_battery_storage(rows: list[dict]) -> int:
+    """rows: [{ts, iso, mw_charging, mw_discharging, mwh_state}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO battery_storage (ts, iso, mw_charging, mw_discharging, mwh_state)
+            VALUES %s
+            ON CONFLICT (ts, iso) DO UPDATE
+              SET mw_charging = EXCLUDED.mw_charging,
+                  mw_discharging = EXCLUDED.mw_discharging,
+                  mwh_state = EXCLUDED.mwh_state
+            """,
+            [(r["ts"], r["iso"], r.get("mw_charging"), r.get("mw_discharging"), r.get("mwh_state")) for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_btm_solar(rows: list[dict]) -> int:
+    """rows: [{ts, iso, mw_actual, mw_forecast}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO btm_solar (ts, iso, mw_actual, mw_forecast)
+            VALUES %s
+            ON CONFLICT (ts, iso) DO UPDATE
+              SET mw_actual = EXCLUDED.mw_actual, mw_forecast = EXCLUDED.mw_forecast
+            """,
+            [(r["ts"], r["iso"], r.get("mw_actual"), r.get("mw_forecast")) for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_gas_storage(rows: list[dict]) -> int:
+    """rows: [{ts, region, bcf, series_id}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO gas_storage (ts, region, bcf, series_id)
+            VALUES %s
+            ON CONFLICT (ts, region) DO UPDATE SET bcf = EXCLUDED.bcf
+            """,
+            [(r["ts"], r["region"], r.get("bcf"), r.get("series_id")) for r in rows],
+        )
+    return len(rows)
+
+
+def upsert_reserve_margins(rows: list[dict]) -> int:
+    """rows: [{ts, iso, required_pct, actual_pct, installed_mw, peak_mw}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO reserve_margins (ts, iso, required_pct, actual_pct, installed_mw, peak_mw)
+            VALUES %s
+            ON CONFLICT (ts, iso) DO UPDATE
+              SET required_pct = EXCLUDED.required_pct, actual_pct = EXCLUDED.actual_pct,
+                  installed_mw = EXCLUDED.installed_mw, peak_mw = EXCLUDED.peak_mw
+            """,
+            [(r["ts"], r["iso"], r.get("required_pct"), r.get("actual_pct"),
+              r.get("installed_mw"), r.get("peak_mw")) for r in rows],
+        )
+    return len(rows)
+
+
 def replace_interconnection_queue(iso: str, rows: list[dict]) -> int:
     """Delete all rows for iso and re-insert (snapshot table)."""
     if not rows:
