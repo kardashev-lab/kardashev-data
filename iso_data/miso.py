@@ -57,6 +57,29 @@ def get_fuel_mix() -> pd.DataFrame:
     return _parse_fuel_mix_response(data)
 
 
+def get_realtime_total_mw() -> dict | None:
+    """
+    Current system total load from the public FuelMix endpoint.
+    Returns {ts: datetime (UTC), mw: float} or None on failure.
+    Source: /api/FuelMix, updated every ~5 minutes.
+    """
+    import datetime as _dt
+    import pytz as _pytz
+    data = _http.get(f"{_PUBLIC_API}/FuelMix").json()
+    total_mw = data.get("TotalMW")
+    if total_mw is None:
+        return None
+    fuel_types = data.get("Fuel", {}).get("Type", [])
+    interval_str = fuel_types[0].get("INTERVALEST") if fuel_types else None
+    if interval_str:
+        est = _pytz.timezone("US/Eastern")
+        ts = _dt.datetime.strptime(interval_str, "%Y-%m-%d %I:%M:%S %p")
+        ts = est.localize(ts).astimezone(_dt.timezone.utc)
+    else:
+        ts = _dt.datetime.now(_dt.timezone.utc)
+    return {"ts": ts, "mw": float(total_mw)}
+
+
 def get_fuel_mix_today() -> pd.DataFrame:
     """Today's fuel mix (all intervals so far)."""
     data = _http.get(f"{_PUBLIC_API}/FuelMix/Today").json()

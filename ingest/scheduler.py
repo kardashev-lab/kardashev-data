@@ -6,9 +6,9 @@ Run:
     python -m ingest.scheduler backfill CAISO 90
 
 Schedule (UTC):
-    Every 5 min  : CAISO, NYISO, MISO, ISONE fuel mix
+    Every 5 min  : CAISO, NYISO, MISO, ISONE fuel mix + CAISO/ERCOT/MISO/NYISO realtime load
     Every 15 min : ERCOT fuel mix
-    Every hour   : CAISO, NYISO, ISONE load
+    Every hour   : ISONE/SPP/PJM/BPAT/TVA/SOCO/FPL/DUK/SRP/PSCO/PACE load (via EIA)
     Daily 06:00  : Curtailment for yesterday (CAISO, SPP, ERCOT)
     Daily 07:00  : Interconnection queue (NYISO)
 """
@@ -47,6 +47,11 @@ def run_fuel_mix():
     _run("nyiso_fuel_mix",  ingest_nyiso_fuel_mix, date.today())
     _run("miso_fuel_mix",   ingest_miso_fuel_mix)
     _run("isone_fuel_mix",  ingest_isone_fuel_mix)
+
+
+def run_realtime_load():
+    from ingest.jobs import ingest_realtime_load_all
+    _run("realtime_load", ingest_realtime_load_all)
 
 
 def run_ercot_fuel_mix():
@@ -126,10 +131,11 @@ def start():
     last_curtailment_day = -1
     last_queue_day       = -1
 
-    # Run fuel mix immediately on startup
-    log.info("Initial fuel mix fetch")
+    # Run immediately on startup
+    log.info("Initial fuel mix + realtime load fetch")
     run_fuel_mix()
     run_ercot_fuel_mix()
+    run_realtime_load()
 
     while True:
         now   = _utcnow()
@@ -141,8 +147,9 @@ def start():
 
         if min5 != last_5min:
             last_5min = min5
-            log.info("tick: 5-min fuel mix")
+            log.info("tick: 5-min fuel mix + realtime load")
             run_fuel_mix()
+            run_realtime_load()
 
         if min15 != last_15min:
             last_15min = min15

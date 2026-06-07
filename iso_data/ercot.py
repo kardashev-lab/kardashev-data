@@ -158,6 +158,25 @@ def get_load_summary() -> dict:
     return _dash("load-summary")
 
 
+def get_demand_today() -> list[dict]:
+    """
+    5-minute actual demand for today (midnight to latest interval).
+    Returns list of {ts: datetime (UTC), mw: float}.
+    Source: supply-demand.json, updated every ~5 minutes.
+    """
+    data = _dash("supply-demand")
+    rows = []
+    for point in data.get("data", []):
+        demand = point.get("demand")
+        epoch = point.get("epoch")
+        if demand is None or epoch is None:
+            continue
+        import datetime as _dt
+        ts = _dt.datetime.fromtimestamp(epoch / 1000, tz=_dt.timezone.utc)
+        rows.append({"ts": ts, "mw": float(demand)})
+    return rows
+
+
 # ---------------------------------------------------------------------------
 # Prices
 # ---------------------------------------------------------------------------

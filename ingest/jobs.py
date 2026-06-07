@@ -238,6 +238,81 @@ _EIA_LOAD_REGIONS: dict[str, str] = {
 }
 
 
+def ingest_realtime_load_all():
+    """
+    5-minute native demand for CAISO, ERCOT, MISO, NYISO.
+    Runs every 5 min. ISONE/SPP/others stay on hourly EIA.
+    """
+    from ingest.writer import upsert_load
+    rows: list[dict] = []
+
+    # CAISO — caiso.com/outlook/current/demand.csv, 5-min resolution
+    try:
+        from iso_data import caiso
+        df = caiso.get_load()
+        if not df.empty:
+            df.columns = [c.strip() for c in df.columns]
+            today = date.today()
+            import pytz
+            pacific = pytz.timezone("US/Pacific")
+            for _, row in df.iterrows():
+                mw = row.get("Current demand")
+                t = row.get("Time")
+                if pd.isna(mw) or pd.isna(t):
+                    continue
+                try:
+                    hh, mm = str(t).strip().split(":")
+                    naive = datetime(today.year, today.month, today.day, int(hh), int(mm))
+                    ts_utc = pacific.localize(naive).astimezone(timezone.utc)
+                    rows.append({"ts": ts_utc, "iso": "CAISO", "zone": "CAISO",
+                                 "mw_actual": float(mw), "mw_forecast": None})
+                except Exception:
+                    continue
+            log.info("realtime CAISO: %d rows", sum(1 for r in rows if r["iso"] == "CAISO"))
+    except Exception as exc:
+        log.warning("realtime CAISO failed: %s", exc)
+
+    # ERCOT — supply-demand.json, 5-min resolution, epoch-based timestamps
+    try:
+        from iso_data import ercot
+        points = ercot.get_demand_today()
+        for p in points:
+            rows.append({"ts": p["ts"], "iso": "ERCOT", "zone": "ERCOT",
+                         "mw_actual": p["mw"], "mw_forecast": None})
+        log.info("realtime ERCOT: %d rows", len(points))
+    except Exception as exc:
+        log.warning("realtime ERCOT failed: %s", exc)
+
+    # MISO — FuelMix endpoint, single current interval
+    try:
+        from iso_data import miso
+        pt = miso.get_realtime_total_mw()
+        if pt:
+            rows.append({"ts": pt["ts"], "iso": "MISO", "zone": "MISO",
+                         "mw_actual": pt["mw"], "mw_forecast": None})
+            log.info("realtime MISO: 1 row")
+    except Exception as exc:
+        log.warning("realtime MISO failed: %s", exc)
+
+    # NYISO — zonal 5-min CSV, sum across zones for system total
+    try:
+        from iso_data import nyiso
+        df = nyiso.get_load(date.today())
+        if not df.empty:
+            df["ts"] = pd.to_datetime(df["Time Stamp"])
+            totals = df.groupby("ts")["Load"].sum().reset_index()
+            for _, row in totals.iterrows():
+                rows.append({"ts": row["ts"], "iso": "NYISO", "zone": "NYISO",
+                             "mw_actual": float(row["Load"]), "mw_forecast": None})
+            log.info("realtime NYISO: %d rows", len(totals))
+    except Exception as exc:
+        log.warning("realtime NYISO failed: %s", exc)
+
+    if rows:
+        n = upsert_load(rows)
+        log.info("realtime load upsert: %d total rows", n)
+
+
 def ingest_eia_load_all(hours: int = 3):
     """Hourly demand for all EIA-covered BAs. Use hours>3 for backfills."""
     from iso_data import eia
