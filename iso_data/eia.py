@@ -155,6 +155,26 @@ def get_generator_capacity(year: int | None = None) -> list[dict]:
 # Endpoint: electricity/retail-sales
 # ---------------------------------------------------------------------------
 
+def get_interchange(respondent: str, hours: int = 24) -> list[dict]:
+    """
+    Hourly net interchange between a BA and its neighbors.
+    Type TI = total interchange; type WHL = wheeling.
+    """
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(hours=hours + 2)
+    return paginate("interchange-data/data", {
+        "facets[respondent][]": respondent,
+        "facets[type][]": "TI",
+        "start": start.strftime("%Y-%m-%dT%H"),
+        "end":   now.strftime("%Y-%m-%dT%H"),
+        "frequency": "hourly",
+        "data[]": "value",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "length": hours + 5,
+    })
+
+
 def get_retail_prices(months: int = 24) -> list[dict]:
     """
     Monthly retail electricity prices (cents/kWh) and sales (MWh) by state and sector.

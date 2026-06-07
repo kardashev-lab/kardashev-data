@@ -229,6 +229,23 @@ def upsert_retail_prices(rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_interchange(rows: list[dict]) -> int:
+    """rows: [{ts, from_ba, to_ba, mw}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO interchange (ts, from_ba, to_ba, mw)
+            VALUES %s
+            ON CONFLICT (ts, from_ba, to_ba) DO UPDATE SET mw = EXCLUDED.mw
+            """,
+            [(r["ts"], r["from_ba"], r.get("to_ba", "ALL"), r.get("mw")) for r in rows],
+        )
+    return len(rows)
+
+
 def upsert_bpa_balancesheet(rows: list[dict]) -> int:
     """rows: [{ts, load_mw, wind_mw, hydro_mw, thermal_mw, nuclear_mw, net_interchange_mw}]"""
     if not rows:

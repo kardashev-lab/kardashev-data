@@ -1110,6 +1110,43 @@ def ingest_eia_retail_prices():
     log.info("EIA retail prices: %d rows", n)
 
 
+def ingest_eia_interchange():
+    """
+    EIA hourly net interchange between major US BAs (#20).
+    Covers: CAISO, ERCOT, PJM, MISO, NYISO, ISONE, SPP, BPAT.
+    """
+    from iso_data import eia
+    from ingest.writer import upsert_interchange
+
+    _RESPONDENTS: list[tuple[str, str]] = [
+        ("CISO", "CAISO"), ("ERCO", "ERCOT"), ("PJM", "PJM"),
+        ("MISO", "MISO"), ("NYIS", "NYISO"), ("ISNE", "ISONE"),
+        ("SWPP", "SPP"), ("BPAT", "BPAT"),
+    ]
+
+    all_rows: list[dict] = []
+    for eia_code, iso_name in _RESPONDENTS:
+        try:
+            records = eia.get_interchange(eia_code, hours=3)
+            for rec in records:
+                try:
+                    period = rec.get("period")  # "YYYY-MM-DDTHH"
+                    ts = datetime.strptime(period, "%Y-%m-%dT%H").replace(tzinfo=timezone.utc)
+                    all_rows.append({
+                        "ts":      ts,
+                        "from_ba": iso_name,
+                        "to_ba":   str(rec.get("fromba", "ALL")),
+                        "mw":      float(rec["value"]) if rec.get("value") is not None else None,
+                    })
+                except Exception:
+                    continue
+        except Exception as exc:
+            log.warning("EIA interchange %s: %s", iso_name, exc)
+
+    n = upsert_interchange(all_rows)
+    log.info("EIA interchange: %d rows", n)
+
+
 def ingest_bpa_balancesheet():
     """BPA 5-min wind, hydro, thermal, load from public balance sheet."""
     from iso_data import bpa

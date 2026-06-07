@@ -162,6 +162,11 @@ def run_binding_constraints():
     _run("miso_binding_constraints", ingest_miso_binding_constraints)
 
 
+def run_interchange():
+    from ingest.jobs import ingest_eia_interchange
+    _run("eia_interchange", ingest_eia_interchange)
+
+
 def run_eia_static():
     """Monthly/annual EIA datasets — run weekly."""
     from ingest.jobs import (
@@ -251,6 +256,7 @@ def start():
     run_temperatures()
     run_binding_constraints()
     run_eia_static()   # monthly/annual EIA data (EIA-923, EIA-860, EIA-861)
+    run_interchange()  # EIA hourly BA-to-BA interchange
 
     while True:
         now   = _utcnow()
@@ -281,12 +287,13 @@ def start():
 
         if hour != last_hour:
             last_hour = hour
-            log.info("tick: hourly data (load, DA LMP, forecasts, margins, temperatures)")
+            log.info("tick: hourly data (load, DA LMP, forecasts, margins, temperatures, interchange)")
             run_load()
             run_lmp_da()
             run_load_forecasts()
             run_reserve_margins()
             run_temperatures()
+            run_interchange()
 
         if hour == 6 and day != last_curtailment_day:
             last_curtailment_day = day

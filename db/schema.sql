@@ -269,3 +269,16 @@ CREATE TABLE IF NOT EXISTS retail_prices (
     CONSTRAINT   rp_pk PRIMARY KEY (period, state, sector)
 );
 CREATE INDEX IF NOT EXISTS rp_period ON retail_prices (period DESC, state, sector);
+
+-- ---------------------------------------------------------------------------
+-- EIA inter-regional interchange  (hourly net flows between BAs)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS interchange (
+    ts           TIMESTAMPTZ      NOT NULL,
+    from_ba      TEXT             NOT NULL,   -- respondent / source BA
+    to_ba        TEXT,                        -- fromba / neighbor (may be NULL for total)
+    mw           DOUBLE PRECISION,            -- positive = export from from_ba
+    CONSTRAINT   ix_pk PRIMARY KEY (ts, from_ba, to_ba)
+);
+CREATE INDEX IF NOT EXISTS ix_ts_brin ON interchange USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS ix_ba      ON interchange (from_ba, ts DESC);

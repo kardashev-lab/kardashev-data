@@ -26,6 +26,7 @@ Endpoints:
     GET  /eia/generation             EIA-923 monthly generation by state + fuel type
     GET  /eia/capacity               EIA-860 annual installed capacity by state + technology
     GET  /eia/retail-prices          EIA-861 monthly retail electricity prices (cents/kWh)
+    GET  /interchange                Hourly net interchange between US balancing authorities
     GET  /interconnection-queue Active queue with filters
     GET  /isos              ISO catalog with dataset coverage
     GET  /health            Uptime check
@@ -40,7 +41,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import (
     bpa, carbon, constraints, curtailment, eia_static, fuel_mix, generation,
-    isos, lmp, load, nat_gas, queue, weather,
+    interchange, isos, lmp, load, nat_gas, queue, weather,
 )
 
 
@@ -113,6 +114,7 @@ app.include_router(bpa.router)
 app.include_router(weather.router)
 app.include_router(constraints.router)
 app.include_router(eia_static.router)
+app.include_router(interchange.router)
 app.include_router(queue.router)
 app.include_router(isos.router)
 
