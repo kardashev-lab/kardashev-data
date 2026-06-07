@@ -70,9 +70,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_extra_origins = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=_extra_origins,
+    allow_origin_regex=r"https://([a-z0-9-]+\.)*kardashevlabs\.org",
     allow_methods=["GET"],
     allow_headers=["*"],
 )
