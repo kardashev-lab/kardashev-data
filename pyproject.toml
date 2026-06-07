@@ -20,7 +20,8 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-    "fastapi>=0.115",
+    "fastapi>=0.115,<0.130",
+    "starlette>=0.41.0,<1.0.0",
     "uvicorn[standard]>=0.30",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.29",
@@ -40,4 +41,4 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["iso_data*", "api*", "ingest*"]
+include = ["iso_data*", "api*", "ingest*", "db*"]

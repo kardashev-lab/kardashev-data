@@ -28,19 +28,35 @@ from api.routes import curtailment, fuel_mix, isos, lmp, load, queue
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Run migration in background thread — uvicorn binds immediately so health check passes
-    import asyncio, threading
+    import threading, logging
     def _migrate():
         try:
-            from db.migrate import run
-            run()
+            import psycopg2, time, os
+            from pathlib import Path
+            dsn = os.environ.get("DATABASE_URL", "")
+            if not dsn:
+                return
+            schema = (Path(__file__).parent.parent / "db" / "schema.sql").read_text()
+            for attempt in range(10):
+                try:
+                    conn = psycopg2.connect(dsn)
+                    with conn:
+                        with conn.cursor() as cur:
+                            cur.execute(schema)
+                    conn.close()
+                    logging.getLogger("migrate").info("Migration complete")
+                    return
+                except psycopg2.OperationalError:
+                    time.sleep(3)
         except Exception as exc:
-            import logging
             logging.getLogger("migrate").error("Migration error: %s", exc)
     threading.Thread(target=_migrate, daemon=True).start()
     yield
-    from api.db import get_engine
-    await get_engine().dispose()
+    try:
+        from api.db import get_engine
+        await get_engine().dispose()
+    except Exception:
+        pass
 
 
 app = FastAPI(
