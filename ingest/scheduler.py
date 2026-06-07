@@ -243,27 +243,33 @@ def start():
     last_queue_day       = -1
     last_static_week     = -1   # ISO week number for EIA monthly/annual data
 
+    def _startup(name: str, fn) -> None:
+        try:
+            fn()
+        except Exception as exc:
+            log.error("Startup job %s failed (continuing): %s", name, exc)
+
     # Run immediately on startup
     log.info("Initial startup: all data sources")
-    run_fuel_mix()
-    run_ercot_fuel_mix()
-    run_spp_fuel_mix()
-    run_realtime_load()
-    run_lmp_rt()
-    run_lmp_da()
-    run_wind_solar()
-    run_pjm_wind_solar()
-    run_battery()
-    run_btm_solar()
-    run_nat_gas()
-    run_gas_storage()
-    run_load_forecasts()
-    run_reserve_margins()
-    run_bpa()
-    run_temperatures()
-    run_binding_constraints()
-    run_eia_static()   # monthly/annual EIA data (EIA-923, EIA-860, EIA-861)
-    run_interchange()  # EIA hourly BA-to-BA interchange
+    _startup("fuel_mix",         run_fuel_mix)
+    _startup("ercot_fuel_mix",   run_ercot_fuel_mix)
+    _startup("spp_fuel_mix",     run_spp_fuel_mix)
+    _startup("realtime_load",    run_realtime_load)
+    _startup("lmp_rt",           run_lmp_rt)
+    _startup("lmp_da",           run_lmp_da)
+    _startup("wind_solar",       run_wind_solar)
+    _startup("pjm_wind_solar",   run_pjm_wind_solar)
+    _startup("battery",          run_battery)
+    _startup("btm_solar",        run_btm_solar)
+    _startup("nat_gas",          run_nat_gas)
+    _startup("gas_storage",      run_gas_storage)
+    _startup("load_forecasts",   run_load_forecasts)
+    _startup("reserve_margins",  run_reserve_margins)
+    _startup("bpa",              run_bpa)
+    _startup("temperatures",     run_temperatures)
+    _startup("binding_constraints", run_binding_constraints)
+    _startup("eia_static",       run_eia_static)
+    _startup("interchange",      run_interchange)
 
     while True:
         now   = _utcnow()
