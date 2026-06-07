@@ -21,14 +21,14 @@ from . import _http
 _FILE_BROWSER = "https://portal.spp.org/file-browser-api/download"
 
 _VER_WIND_COLS = [
-    "Wind Redispatch Curtailments",
-    "Wind Manual Curtailments",
-    "Wind Curtailed For Energy",
+    "WindRedispatchCurtailments",
+    "WindManualCurtailments",
+    "WindCurtailedForEnergy",
 ]
 _VER_SOLAR_COLS = [
-    "Solar Redispatch Curtailments",
-    "Solar Manual Curtailments",
-    "Solar Curtailed For Energy",
+    "SolarRedispatchCurtailments",
+    "SolarManualCurtailments",
+    "SolarCurtailedForEnergy",
 ]
 _INTERVAL_H = 5 / 60  # 5-minute rows in MW → MWh
 
