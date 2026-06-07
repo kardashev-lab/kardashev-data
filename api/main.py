@@ -36,7 +36,11 @@ async def lifespan(app: FastAPI):
             dsn = os.environ.get("DATABASE_URL", "")
             if not dsn:
                 return
-            schema = (Path(__file__).parent.parent / "db" / "schema.sql").read_text()
+            # /app/db/schema.sql always exists after COPY . . in Docker
+            schema_path = Path("/app/db/schema.sql")
+            if not schema_path.exists():
+                schema_path = Path(__file__).parent.parent / "db" / "schema.sql"
+            schema = schema_path.read_text()
             for attempt in range(10):
                 try:
                     conn = psycopg2.connect(dsn)

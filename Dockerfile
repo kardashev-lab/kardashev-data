@@ -17,4 +17,4 @@ ENV PYTHONUNBUFFERED=1
 # Default: API service (migration runs inside FastAPI lifespan).
 # Override start command for ingest service in Railway dashboard:
 #   ingest: python -m db.migrate && python -m ingest.scheduler
-CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["python", "/app/run.py"]
