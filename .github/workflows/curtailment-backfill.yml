@@ -26,6 +26,15 @@ jobs:
       - name: Install package
         run: pip install ".[ingest]"
 
+      - name: Require DATABASE_URL
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL secret is not set on this repo."
+            exit 1
+          fi
+
       - name: Run backfill
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

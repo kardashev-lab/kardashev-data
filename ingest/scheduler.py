@@ -353,8 +353,16 @@ def start():
 # Entrypoint
 # ---------------------------------------------------------------------------
 
+def _require_database_url() -> None:
+    import os
+    if not os.environ.get("DATABASE_URL"):
+        log.error("DATABASE_URL is not set")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     if len(sys.argv) >= 3 and sys.argv[1] == "backfill":
+        _require_database_url()
         iso_arg  = sys.argv[2]
         days_arg = int(sys.argv[3]) if len(sys.argv) > 3 else 90
         backfill(iso_arg, days_arg)
