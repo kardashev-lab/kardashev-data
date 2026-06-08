@@ -17,7 +17,8 @@ Schedule (UTC):
     Every hour   : EIA load (ISONE/PJM/BPAT/TVA/SOCO/FPL/DUK/SRP/PSCO/PACE)
                    + NYISO DA LMP + PJM/ISONE load forecast + PJM reserve margins
                    + grid-area temperatures via Open-Meteo
-    Daily 06:00  : Curtailment (CAISO, SPP, ERCOT) + EIA nat gas prices + EIA gas storage
+    Daily 10:00  : Curtailment backfill (last 3 days) + EIA nat gas prices + EIA gas storage
+    Daily 14:00  : Curtailment retry (last 3 days — CAISO often publishes after 10:00 UTC)
     Daily 07:00  : Interconnection queues (NYISO, PJM, ISONE)
     Weekly Mon 08:00 : EIA-923 monthly generation, EIA-860 capacity, EIA-861 retail prices
 """
@@ -34,6 +35,9 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 log = logging.getLogger("scheduler")
+
+# How many recent calendar days to (re)fetch on each curtailment tick.
+CURTAILMENT_LOOKBACK_DAYS = 3
 
 
 # ---------------------------------------------------------------------------
@@ -76,12 +80,14 @@ def run_load():
     _run("eia_load_all", ingest_eia_load_all)
 
 
-def run_curtailment():
+def run_curtailment(days: int = CURTAILMENT_LOOKBACK_DAYS):
     from ingest.jobs import ingest_caiso_curtailment, ingest_spp_curtailment, ingest_ercot_curtailment
-    yesterday = date.today() - timedelta(days=1)
-    _run("caiso_curtailment", ingest_caiso_curtailment, yesterday)
-    _run("spp_curtailment",   ingest_spp_curtailment,   yesterday)
-    _run("ercot_curtailment", ingest_ercot_curtailment, yesterday)
+    today = date.today()
+    for i in range(1, days + 1):
+        target = today - timedelta(days=i)
+        _run(f"caiso_curtailment_{target}", ingest_caiso_curtailment, target)
+        _run(f"spp_curtailment_{target}",   ingest_spp_curtailment,   target)
+        _run(f"ercot_curtailment_{target}", ingest_ercot_curtailment, target)
 
 
 def run_lmp_rt():
@@ -198,26 +204,29 @@ def run_queue():
 def backfill(iso: str, days: int):
     from ingest import jobs
     iso = iso.upper()
+    isos = ("CAISO", "SPP", "ERCOT") if iso == "ALL" else (iso,)
     today = date.today()
     log.info("Backfilling %s for %d days", iso, days)
-    for i in range(days, 0, -1):
-        target = today - timedelta(days=i)
-        try:
-            if iso == "CAISO":
-                jobs.ingest_caiso_curtailment(target)
-                jobs.ingest_caiso_fuel_mix(target)
-            elif iso == "SPP":
-                jobs.ingest_spp_curtailment(target)
-            elif iso == "ERCOT":
-                jobs.ingest_ercot_curtailment(target)
-            elif iso == "NYISO":
-                jobs.ingest_nyiso_fuel_mix(target)
-                jobs.ingest_nyiso_load(target)
-            elif iso == "ISONE":
-                jobs.ingest_isone_fuel_mix(target)
-                jobs.ingest_isone_load(target)
-        except Exception as exc:
-            log.warning("%s backfill %s: %s", iso, target, exc)
+    for iso_name in isos:
+        for i in range(days, 0, -1):
+            target = today - timedelta(days=i)
+            try:
+                if iso_name == "CAISO":
+                    jobs.ingest_caiso_curtailment(target)
+                    if iso != "ALL":
+                        jobs.ingest_caiso_fuel_mix(target)
+                elif iso_name == "SPP":
+                    jobs.ingest_spp_curtailment(target)
+                elif iso_name == "ERCOT":
+                    jobs.ingest_ercot_curtailment(target)
+                elif iso_name == "NYISO":
+                    jobs.ingest_nyiso_fuel_mix(target)
+                    jobs.ingest_nyiso_load(target)
+                elif iso_name == "ISONE":
+                    jobs.ingest_isone_fuel_mix(target)
+                    jobs.ingest_isone_load(target)
+            except Exception as exc:
+                log.warning("%s backfill %s: %s", iso_name, target, exc)
     log.info("Backfill complete: %s", iso)
 
 
@@ -239,7 +248,8 @@ def start():
     last_5min  = -1
     last_15min = -1
     last_hour  = -1
-    last_curtailment_day = -1
+    last_curtailment_10_day = -1
+    last_curtailment_14_day = -1
     last_queue_day       = -1
     last_static_week     = -1   # ISO week number for EIA monthly/annual data
 
@@ -270,6 +280,7 @@ def start():
     _startup("binding_constraints", run_binding_constraints)
     _startup("eia_static",       run_eia_static)
     _startup("interchange",      run_interchange)
+    _startup("curtailment",      run_curtailment)
 
     while True:
         try:
@@ -309,12 +320,17 @@ def start():
                 run_temperatures()
                 run_interchange()
 
-            if hour == 6 and day != last_curtailment_day:
-                last_curtailment_day = day
-                log.info("tick: daily curtailment + nat gas prices + gas storage")
+            if hour == 10 and day != last_curtailment_10_day:
+                last_curtailment_10_day = day
+                log.info("tick: daily curtailment backfill + nat gas prices + gas storage")
                 run_curtailment()
                 run_nat_gas()
                 run_gas_storage()
+
+            if hour == 14 and day != last_curtailment_14_day:
+                last_curtailment_14_day = day
+                log.info("tick: curtailment retry (last %d days)", CURTAILMENT_LOOKBACK_DAYS)
+                run_curtailment()
 
             if hour == 7 and day != last_queue_day:
                 last_queue_day = day
