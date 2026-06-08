@@ -28,7 +28,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://kardashev:kardashev@db:5432/energy
-      CORS_ORIGINS: "*"
+      CORS_ORIGINS: "http://localhost:3000"
     ports:
       - "8000:8000"
 

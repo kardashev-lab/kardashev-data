@@ -39,6 +39,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.rate_limit import RateLimitMiddleware, requests_per_minute
 from api.routes import (
     bpa, carbon, constraints, curtailment, eia_static, fuel_mix, generation,
     interchange, isos, lmp, load, nat_gas, queue, weather,
@@ -82,12 +83,19 @@ async def lifespan(app: FastAPI):
         pass
 
 
+_is_dev = os.environ.get("ENVIRONMENT", "production") != "production"
+
 app = FastAPI(
     title="Kardashev Data Platform",
     description="Bloomberg Terminal for Energy — unified US grid data API",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url="/docs" if _is_dev else None,
+    redoc_url="/redoc" if _is_dev else None,
+    openapi_url="/openapi.json" if _is_dev else None,
 )
+
+app.add_middleware(RateLimitMiddleware, requests_per_minute=requests_per_minute())
 
 _extra_origins = [
     o.strip()

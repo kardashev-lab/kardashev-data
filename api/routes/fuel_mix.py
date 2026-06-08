@@ -24,7 +24,7 @@ async def get_fuel_mix(
     start: Optional[date] = Query(None),
     end: Optional[date] = Query(None),
     fuel_type: Optional[str] = Query(None),
-    limit: int = Query(10_000, le=100_000),
+    limit: int = Query(5_000, le=10_000),
 ):
     """5-minute fuel mix time series. Defaults to last 24 hours if no start/end given."""
     if start is None:

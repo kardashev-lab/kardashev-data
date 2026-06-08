@@ -30,7 +30,7 @@ async def get_lmp(
     market: str = Query("RT", description="'RT' or 'DA'"),
     start: Optional[date] = Query(None),
     end: Optional[date] = Query(None),
-    limit: int = Query(5_000, le=50_000),
+    limit: int = Query(3_000, le=10_000),
 ):
     """LMP time series for a pricing node."""
     params: dict = {"iso": iso.upper(), "market": market.upper(), "lim": limit}

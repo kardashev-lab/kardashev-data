@@ -26,7 +26,7 @@ async def get_load(
     start: Optional[date] = Query(None),
     end: Optional[date] = Query(None),
     hours: int = Query(24, ge=1, le=720, description="Hours of history when start/end not given."),
-    limit: int = Query(10_000, le=100_000),
+    limit: int = Query(5_000, le=10_000),
 ):
     params: dict = {"iso": iso.upper(), "lim": limit}
 
