@@ -53,8 +53,10 @@ def _run(name: str, fn, *args):
 
 def run_fuel_mix():
     from ingest.jobs import (
-        ingest_caiso_fuel_mix, ingest_nyiso_fuel_mix,
-        ingest_miso_fuel_mix, ingest_isone_fuel_mix,
+        ingest_caiso_fuel_mix,
+        ingest_isone_fuel_mix,
+        ingest_miso_fuel_mix,
+        ingest_nyiso_fuel_mix,
     )
     _run("caiso_fuel_mix",  ingest_caiso_fuel_mix)
     _run("nyiso_fuel_mix",  ingest_nyiso_fuel_mix, date.today())
@@ -73,7 +75,7 @@ def run_ercot_fuel_mix():
 
 
 def run_load():
-    from ingest.jobs import ingest_caiso_load, ingest_nyiso_load, ingest_isone_load, ingest_eia_load_all
+    from ingest.jobs import ingest_caiso_load, ingest_eia_load_all, ingest_isone_load, ingest_nyiso_load
     _run("caiso_load", ingest_caiso_load)
     _run("nyiso_load", ingest_nyiso_load, date.today())
     _run("isone_load", ingest_isone_load)
@@ -81,7 +83,7 @@ def run_load():
 
 
 def run_curtailment(days: int = CURTAILMENT_LOOKBACK_DAYS):
-    from ingest.jobs import ingest_caiso_curtailment, ingest_spp_curtailment, ingest_ercot_curtailment
+    from ingest.jobs import ingest_caiso_curtailment, ingest_ercot_curtailment, ingest_spp_curtailment
     today = date.today()
     for i in range(1, days + 1):
         target = today - timedelta(days=i)
@@ -92,8 +94,10 @@ def run_curtailment(days: int = CURTAILMENT_LOOKBACK_DAYS):
 
 def run_lmp_rt():
     from ingest.jobs import (
-        ingest_nyiso_lmp_rt, ingest_spp_lmp_rt,
-        ingest_pjm_lmp_rt, ingest_caiso_lmp_rt,
+        ingest_caiso_lmp_rt,
+        ingest_nyiso_lmp_rt,
+        ingest_pjm_lmp_rt,
+        ingest_spp_lmp_rt,
     )
     _run("nyiso_lmp_rt",  ingest_nyiso_lmp_rt)
     _run("spp_lmp_rt",    ingest_spp_lmp_rt)
@@ -102,7 +106,7 @@ def run_lmp_rt():
 
 
 def run_lmp_da():
-    from ingest.jobs import ingest_nyiso_lmp_da, ingest_pjm_lmp_da, ingest_caiso_lmp_da
+    from ingest.jobs import ingest_caiso_lmp_da, ingest_nyiso_lmp_da, ingest_pjm_lmp_da
     _run("nyiso_lmp_da",  ingest_nyiso_lmp_da)
     _run("pjm_lmp_da",   ingest_pjm_lmp_da)
     _run("caiso_lmp_da", ingest_caiso_lmp_da)
@@ -134,7 +138,7 @@ def run_pjm_wind_solar():
 
 
 def run_load_forecasts():
-    from ingest.jobs import ingest_pjm_load_forecast, ingest_isone_load_forecast
+    from ingest.jobs import ingest_isone_load_forecast, ingest_pjm_load_forecast
     _run("pjm_load_forecast",   ingest_pjm_load_forecast)
     _run("isone_load_forecast", ingest_isone_load_forecast)
 
@@ -150,7 +154,7 @@ def run_gas_storage():
 
 
 def run_queue_all():
-    from ingest.jobs import ingest_pjm_queue, ingest_isone_queue
+    from ingest.jobs import ingest_isone_queue, ingest_pjm_queue
     _run("pjm_queue",   ingest_pjm_queue)
     _run("isone_queue", ingest_isone_queue)
 
@@ -183,8 +187,8 @@ def run_interchange():
 def run_eia_static():
     """Monthly/annual EIA datasets — run weekly."""
     from ingest.jobs import (
-        ingest_eia_monthly_generation,
         ingest_eia_generator_capacity,
+        ingest_eia_monthly_generation,
         ingest_eia_retail_prices,
     )
     _run("eia_monthly_gen",    ingest_eia_monthly_generation)
@@ -238,10 +242,6 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _minutes_since_midnight(now: datetime) -> int:
-    return now.hour * 60 + now.minute
-
-
 def start():
     log.info("Kardashev Data scheduler starting")
 
@@ -288,7 +288,6 @@ def start():
             min5  = now.minute // 5          # 0-11, changes every 5 min
             min15 = now.minute // 15         # 0-3,  changes every 15 min
             hour  = now.hour                 # 0-23
-            mins  = _minutes_since_midnight(now)
             day   = now.toordinal()
             week  = now.isocalendar()[1]     # ISO week number (1-53)
 

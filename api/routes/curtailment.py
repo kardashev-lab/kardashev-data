@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-from api.db import fetch, fetch_one
+from api.db import fetch
 
 router = APIRouter(prefix="/curtailment", tags=["curtailment"])
 

@@ -30,9 +30,7 @@ NOTE: ERCOT does not publish a clean renewable curtailment endpoint.
 """
 from __future__ import annotations
 
-import io
-from datetime import date, timedelta
-from typing import Any
+from datetime import date
 
 import pandas as pd
 

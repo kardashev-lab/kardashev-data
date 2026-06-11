@@ -5,7 +5,7 @@ Each job is idempotent: safe to re-run, uses ON CONFLICT upserts.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 import pandas as pd
 
@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def ingest_caiso_fuel_mix(target: date | None = None):
-    from iso_data import caiso
     from ingest.writer import upsert_fuel_mix
+    from iso_data import caiso
     df = caiso.get_fuel_mix(target)
     if df.empty:
         return
@@ -34,9 +34,10 @@ def ingest_caiso_fuel_mix(target: date | None = None):
 
 
 def ingest_nyiso_fuel_mix(target: date):
-    from iso_data import nyiso
-    from ingest.writer import upsert_fuel_mix
     import pytz
+
+    from ingest.writer import upsert_fuel_mix
+    from iso_data import nyiso
     _eastern = pytz.timezone("US/Eastern")
     df = nyiso.get_fuel_mix(target)
     if df.empty:
@@ -59,8 +60,8 @@ def ingest_nyiso_fuel_mix(target: date):
 
 
 def ingest_miso_fuel_mix():
-    from iso_data import miso
     from ingest.writer import upsert_fuel_mix
+    from iso_data import miso
     df = miso.get_fuel_mix_today()
     if df.empty:
         return
@@ -76,8 +77,8 @@ def ingest_miso_fuel_mix():
 
 
 def ingest_ercot_fuel_mix():
-    from iso_data import ercot
     from ingest.writer import upsert_fuel_mix
+    from iso_data import ercot
     df = ercot.get_fuel_mix()
     if df.empty:
         return
@@ -103,9 +104,10 @@ def ingest_ercot_fuel_mix():
 
 
 def ingest_isone_fuel_mix(target: date | None = None):
-    from iso_data import isone
-    from ingest.writer import upsert_fuel_mix
     import pytz
+
+    from ingest.writer import upsert_fuel_mix
+    from iso_data import isone
     _eastern = pytz.timezone("US/Eastern")
     t = target or date.today()
     df = isone.get_fuel_mix(t)
@@ -134,8 +136,8 @@ def ingest_isone_fuel_mix(target: date | None = None):
 # ---------------------------------------------------------------------------
 
 def ingest_caiso_curtailment(target: date):
-    from iso_data import caiso
     from ingest.writer import upsert_curtailment, upsert_curtailment_hourly
+    from iso_data import caiso
     try:
         df = caiso.get_curtailment(target)
         if df.empty:
@@ -156,8 +158,8 @@ def ingest_caiso_curtailment(target: date):
 
 
 def ingest_spp_curtailment(target: date):
-    from iso_data import spp
     from ingest.writer import upsert_curtailment
+    from iso_data import spp
     try:
         totals = spp.get_curtailment_daily_totals(target)
         upsert_curtailment(target, "SPP", totals["solar_mwh"], totals["wind_mwh"], totals["total_mwh"])
@@ -167,8 +169,8 @@ def ingest_spp_curtailment(target: date):
 
 
 def ingest_ercot_curtailment(target: date):
-    from iso_data import ercot
     from ingest.writer import upsert_curtailment
+    from iso_data import ercot
     try:
         totals = ercot.estimate_curtailment(target)
         if totals["total_mwh"] > 0:
@@ -183,9 +185,10 @@ def ingest_ercot_curtailment(target: date):
 # ---------------------------------------------------------------------------
 
 def ingest_caiso_load(target: date | None = None):
-    from iso_data import caiso
-    from ingest.writer import upsert_load
     import pytz
+
+    from ingest.writer import upsert_load
+    from iso_data import caiso
     _PT = pytz.timezone("US/Pacific")
     df = caiso.get_load(target)
     if df.empty:
@@ -216,9 +219,10 @@ def ingest_caiso_load(target: date | None = None):
 
 
 def ingest_nyiso_load(target: date):
-    from iso_data import nyiso
-    from ingest.writer import upsert_load
     import pytz
+
+    from ingest.writer import upsert_load
+    from iso_data import nyiso
     _eastern = pytz.timezone("US/Eastern")
     df = nyiso.get_load(target)
     if df.empty:
@@ -242,9 +246,10 @@ def ingest_nyiso_load(target: date):
 
 
 def ingest_isone_load(target: date | None = None):
-    from iso_data import isone
-    from ingest.writer import upsert_load
     import pytz
+
+    from ingest.writer import upsert_load
+    from iso_data import isone
     _eastern = pytz.timezone("US/Eastern")
     t = target or date.today()
     df = isone.get_load(t)
@@ -393,8 +398,9 @@ def ingest_realtime_load_all():
 def ingest_eia_load_all(hours: int = 3):
     """Hourly demand for all EIA-covered BAs. Use hours>3 for backfills."""
     import pytz
-    from iso_data import eia
+
     from ingest.writer import upsert_load
+    from iso_data import eia
     rows: list[dict] = []
     for eia_code, iso_name in _EIA_LOAD_REGIONS.items():
         tz = pytz.timezone(_EIA_LOAD_TZ.get(eia_code, "UTC"))
@@ -426,8 +432,8 @@ def ingest_eia_load_all(hours: int = 3):
 # ---------------------------------------------------------------------------
 
 def ingest_nyiso_queue():
-    from iso_data import nyiso
     from ingest.writer import replace_interconnection_queue
+    from iso_data import nyiso
     df = nyiso.get_interconnection_queue()
     if df.empty:
         return
@@ -448,8 +454,8 @@ def ingest_caiso_queue():
 
 def ingest_pjm_queue():
     """PJM interconnection queue — all active requests."""
-    from iso_data import pjm
     from ingest.writer import replace_interconnection_queue
+    from iso_data import pjm
     df = pjm.get_interconnection_queue()
     if df.empty:
         return
@@ -475,8 +481,8 @@ def ingest_pjm_queue():
 
 def ingest_isone_queue():
     """ISONE interconnection queue."""
-    from iso_data import isone
     from ingest.writer import replace_interconnection_queue
+    from iso_data import isone
     try:
         df = isone.get_interconnection_queue()
     except Exception as exc:
@@ -509,8 +515,8 @@ def ingest_isone_queue():
 
 def ingest_pjm_load_forecast():
     """PJM 7-day hourly load forecast stored in load_data."""
-    from iso_data import pjm
     from ingest.writer import upsert_load
+    from iso_data import pjm
     df = pjm.get_load_forecast_7day()
     if df.empty:
         return
@@ -537,8 +543,8 @@ def ingest_pjm_load_forecast():
 
 def ingest_isone_load_forecast():
     """ISONE day-ahead load forecast via EIA."""
-    from iso_data import isone
     from ingest.writer import upsert_load
+    from iso_data import isone
     df = isone.get_load_forecast(date.today())
     if df.empty:
         return
@@ -563,8 +569,8 @@ def ingest_isone_load_forecast():
 
 def ingest_spp_fuel_mix():
     """SPP 5-min generation mix — latest interval."""
-    from iso_data import spp
     from ingest.writer import upsert_fuel_mix
+    from iso_data import spp
     df = spp.get_gen_mix_latest("gen-mix")
     if df.empty:
         return
@@ -592,7 +598,10 @@ def ingest_spp_fuel_mix():
 
 def ingest_eia_gas_storage():
     """EIA weekly natural gas in storage by region (Lower 48, East, Midwest, Mountain, Pacific, South Central)."""
-    import os, requests
+    import os
+
+    import requests
+
     from ingest.writer import upsert_gas_storage
 
     api_key = os.environ.get("EIA_API_KEY", "")
@@ -653,8 +662,8 @@ def ingest_eia_gas_storage():
 
 def ingest_pjm_wind_solar():
     """PJM hourly wind + solar actual generation stored in gen_forecast."""
-    from iso_data import pjm
     from ingest.writer import upsert_gen_forecast
+    from iso_data import pjm
 
     rows: list[dict] = []
 
@@ -694,8 +703,8 @@ def ingest_pjm_wind_solar():
 
 def ingest_nyiso_btm_solar():
     """NYISO hourly BTM solar actual vs. forecast."""
-    from iso_data import nyiso
     from ingest.writer import upsert_btm_solar
+    from iso_data import nyiso
 
     df = nyiso.get_btm_solar(date.today())
     if df.empty:
@@ -731,8 +740,8 @@ def ingest_nyiso_btm_solar():
 
 def ingest_pjm_reserve_margins():
     """PJM capacity reserve margin requirements and actuals."""
-    from iso_data import pjm
     from ingest.writer import upsert_reserve_margins
+    from iso_data import pjm
 
     df = pjm.get_capacity_reserve_margin()
     if df.empty:
@@ -766,8 +775,8 @@ def ingest_ercot_wind_solar():
     ERCOT 15-min wind + solar: actual generation vs. system-wide potential.
     Stores in gen_forecast (mw_actual, mw_potential).
     """
-    from iso_data import ercot
     from ingest.writer import upsert_gen_forecast
+    from iso_data import ercot
 
     rows: list[dict] = []
 
@@ -820,7 +829,10 @@ def ingest_eia_nat_gas_prices():
     EIA v2 API: Henry Hub + key regional hub daily spot prices.
     Series IDs (EIA NG v2 facets): RNGWHHD=Henry Hub, others regional.
     """
-    import os, requests
+    import os
+
+    import requests
+
     from ingest.writer import upsert_nat_gas_prices
 
     api_key = os.environ.get("EIA_API_KEY", "")
@@ -888,8 +900,8 @@ def ingest_caiso_battery():
     The demand.csv 'Batteries' column is negative when charging, positive when discharging.
     We split into mw_charging / mw_discharging for clarity.
     """
-    from iso_data import caiso
     from ingest.writer import upsert_battery_storage
+    from iso_data import caiso
 
     df = caiso.get_fuel_mix()
     if df.empty:
@@ -934,9 +946,10 @@ def ingest_nyiso_lmp_rt():
     Columns: Time Stamp, Name, PTID, LBMP ($/MWHr),
              Marginal Cost Losses ($/MWHr), Marginal Cost Congestion ($/MWHr)
     """
-    from iso_data import nyiso
-    from ingest.writer import upsert_lmp
     import pytz
+
+    from ingest.writer import upsert_lmp
+    from iso_data import nyiso
     eastern = pytz.timezone("US/Eastern")
 
     df = nyiso.get_lmp_realtime_zone(date.today())
@@ -970,9 +983,10 @@ def ingest_nyiso_lmp_rt():
 
 def ingest_nyiso_lmp_da():
     """NYISO day-ahead hourly zonal LMP for today."""
-    from iso_data import nyiso
-    from ingest.writer import upsert_lmp
     import pytz
+
+    from ingest.writer import upsert_lmp
+    from iso_data import nyiso
     eastern = pytz.timezone("US/Eastern")
 
     df = nyiso.get_lmp_dam_zone(date.today())
@@ -1009,8 +1023,8 @@ def ingest_spp_lmp_rt():
     SPP real-time RTBM LMP for latest 5-min interval, all settlement locations.
     Columns: Interval, GMTIntervalEnd, Settlement Location, Pnode, LMP, MLC, MCC, MEC, BAA
     """
-    from iso_data import spp
     from ingest.writer import upsert_lmp
+    from iso_data import spp
 
     df = spp.get_lmp_rtbm_latest()
     if df.empty:
@@ -1052,9 +1066,11 @@ def ingest_eia_monthly_generation():
     EIA-923 monthly net generation by state + fuel type (#10).
     Runs weekly (data updates monthly ~2 months lag).
     """
-    from iso_data.eia import api_key, _http
+    import os
+
+    import requests
+
     from ingest.writer import upsert_monthly_generation
-    import os, requests
 
     key = os.environ.get("EIA_API_KEY", "")
     if not key:
@@ -1103,7 +1119,10 @@ def ingest_eia_generator_capacity():
     """
     EIA-860 annual installed capacity by state + technology (#11).
     """
-    import os, requests
+    import os
+
+    import requests
+
     from ingest.writer import upsert_generator_capacity
 
     key = os.environ.get("EIA_API_KEY", "")
@@ -1152,7 +1171,10 @@ def ingest_eia_retail_prices():
     EIA-861 monthly retail electricity prices + sales by state + sector (#12).
     Sectors: RES, COM, IND, ALL.
     """
-    import os, requests
+    import os
+
+    import requests
+
     from ingest.writer import upsert_retail_prices
 
     key = os.environ.get("EIA_API_KEY", "")
@@ -1203,8 +1225,8 @@ def ingest_eia_interchange():
     EIA hourly net interchange between major US BAs (#20).
     Covers: CAISO, ERCOT, PJM, MISO, NYISO, ISONE, SPP, BPAT.
     """
-    from iso_data import eia
     from ingest.writer import upsert_interchange
+    from iso_data import eia
 
     _RESPONDENTS: list[tuple[str, str]] = [
         ("CISO", "CAISO"), ("ERCO", "ERCOT"), ("PJM", "PJM"),
@@ -1237,8 +1259,8 @@ def ingest_eia_interchange():
 
 def ingest_bpa_balancesheet():
     """BPA 5-min wind, hydro, thermal, load from public balance sheet."""
-    from iso_data import bpa
     from ingest.writer import upsert_bpa_balancesheet
+    from iso_data import bpa
     df = bpa.get_balancesheet()
     if df.empty:
         return
@@ -1253,8 +1275,8 @@ def ingest_bpa_balancesheet():
 
 def ingest_grid_temperatures():
     """Hourly temperature at representative grid-hub cities via Open-Meteo."""
-    from iso_data import weather
     from ingest.writer import upsert_grid_temperature
+    from iso_data import weather
     rows = weather.get_hourly_temperatures(hours=24)
     n = upsert_grid_temperature(rows)
     log.info("Grid temperatures: %d rows", n)
@@ -1266,9 +1288,10 @@ def ingest_grid_temperatures():
 
 def ingest_miso_binding_constraints():
     """MISO real-time binding constraints from public API."""
-    from iso_data import miso
-    from ingest.writer import cursor
     import psycopg2.extras
+
+    from ingest.writer import cursor
+    from iso_data import miso
 
     df = miso.get_binding_constraints_realtime()
     if df.empty:
@@ -1322,8 +1345,8 @@ _PJM_HUBS: list[tuple[str, str]] = [
 
 def ingest_pjm_lmp_rt():
     """PJM RT 5-min LMP for major trading hubs via Dataminer API."""
-    from iso_data import pjm
     from ingest.writer import upsert_lmp
+    from iso_data import pjm
     today = date.today()
     rows: list[dict] = []
     for pnode_id, hub_name in _PJM_HUBS:
@@ -1359,8 +1382,8 @@ def ingest_pjm_lmp_rt():
 
 def ingest_pjm_lmp_da():
     """PJM DA hourly LMP for major trading hubs."""
-    from iso_data import pjm
     from ingest.writer import upsert_lmp
+    from iso_data import pjm
     today = date.today()
     rows: list[dict] = []
     for pnode_id, hub_name in _PJM_HUBS:
@@ -1450,8 +1473,8 @@ def _caiso_oasis_to_lmp_rows(
 
 def ingest_caiso_lmp_rt():
     """CAISO RT 5-min LMP for SP15, NP15, ZP26 via OASIS."""
-    from iso_data import caiso
     from ingest.writer import upsert_lmp
+    from iso_data import caiso
     today = date.today()
     all_rows: list[dict] = []
     for node_id, node_name in _CAISO_PRICE_AREAS:
@@ -1466,8 +1489,8 @@ def ingest_caiso_lmp_rt():
 
 def ingest_caiso_lmp_da():
     """CAISO DA hourly LMP for SP15, NP15, ZP26 via OASIS."""
-    from iso_data import caiso
     from ingest.writer import upsert_lmp
+    from iso_data import caiso
     today = date.today()
     all_rows: list[dict] = []
     for node_id, node_name in _CAISO_PRICE_AREAS:

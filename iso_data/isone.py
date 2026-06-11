@@ -26,12 +26,13 @@ EIA fuel-type data endpoint:
 from __future__ import annotations
 
 import io
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 import pandas as pd
 
-from . import _http, eia as _eia
+from . import _http
+from . import eia as _eia
 
 _ISONE_RESPONDENT = "ISNE"
 

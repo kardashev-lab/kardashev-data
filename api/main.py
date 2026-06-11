@@ -37,13 +37,25 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from api.rate_limit import RateLimitMiddleware, requests_per_minute
 from api.routes import (
-    bpa, carbon, constraints, curtailment, eia_static, fuel_mix, generation,
-    interchange, isos, lmp, load, nat_gas, queue, weather,
+    bpa,
+    carbon,
+    constraints,
+    curtailment,
+    eia_static,
+    fuel_mix,
+    generation,
+    interchange,
+    isos,
+    lmp,
+    load,
+    nat_gas,
+    queue,
+    weather,
 )
 
 

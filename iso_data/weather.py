@@ -11,10 +11,7 @@ Usage:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
-from typing import Any
-
-import pandas as pd
+from datetime import datetime, timezone
 
 from . import _http
 

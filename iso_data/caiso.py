@@ -10,7 +10,6 @@ Sources (no auth required):
 """
 from __future__ import annotations
 
-import io
 import re
 from datetime import date, timedelta
 
@@ -187,7 +186,8 @@ def _oasis_query(queryname: str, start: date, end: date, extra: dict | None = No
         **(extra or {}),
     }
     r = _http.get(_OASIS_BASE, params=params)
-    import zipfile, io as _io
+    import io as _io
+    import zipfile
     with zipfile.ZipFile(_io.BytesIO(r.content)) as zf:
         csv_names = [n for n in zf.namelist() if n.endswith(".csv")]
         if not csv_names:

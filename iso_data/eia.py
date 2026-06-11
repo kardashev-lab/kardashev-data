@@ -106,7 +106,6 @@ def get_monthly_generation(months: int = 12) -> list[dict]:
     Aggregated from EIA-923. Returns newest `months` of data.
     """
     now = datetime.now(timezone.utc)
-    start_month = (now.year, now.month)
     # EIA period format: "YYYY-MM"
     start_y = now.year - (months // 12 + 1)
     params = {

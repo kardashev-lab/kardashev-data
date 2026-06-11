@@ -71,6 +71,7 @@ def get_realtime_total_mw() -> dict | None:
     Source: /api/FuelMix, updated every ~5 minutes.
     """
     import datetime as _dt
+
     import pytz as _pytz
     data = _http.get(f"{_PUBLIC_API}/FuelMix").json()
     total_mw = data.get("TotalMW")
