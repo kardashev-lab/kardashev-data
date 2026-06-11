@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir ".[api,ingest]"
 
 ENV PYTHONUNBUFFERED=1
 
-# Default: API service (migration runs inside FastAPI lifespan).
+# Default: API service (run.py migrates, then serves uvicorn).
 # Override start command for ingest service in Railway dashboard:
-#   ingest: python -m db.migrate && python -m ingest.scheduler
+#   ingest: python /app/start_ingest.py
 CMD ["python", "/app/run.py"]

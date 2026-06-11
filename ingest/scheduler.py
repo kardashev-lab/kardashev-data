@@ -367,6 +367,7 @@ if __name__ == "__main__":
         days_arg = int(sys.argv[3]) if len(sys.argv) > 3 else 90
         backfill(iso_arg, days_arg)
     else:
+        _require_database_url()
         try:
             start()
         except Exception as exc:

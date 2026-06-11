@@ -38,9 +38,20 @@ def session(extra_headers: dict[str, str] | None = None) -> requests.Session:
     return s
 
 
+# Shared session for the module-level helpers — reuses connections across calls
+# instead of paying TLS handshake cost on every request.
+_shared_session: requests.Session | None = None
+
+
+def _get_shared_session() -> requests.Session:
+    global _shared_session
+    if _shared_session is None:
+        _shared_session = session()
+    return _shared_session
+
+
 def get(url: str, params: dict | None = None, **kwargs: Any) -> requests.Response:
-    s = session()
-    r = s.get(url, params=params, timeout=60, **kwargs)
+    r = _get_shared_session().get(url, params=params, timeout=60, **kwargs)
     r.raise_for_status()
     return r
 
@@ -62,7 +73,6 @@ def get_zip_csv(url: str, params: dict | None = None, filename_hint: str = "") -
 
 
 def post_json(url: str, data: dict, **kwargs: Any) -> Any:
-    s = session()
-    r = s.post(url, data=data, timeout=60, **kwargs)
+    r = _get_shared_session().post(url, data=data, timeout=60, **kwargs)
     r.raise_for_status()
     return r.json()

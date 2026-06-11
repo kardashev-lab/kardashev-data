@@ -37,6 +37,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.rate_limit import RateLimitMiddleware, requests_per_minute
@@ -46,35 +47,9 @@ from api.routes import (
 )
 
 
+# Schema migration is handled at process start (run.py / db.migrate), not here.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import threading, logging
-    def _migrate():
-        try:
-            import psycopg2, time, os
-            from pathlib import Path
-            dsn = os.environ.get("DATABASE_URL", "")
-            if not dsn:
-                return
-            # /app/db/schema.sql always exists after COPY . . in Docker
-            schema_path = Path("/app/db/schema.sql")
-            if not schema_path.exists():
-                schema_path = Path(__file__).parent.parent / "db" / "schema.sql"
-            schema = schema_path.read_text()
-            for attempt in range(10):
-                try:
-                    conn = psycopg2.connect(dsn)
-                    with conn:
-                        with conn.cursor() as cur:
-                            cur.execute(schema)
-                    conn.close()
-                    logging.getLogger("migrate").info("Migration complete")
-                    return
-                except psycopg2.OperationalError:
-                    time.sleep(3)
-        except Exception as exc:
-            logging.getLogger("migrate").error("Migration error: %s", exc)
-    threading.Thread(target=_migrate, daemon=True).start()
     yield
     try:
         from api.db import get_engine
@@ -129,4 +104,10 @@ app.include_router(isos.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    from api.db import fetch_one
+
+    try:
+        await fetch_one("SELECT 1")
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "degraded", "db": "unreachable"})
+    return {"status": "ok", "db": "ok"}

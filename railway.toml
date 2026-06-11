@@ -7,11 +7,11 @@ dockerfilePath = "Dockerfile"
 # in the Railway dashboard. Create two services from this repo:
 #
 #   Service 1 — "api"
-#     Start command: uvicorn api.main:app --host 0.0.0.0 --port $PORT
-#     Health check:  GET /health
+#     Start command: python /app/run.py        (migrates schema, then uvicorn)
+#     Health check:  GET /health               (verifies DB connectivity)
 #
 #   Service 2 — "ingest"
-#     Start command: python -m ingest.scheduler
+#     Start command: python /app/start_ingest.py   (migrates schema, then schedules)
 #     Health check:  (none — long-running daemon)
 #
 # Both services share the same Dockerfile.
