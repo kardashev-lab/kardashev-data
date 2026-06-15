@@ -29,6 +29,30 @@ Quick-start:
     df = pjm.get_fuel_mix(date(2025, 6, 1))
 """
 
-from . import _http, caiso, eia, ercot, isone, miso, nyiso, pjm, spp
+from . import (
+    _http,
+    caiso,
+    eia,
+    eia_930,
+    eia_commodities,
+    ercot,
+    ercot_lmp,
+    epa,
+    isone,
+    isone_api,
+    miso,
+    miso_lmp,
+    nrc,
+    nrel,
+    nyiso,
+    pjm,
+    rggi,
+    spp,
+    usbr,
+)
 
-__all__ = ["caiso", "eia", "ercot", "isone", "miso", "nyiso", "pjm", "spp", "_http"]
+__all__ = [
+    "caiso", "eia", "eia_930", "eia_commodities", "ercot", "ercot_lmp", "epa",
+    "isone", "isone_api", "miso", "miso_lmp", "nrc", "nrel", "nyiso", "pjm",
+    "rggi", "spp", "usbr", "_http",
+]

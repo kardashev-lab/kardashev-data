@@ -30,6 +30,21 @@ Endpoints:
     GET  /interconnection-queue Active queue with filters
     GET  /isos              ISO catalog with dataset coverage
     GET  /health            Uptime check
+    GET  /nuclear           NRC daily reactor status (unit, date range)
+    GET  /nuclear/summary   Fleet-wide reactor summary
+    GET  /emissions         EPA CAMPD hourly plant emissions (state, facility, date range)
+    GET  /emissions/summary State-level emissions totals
+    GET  /carbon-markets    RGGI + CA-WCI allowance auction results
+    GET  /carbon-markets/latest Latest clearing price per program
+    GET  /hydro/reservoirs  USBR reservoir storage levels (Western US)
+    GET  /hydro/reservoirs/latest  Latest reading per reservoir
+    GET  /hydro/streamflow  USGS streamflow at major river gauges
+    GET  /commodities/coal  EIA monthly coal prices by rank
+    GET  /commodities/petroleum EIA daily spot prices (WTI, Brent, RBOB, heating oil)
+    GET  /commodities/power-burn EIA monthly gas consumed for power
+    GET  /forecasts/steo    EIA Short-Term Energy Outlook 2-year monthly forecasts
+    GET  /solar/irradiance  NREL NSRDB hourly GHI/DNI/DHI for 10 grid locations
+    GET  /solar/irradiance/latest Latest irradiance per location
 """
 from __future__ import annotations
 
@@ -44,17 +59,23 @@ from api.rate_limit import RateLimitMiddleware, requests_per_minute
 from api.routes import (
     bpa,
     carbon,
+    carbon_markets,
+    commodities,
     constraints,
     curtailment,
     eia_static,
+    emissions,
     fuel_mix,
     generation,
+    hydro,
     interchange,
     isos,
     lmp,
     load,
     nat_gas,
+    nuclear,
     queue,
+    solar,
     weather,
 )
 
@@ -112,6 +133,13 @@ app.include_router(eia_static.router)
 app.include_router(interchange.router)
 app.include_router(queue.router)
 app.include_router(isos.router)
+# New datasets
+app.include_router(nuclear.router)
+app.include_router(emissions.router)
+app.include_router(carbon_markets.router)
+app.include_router(hydro.router)
+app.include_router(commodities.router)
+app.include_router(solar.router)
 
 
 @app.get("/health")

@@ -1495,3 +1495,244 @@ def ingest_caiso_lmp_da():
             log.warning("CAISO DA LMP %s: %s", node_name, exc)
     n = upsert_lmp(all_rows)
     log.info("CAISO DA LMP: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# EIA-930 Non-ISO balancing authority fuel mix
+# ---------------------------------------------------------------------------
+
+def ingest_eia_fuel_mix_all():
+    """Hourly fuel-type generation for all non-ISO balancing authorities via EIA-930."""
+    from ingest.writer import upsert_fuel_mix
+    from iso_data import eia_930
+    rows = eia_930.get_fuel_mix_all_bas(hours=25)
+    n = upsert_fuel_mix(rows)
+    log.info("EIA-930 non-ISO BA fuel mix: %d rows across all BAs", n)
+
+
+# ---------------------------------------------------------------------------
+# ISONE LMP (REST API replacement)
+# ---------------------------------------------------------------------------
+
+def ingest_isone_lmp_rt():
+    """ISONE RT 5-min LMP via ISO-NE REST API."""
+    from ingest.writer import upsert_lmp
+    from iso_data import isone_api
+    try:
+        rows = isone_api.get_rt_lmp()
+        n = upsert_lmp(rows)
+        log.info("ISONE RT LMP: %d rows", n)
+    except Exception as exc:
+        log.warning("ISONE RT LMP skipped (check ISONE_USERNAME/PASSWORD): %s", exc)
+
+
+def ingest_isone_lmp_da(target: date | None = None):
+    """ISONE DA hourly LMP for all hub zones via ISO-NE REST API."""
+    from ingest.writer import upsert_lmp
+    from iso_data import isone_api
+    target = target or date.today()
+    try:
+        rows = isone_api.get_da_lmp(target)
+        n = upsert_lmp(rows)
+        log.info("ISONE DA LMP %s: %d rows", target, n)
+    except Exception as exc:
+        log.warning("ISONE DA LMP skipped (check ISONE_USERNAME/PASSWORD): %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# MISO LMP
+# ---------------------------------------------------------------------------
+
+def ingest_miso_lmp_rt():
+    """MISO RT LMP for hub nodes."""
+    from ingest.writer import upsert_lmp
+    from iso_data import miso_lmp
+    rows = miso_lmp.get_rt_lmp()
+    n = upsert_lmp(rows)
+    log.info("MISO RT LMP: %d rows", n)
+
+
+def ingest_miso_lmp_da(target: date | None = None):
+    """MISO DA ex-ante LMP for hub nodes."""
+    from ingest.writer import upsert_lmp
+    from iso_data import miso_lmp
+    target = target or date.today()
+    rows = miso_lmp.get_da_lmp(target)
+    n = upsert_lmp(rows)
+    log.info("MISO DA LMP %s: %d rows", target, n)
+
+
+# ---------------------------------------------------------------------------
+# ERCOT LMP (public data portal)
+# ---------------------------------------------------------------------------
+
+def ingest_ercot_lmp_rt():
+    """ERCOT SCED 15-min settlement point prices for hub nodes."""
+    from ingest.writer import upsert_lmp
+    from iso_data import ercot_lmp
+    rows = ercot_lmp.get_rt_lmp()
+    n = upsert_lmp(rows)
+    log.info("ERCOT RT LMP: %d rows", n)
+
+
+def ingest_ercot_lmp_da(target: date | None = None):
+    """ERCOT DAM settlement point prices for hub nodes."""
+    from ingest.writer import upsert_lmp
+    from iso_data import ercot_lmp
+    rows = ercot_lmp.get_da_lmp(target)
+    n = upsert_lmp(rows)
+    log.info("ERCOT DA LMP: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# NRC daily reactor status
+# ---------------------------------------------------------------------------
+
+def ingest_nrc_reactor_status():
+    """NRC rolling 365-day power reactor status (daily % capacity)."""
+    from ingest.writer import upsert_reactor_status
+    from iso_data import nrc
+    rows = nrc.get_reactor_status()
+    n = upsert_reactor_status(rows)
+    log.info("NRC reactor status: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# EPA CAMPD emissions
+# ---------------------------------------------------------------------------
+
+def ingest_epa_campd_emissions(days: int | None = None):
+    """
+    EPA CAMPD hourly measured emissions per generator.
+
+    On first call (days=30) backfills the last 30 days.
+    Default (days=None) fetches yesterday only.
+    """
+    from ingest.writer import upsert_plant_emissions
+    from iso_data import epa
+    if days is not None:
+        rows = epa.get_recent_emissions(days=days)
+        log.info("EPA CAMPD backfill (%d days): fetching...", days)
+    else:
+        rows = epa.get_daily_emissions()
+    n = upsert_plant_emissions(rows)
+    log.info("EPA CAMPD emissions: %d rows", n)
+
+
+def ingest_epa_campd_backfill():
+    """One-time 30-day backfill on startup."""
+    ingest_epa_campd_emissions(days=30)
+
+
+# ---------------------------------------------------------------------------
+# RGGI + CA ARB carbon allowances
+# ---------------------------------------------------------------------------
+
+def ingest_rggi_auction_results():
+    """RGGI CO2 allowance auction results (quarterly, all history)."""
+    from ingest.writer import upsert_carbon_allowances
+    from iso_data import rggi
+    rows = rggi.get_rggi_auctions()
+    n = upsert_carbon_allowances(rows)
+    log.info("RGGI auction results: %d rows", n)
+
+
+def ingest_ca_arb_auction_results():
+    """CA ARB cap-and-trade auction results (quarterly, most recent xlsx)."""
+    from ingest.writer import upsert_carbon_allowances
+    from iso_data import rggi
+    try:
+        rows = rggi.get_ca_arb_auctions()
+        n = upsert_carbon_allowances(rows)
+        log.info("CA ARB auction results: %d rows", n)
+    except Exception as exc:
+        log.warning("CA ARB auctions skipped: %s", exc)
+
+
+def ingest_carbon_allowances():
+    """Ingest both RGGI and CA ARB auction results."""
+    ingest_rggi_auction_results()
+    ingest_ca_arb_auction_results()
+
+
+# ---------------------------------------------------------------------------
+# USBR reservoirs + USGS streamflow
+# ---------------------------------------------------------------------------
+
+def ingest_usbr_reservoirs():
+    """USBR RISE daily reservoir storage for major Western US reservoirs."""
+    from ingest.writer import upsert_reservoir_storage
+    from iso_data import usbr
+    rows = usbr.get_reservoir_storage()
+    n = upsert_reservoir_storage(rows)
+    log.info("USBR reservoirs: %d rows", n)
+
+
+def ingest_usgs_streamflow():
+    """USGS instantaneous streamflow at Colorado River + Sacramento River gauges."""
+    from ingest.writer import upsert_streamflow
+    from iso_data import usbr
+    rows = usbr.get_streamflow()
+    n = upsert_streamflow(rows)
+    log.info("USGS streamflow: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# EIA commodity prices
+# ---------------------------------------------------------------------------
+
+def ingest_eia_power_burn():
+    """EIA monthly natural gas consumed for electric power generation."""
+    from ingest.writer import upsert_power_burn
+    from iso_data import eia_commodities
+    rows = eia_commodities.get_power_burn(months=12)
+    n = upsert_power_burn(rows)
+    log.info("EIA power burn: %d rows", n)
+
+
+def ingest_eia_coal_prices():
+    """EIA monthly coal prices by rank."""
+    from ingest.writer import upsert_coal_prices
+    from iso_data import eia_commodities
+    rows = eia_commodities.get_coal_prices(months=24)
+    n = upsert_coal_prices(rows)
+    log.info("EIA coal prices: %d rows", n)
+
+
+def ingest_eia_petroleum_prices():
+    """EIA daily spot prices for WTI, Brent, RBOB, heating oil."""
+    from ingest.writer import upsert_petroleum_prices
+    from iso_data import eia_commodities
+    rows = eia_commodities.get_petroleum_prices(days=90)
+    n = upsert_petroleum_prices(rows)
+    log.info("EIA petroleum prices: %d rows", n)
+
+
+def ingest_eia_steo():
+    """EIA Short-Term Energy Outlook monthly 2-year forecasts."""
+    from ingest.writer import upsert_steo_forecasts
+    from iso_data import eia_commodities
+    rows = eia_commodities.get_steo_forecasts()
+    n = upsert_steo_forecasts(rows)
+    log.info("EIA STEO forecasts: %d rows", n)
+
+
+def ingest_eia_commodities_all():
+    """Run all EIA commodity price ingest jobs."""
+    ingest_eia_power_burn()
+    ingest_eia_coal_prices()
+    ingest_eia_petroleum_prices()
+    ingest_eia_steo()
+
+
+# ---------------------------------------------------------------------------
+# NREL NSRDB solar irradiance
+# ---------------------------------------------------------------------------
+
+def ingest_nrel_solar_irradiance():
+    """NREL NSRDB hourly GHI/DNI/DHI for 10 representative grid locations."""
+    from ingest.writer import upsert_solar_irradiance
+    from iso_data import nrel
+    rows = nrel.get_irradiance_all_locations()
+    n = upsert_solar_irradiance(rows)
+    log.info("NREL solar irradiance: %d rows", n)

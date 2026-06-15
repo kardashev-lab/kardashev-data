@@ -282,3 +282,139 @@ CREATE TABLE IF NOT EXISTS interchange (
 );
 CREATE INDEX IF NOT EXISTS ix_ts_brin ON interchange USING BRIN (ts);
 CREATE INDEX IF NOT EXISTS ix_ba      ON interchange (from_ba, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- NRC daily reactor status
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS nuclear_reactor_status (
+    date        DATE             NOT NULL,
+    unit        TEXT             NOT NULL,
+    power_pct   DOUBLE PRECISION,
+    CONSTRAINT  nrc_pk PRIMARY KEY (date, unit)
+);
+CREATE INDEX IF NOT EXISTS nrc_date ON nuclear_reactor_status (date DESC);
+CREATE INDEX IF NOT EXISTS nrc_unit ON nuclear_reactor_status (unit, date DESC);
+
+-- ---------------------------------------------------------------------------
+-- EPA CAMPD hourly emissions (per generator)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS plant_emissions (
+    date               DATE             NOT NULL,
+    hour               SMALLINT         NOT NULL,
+    facility_id        TEXT             NOT NULL,
+    facility_name      TEXT,
+    unit_id            TEXT             NOT NULL,
+    state              TEXT,
+    gross_load_mw      DOUBLE PRECISION,
+    so2_lbs            DOUBLE PRECISION,
+    nox_lbs            DOUBLE PRECISION,
+    co2_tons           DOUBLE PRECISION,
+    heat_input_mmbtu   DOUBLE PRECISION,
+    CONSTRAINT  emissions_pk PRIMARY KEY (date, hour, facility_id, unit_id)
+);
+CREATE INDEX IF NOT EXISTS emissions_date  ON plant_emissions (date DESC);
+CREATE INDEX IF NOT EXISTS emissions_state ON plant_emissions (state, date DESC);
+CREATE INDEX IF NOT EXISTS emissions_fac   ON plant_emissions (facility_id, date DESC);
+
+-- ---------------------------------------------------------------------------
+-- Carbon allowance auction results (RGGI + CA-WCI)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS carbon_allowances (
+    auction_date          DATE             NOT NULL,
+    program               TEXT             NOT NULL,   -- 'RGGI' | 'CA-WCI'
+    settlement_price_usd  DOUBLE PRECISION,
+    allowances_offered    INTEGER,
+    allowances_sold       INTEGER,
+    CONSTRAINT  ca_pk PRIMARY KEY (auction_date, program)
+);
+CREATE INDEX IF NOT EXISTS ca_program ON carbon_allowances (program, auction_date DESC);
+
+-- ---------------------------------------------------------------------------
+-- USBR reservoir storage (Western US hydro)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reservoir_storage (
+    ts           TIMESTAMPTZ      NOT NULL,
+    reservoir    TEXT             NOT NULL,
+    storage_af   DOUBLE PRECISION,
+    capacity_af  DOUBLE PRECISION,
+    pct_full     DOUBLE PRECISION,
+    CONSTRAINT   res_pk PRIMARY KEY (ts, reservoir)
+);
+CREATE INDEX IF NOT EXISTS res_ts_brin    ON reservoir_storage USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS res_reservoir  ON reservoir_storage (reservoir, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- USGS streamflow gauge readings
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS streamflow (
+    ts         TIMESTAMPTZ      NOT NULL,
+    site_id    TEXT             NOT NULL,
+    site_name  TEXT,
+    flow_cfs   DOUBLE PRECISION,
+    CONSTRAINT sf_pk PRIMARY KEY (ts, site_id)
+);
+CREATE INDEX IF NOT EXISTS sf_ts_brin ON streamflow USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS sf_site    ON streamflow (site_id, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- EIA power burn (gas consumed for electric generation)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS power_burn (
+    period   TEXT             NOT NULL,   -- "YYYY-MM"
+    state    TEXT             NOT NULL,
+    value    DOUBLE PRECISION,            -- MMcf
+    units    TEXT,
+    CONSTRAINT pb_pk PRIMARY KEY (period, state)
+);
+CREATE INDEX IF NOT EXISTS pb_period ON power_burn (period DESC, state);
+
+-- ---------------------------------------------------------------------------
+-- EIA coal prices
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS coal_prices (
+    period                   TEXT             NOT NULL,
+    rank                     TEXT             NOT NULL,
+    price_usd_per_short_ton  DOUBLE PRECISION,
+    CONSTRAINT  cp_pk PRIMARY KEY (period, rank)
+);
+CREATE INDEX IF NOT EXISTS cp_period ON coal_prices (period DESC);
+
+-- ---------------------------------------------------------------------------
+-- EIA petroleum spot prices
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS petroleum_prices (
+    ts          TIMESTAMPTZ      NOT NULL,
+    product     TEXT             NOT NULL,
+    price_usd   DOUBLE PRECISION,
+    CONSTRAINT  pp_pk PRIMARY KEY (ts, product)
+);
+CREATE INDEX IF NOT EXISTS pp_ts_brin ON petroleum_prices USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS pp_product ON petroleum_prices (product, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- EIA STEO (Short-Term Energy Outlook) monthly forecasts
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS steo_forecasts (
+    period     TEXT             NOT NULL,   -- "YYYY-MM"
+    series_id  TEXT             NOT NULL,
+    value      DOUBLE PRECISION,
+    units      TEXT,
+    CONSTRAINT steo_pk PRIMARY KEY (period, series_id)
+);
+CREATE INDEX IF NOT EXISTS steo_period ON steo_forecasts (period DESC);
+
+-- ---------------------------------------------------------------------------
+-- NREL NSRDB solar irradiance (hourly, 10 grid locations)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS solar_irradiance (
+    ts        TIMESTAMPTZ      NOT NULL,
+    location  TEXT             NOT NULL,
+    lat       DOUBLE PRECISION,
+    lon       DOUBLE PRECISION,
+    ghi       DOUBLE PRECISION,
+    dni       DOUBLE PRECISION,
+    dhi       DOUBLE PRECISION,
+    CONSTRAINT  si_pk PRIMARY KEY (ts, location)
+);
+CREATE INDEX IF NOT EXISTS si_ts_brin  ON solar_irradiance USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS si_location ON solar_irradiance (location, ts DESC);

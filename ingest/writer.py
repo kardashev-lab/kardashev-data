@@ -368,3 +368,249 @@ def replace_interconnection_queue(iso: str, rows: list[dict]) -> int:
             ],
         )
     return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# NRC daily reactor status
+# ---------------------------------------------------------------------------
+
+def upsert_reactor_status(rows: list[dict]) -> int:
+    """rows: [{date, unit, power_pct}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO nuclear_reactor_status (date, unit, power_pct)
+            VALUES %s
+            ON CONFLICT (date, unit) DO UPDATE SET power_pct = EXCLUDED.power_pct
+            """,
+            [(r["date"], r["unit"], r.get("power_pct")) for r in rows],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# EPA CAMPD plant emissions
+# ---------------------------------------------------------------------------
+
+def upsert_plant_emissions(rows: list[dict]) -> int:
+    """rows: [{date, hour, facility_id, facility_name, unit_id, state,
+               gross_load_mw, so2_lbs, nox_lbs, co2_tons, heat_input_mmbtu}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO plant_emissions
+              (date, hour, facility_id, facility_name, unit_id, state,
+               gross_load_mw, so2_lbs, nox_lbs, co2_tons, heat_input_mmbtu)
+            VALUES %s
+            ON CONFLICT (date, hour, facility_id, unit_id) DO UPDATE
+              SET facility_name    = EXCLUDED.facility_name,
+                  state            = EXCLUDED.state,
+                  gross_load_mw    = EXCLUDED.gross_load_mw,
+                  so2_lbs          = EXCLUDED.so2_lbs,
+                  nox_lbs          = EXCLUDED.nox_lbs,
+                  co2_tons         = EXCLUDED.co2_tons,
+                  heat_input_mmbtu = EXCLUDED.heat_input_mmbtu
+            """,
+            [
+                (r["date"], r["hour"], r["facility_id"], r.get("facility_name"),
+                 r["unit_id"], r.get("state"), r.get("gross_load_mw"),
+                 r.get("so2_lbs"), r.get("nox_lbs"), r.get("co2_tons"),
+                 r.get("heat_input_mmbtu"))
+                for r in rows
+            ],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# Carbon allowances (RGGI + CA-WCI)
+# ---------------------------------------------------------------------------
+
+def upsert_carbon_allowances(rows: list[dict]) -> int:
+    """rows: [{auction_date, program, settlement_price_usd, allowances_offered, allowances_sold}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO carbon_allowances
+              (auction_date, program, settlement_price_usd, allowances_offered, allowances_sold)
+            VALUES %s
+            ON CONFLICT (auction_date, program) DO UPDATE
+              SET settlement_price_usd = EXCLUDED.settlement_price_usd,
+                  allowances_offered   = EXCLUDED.allowances_offered,
+                  allowances_sold      = EXCLUDED.allowances_sold
+            """,
+            [
+                (r["auction_date"], r["program"], r.get("settlement_price_usd"),
+                 r.get("allowances_offered"), r.get("allowances_sold"))
+                for r in rows
+            ],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# USBR reservoir storage
+# ---------------------------------------------------------------------------
+
+def upsert_reservoir_storage(rows: list[dict]) -> int:
+    """rows: [{ts, reservoir, storage_af, capacity_af, pct_full}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO reservoir_storage (ts, reservoir, storage_af, capacity_af, pct_full)
+            VALUES %s
+            ON CONFLICT (ts, reservoir) DO UPDATE
+              SET storage_af  = EXCLUDED.storage_af,
+                  capacity_af = EXCLUDED.capacity_af,
+                  pct_full    = EXCLUDED.pct_full
+            """,
+            [(r["ts"], r["reservoir"], r.get("storage_af"), r.get("capacity_af"), r.get("pct_full"))
+             for r in rows],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# USGS streamflow
+# ---------------------------------------------------------------------------
+
+def upsert_streamflow(rows: list[dict]) -> int:
+    """rows: [{ts, site_id, site_name, flow_cfs}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO streamflow (ts, site_id, site_name, flow_cfs)
+            VALUES %s
+            ON CONFLICT (ts, site_id) DO UPDATE
+              SET site_name = EXCLUDED.site_name, flow_cfs = EXCLUDED.flow_cfs
+            """,
+            [(r["ts"], r["site_id"], r.get("site_name"), r.get("flow_cfs")) for r in rows],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# EIA power burn
+# ---------------------------------------------------------------------------
+
+def upsert_power_burn(rows: list[dict]) -> int:
+    """rows: [{period, state, value, units}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO power_burn (period, state, value, units)
+            VALUES %s
+            ON CONFLICT (period, state) DO UPDATE
+              SET value = EXCLUDED.value, units = EXCLUDED.units
+            """,
+            [(r["period"], r["state"], r.get("value"), r.get("units")) for r in rows],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# EIA coal prices
+# ---------------------------------------------------------------------------
+
+def upsert_coal_prices(rows: list[dict]) -> int:
+    """rows: [{period, rank, price_usd_per_short_ton}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO coal_prices (period, rank, price_usd_per_short_ton)
+            VALUES %s
+            ON CONFLICT (period, rank) DO UPDATE
+              SET price_usd_per_short_ton = EXCLUDED.price_usd_per_short_ton
+            """,
+            [(r["period"], r["rank"], r.get("price_usd_per_short_ton")) for r in rows],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# EIA petroleum spot prices
+# ---------------------------------------------------------------------------
+
+def upsert_petroleum_prices(rows: list[dict]) -> int:
+    """rows: [{ts, product, price_usd}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO petroleum_prices (ts, product, price_usd)
+            VALUES %s
+            ON CONFLICT (ts, product) DO UPDATE SET price_usd = EXCLUDED.price_usd
+            """,
+            [(r["ts"], r["product"], r.get("price_usd")) for r in rows],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# EIA STEO forecasts
+# ---------------------------------------------------------------------------
+
+def upsert_steo_forecasts(rows: list[dict]) -> int:
+    """rows: [{period, series_id, value, units}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO steo_forecasts (period, series_id, value, units)
+            VALUES %s
+            ON CONFLICT (period, series_id) DO UPDATE
+              SET value = EXCLUDED.value, units = EXCLUDED.units
+            """,
+            [(r["period"], r["series_id"], r.get("value"), r.get("units")) for r in rows],
+        )
+    return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# NREL NSRDB solar irradiance
+# ---------------------------------------------------------------------------
+
+def upsert_solar_irradiance(rows: list[dict]) -> int:
+    """rows: [{ts, location, lat, lon, ghi, dni, dhi}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO solar_irradiance (ts, location, lat, lon, ghi, dni, dhi)
+            VALUES %s
+            ON CONFLICT (ts, location) DO UPDATE
+              SET lat = EXCLUDED.lat, lon = EXCLUDED.lon,
+                  ghi = EXCLUDED.ghi, dni = EXCLUDED.dni, dhi = EXCLUDED.dhi
+            """,
+            [(r["ts"], r["location"], r.get("lat"), r.get("lon"),
+              r.get("ghi"), r.get("dni"), r.get("dhi"))
+             for r in rows],
+        )
+    return len(rows)

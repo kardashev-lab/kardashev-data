@@ -96,6 +96,9 @@ def run_curtailment(days: int = CURTAILMENT_LOOKBACK_DAYS):
 def run_lmp_rt():
     from ingest.jobs import (
         ingest_caiso_lmp_rt,
+        ingest_ercot_lmp_rt,
+        ingest_isone_lmp_rt,
+        ingest_miso_lmp_rt,
         ingest_nyiso_lmp_rt,
         ingest_pjm_lmp_rt,
         ingest_spp_lmp_rt,
@@ -104,13 +107,26 @@ def run_lmp_rt():
     _run("spp_lmp_rt",    ingest_spp_lmp_rt)
     _run("pjm_lmp_rt",   ingest_pjm_lmp_rt)
     _run("caiso_lmp_rt", ingest_caiso_lmp_rt)
+    _run("isone_lmp_rt", ingest_isone_lmp_rt)
+    _run("miso_lmp_rt",  ingest_miso_lmp_rt)
+    _run("ercot_lmp_rt", ingest_ercot_lmp_rt)
 
 
 def run_lmp_da():
-    from ingest.jobs import ingest_caiso_lmp_da, ingest_nyiso_lmp_da, ingest_pjm_lmp_da
+    from ingest.jobs import (
+        ingest_caiso_lmp_da,
+        ingest_ercot_lmp_da,
+        ingest_isone_lmp_da,
+        ingest_miso_lmp_da,
+        ingest_nyiso_lmp_da,
+        ingest_pjm_lmp_da,
+    )
     _run("nyiso_lmp_da",  ingest_nyiso_lmp_da)
     _run("pjm_lmp_da",   ingest_pjm_lmp_da)
     _run("caiso_lmp_da", ingest_caiso_lmp_da)
+    _run("isone_lmp_da", ingest_isone_lmp_da)
+    _run("miso_lmp_da",  ingest_miso_lmp_da)
+    _run("ercot_lmp_da", ingest_ercot_lmp_da)
 
 
 def run_wind_solar():
@@ -185,6 +201,49 @@ def run_interchange():
     _run("eia_interchange", ingest_eia_interchange)
 
 
+def run_eia_fuel_mix_all():
+    """EIA-930 hourly fuel mix for all non-ISO balancing authorities."""
+    from ingest.jobs import ingest_eia_fuel_mix_all
+    _run("eia_fuel_mix_all", ingest_eia_fuel_mix_all)
+
+
+def run_nrc_reactor_status():
+    """NRC daily reactor status — run daily at 12:00 UTC."""
+    from ingest.jobs import ingest_nrc_reactor_status
+    _run("nrc_reactor_status", ingest_nrc_reactor_status)
+
+
+def run_epa_campd_emissions():
+    """EPA CAMPD daily emissions — run daily."""
+    from ingest.jobs import ingest_epa_campd_emissions
+    _run("epa_campd_emissions", ingest_epa_campd_emissions)
+
+
+def run_carbon_allowances():
+    """RGGI + CA ARB carbon allowance auction results — run weekly."""
+    from ingest.jobs import ingest_carbon_allowances
+    _run("carbon_allowances", ingest_carbon_allowances)
+
+
+def run_usbr_reservoirs():
+    """USBR reservoir storage + USGS streamflow — run daily."""
+    from ingest.jobs import ingest_usbr_reservoirs, ingest_usgs_streamflow
+    _run("usbr_reservoirs",  ingest_usbr_reservoirs)
+    _run("usgs_streamflow",  ingest_usgs_streamflow)
+
+
+def run_eia_commodities():
+    """EIA commodity prices (coal, petroleum, power burn, STEO) — run weekly."""
+    from ingest.jobs import ingest_eia_commodities_all
+    _run("eia_commodities", ingest_eia_commodities_all)
+
+
+def run_nrel_irradiance():
+    """NREL NSRDB solar irradiance for 10 grid locations — run hourly."""
+    from ingest.jobs import ingest_nrel_solar_irradiance
+    _run("nrel_irradiance", ingest_nrel_solar_irradiance)
+
+
 def run_eia_static():
     """Monthly/annual EIA datasets — run weekly."""
     from ingest.jobs import (
@@ -253,6 +312,11 @@ def start():
     last_curtailment_14_day = -1
     last_queue_day       = -1
     last_static_week     = -1   # ISO week number for EIA monthly/annual data
+    last_nrc_day         = -1
+    last_epa_day         = -1
+    last_usbr_day        = -1
+    last_carbon_week     = -1
+    last_commodities_week = -1
 
     def _startup(name: str, fn) -> None:
         try:
@@ -279,9 +343,16 @@ def start():
     _startup("bpa",              run_bpa)
     _startup("temperatures",     run_temperatures)
     _startup("binding_constraints", run_binding_constraints)
-    _startup("eia_static",       run_eia_static)
-    _startup("interchange",      run_interchange)
-    _startup("curtailment",      run_curtailment)
+    _startup("eia_static",          run_eia_static)
+    _startup("interchange",         run_interchange)
+    _startup("curtailment",         run_curtailment)
+    _startup("eia_fuel_mix_all",    run_eia_fuel_mix_all)
+    _startup("nrc_reactor_status",  run_nrc_reactor_status)
+    _startup("epa_campd_backfill",  lambda: __import__("ingest.jobs", fromlist=["ingest_epa_campd_backfill"]).ingest_epa_campd_backfill())
+    _startup("usbr_reservoirs",     run_usbr_reservoirs)
+    _startup("carbon_allowances",   run_carbon_allowances)
+    _startup("eia_commodities",     run_eia_commodities)
+    _startup("nrel_irradiance",     run_nrel_irradiance)
 
     while True:
         try:
@@ -319,6 +390,8 @@ def start():
                 run_reserve_margins()
                 run_temperatures()
                 run_interchange()
+                run_eia_fuel_mix_all()
+                run_nrel_irradiance()
 
             if hour == 10 and day != last_curtailment_10_day:
                 last_curtailment_10_day = day
@@ -326,6 +399,17 @@ def start():
                 run_curtailment()
                 run_nat_gas()
                 run_gas_storage()
+
+            if hour == 12 and day != last_nrc_day:
+                last_nrc_day = day
+                log.info("tick: NRC reactor status + EPA emissions + USBR reservoirs")
+                run_nrc_reactor_status()
+                run_usbr_reservoirs()
+
+            if hour == 13 and day != last_epa_day:
+                last_epa_day = day
+                log.info("tick: EPA CAMPD daily emissions")
+                run_epa_campd_emissions()
 
             if hour == 14 and day != last_curtailment_14_day:
                 last_curtailment_14_day = day
@@ -342,6 +426,12 @@ def start():
                 last_static_week = week
                 log.info("tick: weekly EIA static data (EIA-923, EIA-860, EIA-861)")
                 run_eia_static()
+
+            if hour == 9 and week != last_carbon_week:
+                last_carbon_week = week
+                log.info("tick: weekly carbon allowances + EIA commodities")
+                run_carbon_allowances()
+                run_eia_commodities()
 
         except Exception as exc:
             log.error("Scheduler tick error (continuing): %s", exc, exc_info=True)
