@@ -25,9 +25,9 @@ _ISO_CATALOG = [
         "iso": "ERCOT",
         "name": "Electric Reliability Council of Texas",
         "region": "Texas",
-        "datasets": ["fuel_mix", "load", "curtailment_estimate"],
-        "curtailment_source": "Estimated: max(0, potential - actual) — dashboard JSON",
-        "refresh_intervals": {"fuel_mix": "15min", "curtailment": "15min"},
+        "datasets": ["fuel_mix", "load"],
+        "curtailment_source": "Not available — requires ERCOT MIS credentials (DUNS-gated)",
+        "refresh_intervals": {"fuel_mix": "15min"},
     },
     {
         "iso": "MISO",

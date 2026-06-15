@@ -45,8 +45,9 @@ CURTAILMENT_LOOKBACK_DAYS = 3
 # ---------------------------------------------------------------------------
 
 def _run(name: str, fn, *args):
+    from ingest.retry import with_retry
     try:
-        fn(*args)
+        with_retry(fn, *args)
     except Exception as exc:
         log.error("%s failed: %s", name, exc)
 

@@ -169,15 +169,9 @@ def ingest_spp_curtailment(target: date):
 
 
 def ingest_ercot_curtailment(target: date):
-    from ingest.writer import upsert_curtailment
-    from iso_data import ercot
-    try:
-        totals = ercot.estimate_curtailment(target)
-        if totals["total_mwh"] > 0:
-            upsert_curtailment(target, "ERCOT", totals["solar_mwh"], totals["wind_mwh"], totals["total_mwh"])
-            log.info("ERCOT curtailment %s: solar=%.1f wind=%.1f MWh", target, totals["solar_mwh"], totals["wind_mwh"])
-    except Exception as exc:
-        log.warning("ERCOT curtailment %s failed: %s", target, exc)
+    # ERCOT real curtailment requires MIS credentials (DUNS-gated).
+    # Public dashboard data is too inaccurate to serve. Not ingested.
+    log.debug("ERCOT curtailment skipped — no public data source available")
 
 
 # ---------------------------------------------------------------------------
