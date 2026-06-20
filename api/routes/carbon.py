@@ -67,7 +67,7 @@ async def get_carbon_intensity(
             date_trunc('hour', ts) AS ts,
             iso,
             SUM(mw * ({_EMISSION_SQL})) / NULLIF(SUM(mw), 0) AS lbs_co2_per_mwh,
-            SUM(mw) AS total_mw
+            SUM(mw) / NULLIF(COUNT(DISTINCT ts), 0) AS total_mw
         FROM fuel_mix
         WHERE iso = :iso
           AND ts >= now() - :hours * interval '1 hour'
@@ -116,10 +116,12 @@ async def get_carbon_intensity_latest(
             SUM(mw * ({_EMISSION_SQL})) / NULLIF(SUM(mw), 0) AS lbs_co2_per_mwh,
             SUM(mw) AS total_mw,
             ROUND(
-                100.0 * SUM(CASE
-                    WHEN lower(fuel_type) LIKE ANY(ARRAY['%wind%','%solar%','%hydro%','%nuclear%','%geotherm%','%other renew%'])
-                    THEN mw ELSE 0 END
-                ) / NULLIF(SUM(mw), 0),
+                CAST(
+                    100.0 * SUM(CASE
+                        WHEN lower(fuel_type) LIKE ANY(ARRAY['%wind%','%solar%','%hydro%','%nuclear%','%geotherm%','%other renew%'])
+                        THEN mw ELSE 0 END
+                    ) / NULLIF(SUM(mw), 0)
+                AS numeric),
             1) AS pct_clean
         FROM snapshot
         GROUP BY iso, ts
