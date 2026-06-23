@@ -1736,3 +1736,24 @@ def ingest_nrel_solar_irradiance():
     rows = nrel.get_irradiance_all_locations()
     n = upsert_solar_irradiance(rows)
     log.info("NREL solar irradiance: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
+# LMP retention
+# ---------------------------------------------------------------------------
+
+def purge_lmp_old_rows(days: int = 14) -> None:
+    """Delete LMP rows older than `days` days to keep volume under control."""
+    import asyncio
+    from api.db import fetch_one
+    result = asyncio.run(fetch_one(
+        """
+        WITH deleted AS (
+            DELETE FROM lmp WHERE ts < now() - :days * interval '1 day' RETURNING 1
+        )
+        SELECT count(*) AS count FROM deleted
+        """,
+        days=days,
+    ))
+    deleted = result.get("count") if result else 0
+    log.info("LMP purge: deleted %s rows older than %d days", deleted, days)

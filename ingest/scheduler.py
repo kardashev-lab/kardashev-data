@@ -17,6 +17,7 @@ Schedule (UTC):
     Every hour   : EIA load (ISONE/PJM/BPAT/TVA/SOCO/FPL/DUK/SRP/PSCO/PACE)
                    + NYISO DA LMP + PJM/ISONE load forecast + PJM reserve margins
                    + grid-area temperatures via Open-Meteo
+    Daily 03:00  : LMP retention purge (delete rows older than 14 days)
     Daily 10:00  : Curtailment backfill (last 3 days) + EIA nat gas prices + EIA gas storage
     Daily 14:00  : Curtailment retry (last 3 days — CAISO often publishes after 10:00 UTC)
     Daily 07:00  : Interconnection queues (NYISO, PJM, ISONE)
@@ -261,6 +262,11 @@ def run_queue():
     _run("nyiso_queue", ingest_nyiso_queue)
 
 
+def run_lmp_purge(days: int = 14):
+    from ingest.jobs import purge_lmp_old_rows
+    _run("lmp_purge", purge_lmp_old_rows, days)
+
+
 # ---------------------------------------------------------------------------
 # Backfill CLI
 # ---------------------------------------------------------------------------
@@ -317,6 +323,7 @@ def start():
     last_usbr_day        = -1
     last_carbon_week     = -1
     last_commodities_week = -1
+    last_lmp_purge_day   = -1
 
     def _startup(name: str, fn) -> None:
         try:
@@ -432,6 +439,11 @@ def start():
                 log.info("tick: weekly carbon allowances + EIA commodities")
                 run_carbon_allowances()
                 run_eia_commodities()
+
+            if hour == 3 and day != last_lmp_purge_day:
+                last_lmp_purge_day = day
+                log.info("tick: LMP retention purge (>14 days)")
+                run_lmp_purge()
 
         except Exception as exc:
             log.error("Scheduler tick error (continuing): %s", exc, exc_info=True)
