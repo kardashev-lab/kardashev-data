@@ -161,8 +161,8 @@ def run_load_forecasts():
 
 
 def run_btm_solar():
-    from ingest.jobs import ingest_nyiso_btm_solar
-    _run("nyiso_btm_solar", ingest_nyiso_btm_solar)
+    # NYISO btmactualforecast URL discontinued as of June 2026 — disabled until new endpoint found
+    pass
 
 
 def run_gas_storage():

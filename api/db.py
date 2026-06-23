@@ -32,14 +32,22 @@ async def conn() -> AsyncIterator[AsyncConnection]:
         yield c
 
 
+def _sanitize(row: dict) -> dict:
+    """Replace float NaN/Inf with None — Python's json.dumps rejects them."""
+    return {
+        k: (None if isinstance(v, float) and not (v == v) else v)
+        for k, v in row.items()
+    }
+
+
 async def fetch(sql: str, **params):
     async with conn() as c:
         result = await c.execute(text(sql), params)
-        return result.mappings().all()
+        return [_sanitize(dict(r)) for r in result.mappings().all()]
 
 
 async def fetch_one(sql: str, **params):
     async with conn() as c:
         result = await c.execute(text(sql), params)
         row = result.mappings().first()
-        return dict(row) if row else None
+        return _sanitize(dict(row)) if row else None
