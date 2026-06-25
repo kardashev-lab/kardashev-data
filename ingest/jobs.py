@@ -82,23 +82,11 @@ def ingest_ercot_fuel_mix():
     df = ercot.get_fuel_mix()
     if df.empty:
         return
-    rows = []
-    # ERCOT dashboard may use "epoch" (Unix ms), "timestamp" (ISO), or "time"/"date" columns
-    epoch_col = next((c for c in df.columns if c.lower() == "epoch"), None)
-    ts_col    = next((c for c in df.columns if "time" in c.lower() or "date" in c.lower()), None)
-    fuel_cols = [c for c in df.columns if c not in (epoch_col, ts_col) and "mw" in c.lower()]
-    for _, row in df.iterrows():
-        # Prefer epoch (ms) → UTC; fall back to string timestamp; fall back to now()
-        if epoch_col and pd.notna(row.get(epoch_col)):
-            ts = datetime.fromtimestamp(float(row[epoch_col]) / 1000, tz=timezone.utc)
-        elif ts_col and pd.notna(row.get(ts_col)):
-            ts = pd.to_datetime(row[ts_col], utc=True)
-        else:
-            ts = datetime.now(timezone.utc)
-        for col in fuel_cols:
-            if pd.notna(row.get(col)):
-                fuel = col.replace("MW", "").replace("_", " ").strip()
-                rows.append({"ts": ts, "iso": "ERCOT", "fuel_type": fuel, "mw": float(row[col])})
+    rows = [
+        {"ts": row["ts"], "iso": "ERCOT", "fuel_type": row["fuel_type"], "mw": row["mw"]}
+        for _, row in df.iterrows()
+        if pd.notna(row["mw"])
+    ]
     n = upsert_fuel_mix(rows)
     log.info("ERCOT fuel mix: %d rows", n)
 
@@ -562,26 +550,27 @@ def ingest_isone_load_forecast():
 # ---------------------------------------------------------------------------
 
 def ingest_spp_fuel_mix():
-    """SPP 5-min generation mix — latest interval."""
+    """SPP 5-min generation mix — rolling ~2h window from marketplace API."""
     from ingest.writer import upsert_fuel_mix
     from iso_data import spp
-    df = spp.get_gen_mix_latest("gen-mix")
+    df = spp.get_gen_mix_latest()
     if df.empty:
         return
+    skip_cols = {"GMT MKT Interval", "BAA", "Load"}
     rows = []
     for r in df.to_dict("records"):
         try:
-            ts = pd.to_datetime(r.get("GMTIntervalEnd", r.get("Interval")), utc=True)
-            for col, val in r.items():
-                if col in ("Interval", "GMTIntervalEnd"):
-                    continue
-                try:
-                    mw = float(val)
-                except (TypeError, ValueError):
-                    continue
-                rows.append({"ts": ts, "iso": "SPP", "fuel_type": col, "mw": mw})
+            ts = pd.to_datetime(r["GMT MKT Interval"], utc=True)
         except Exception:
             continue
+        for col, val in r.items():
+            if col in skip_cols:
+                continue
+            try:
+                mw = float(val)
+            except (TypeError, ValueError):
+                continue
+            rows.append({"ts": ts, "iso": "SPP", "fuel_type": col, "mw": mw})
     n = upsert_fuel_mix(rows)
     log.info("SPP fuel mix: %d rows", n)
 

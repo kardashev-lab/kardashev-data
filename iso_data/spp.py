@@ -88,10 +88,10 @@ def get_gen_mix_rolling365() -> pd.DataFrame:
     return pd.read_csv(io.StringIO(r.text))
 
 
-def get_gen_mix_latest(endpoint: str = "rtbm-lmp-by-location") -> pd.DataFrame:
-    """Latest 5-min generation mix interval."""
-    url = f"{_FILE_BROWSER}/{endpoint}"
-    r = _http.get(url, params={"path": f"/{endpoint}-latestInterval.csv"})
+def get_gen_mix_latest() -> pd.DataFrame:
+    """Latest 5-min generation mix from SPP marketplace (rolling ~2h window)."""
+    url = "https://marketplace.spp.org/chart-api/gen-mix/asFile"
+    r = _http.get(url)
     return pd.read_csv(io.StringIO(r.text))
 
 

@@ -59,10 +59,28 @@ def _dash(endpoint: str, params: dict | None = None) -> dict:
 def get_fuel_mix() -> pd.DataFrame:
     """
     Current live fuel mix snapshot (~5-min resolution).
-    Returns DataFrame with fuel type columns and a timestamp.
+    Returns DataFrame with columns: ts (UTC datetime), fuel_type (str), mw (float).
     """
+    from datetime import datetime
+    import dateutil.parser
+
     data = _dash("fuel-mix")
-    rows = data.get("data", {}).get("fuelMixData", [])
+    nested = data.get("data", {})
+
+    rows = []
+    for _date, timestamps in nested.items():
+        for ts_str, fuels in timestamps.items():
+            try:
+                ts = dateutil.parser.parse(ts_str).astimezone(__import__("datetime").timezone.utc)
+            except Exception:
+                continue
+            for fuel_type, vals in fuels.items():
+                try:
+                    mw = float(vals.get("gen", 0))
+                except (TypeError, ValueError):
+                    continue
+                rows.append({"ts": ts, "fuel_type": fuel_type, "mw": mw})
+
     return pd.DataFrame(rows)
 
 
