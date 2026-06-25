@@ -19,8 +19,9 @@ from . import _http
 
 _SCED_URL = "https://data.ercot.com/api/public-reports/archive/np6-788-er"
 _DAM_URL  = "https://data.ercot.com/api/public-reports/archive/np4-190-er"
+_RT_SPP_URL = "https://www.ercot.com/content/cdr/html/real_time_spp.html"
 
-HUB_NODES = {"HB_NORTH", "HB_SOUTH", "HB_WEST", "HB_HOUSTON"}
+HUB_NODES = {"HB_NORTH", "HB_SOUTH", "HB_WEST", "HB_HOUSTON", "HB_BUSAVG", "HB_HUBAVG", "HB_PAN"}
 
 # Column name variants observed in ERCOT CSVs
 _SPP_COL_CANDIDATES  = ["Settlement Point Price", "SPP", "Spp"]
@@ -129,52 +130,62 @@ def _col(df: pd.DataFrame, candidates: list[str]) -> str | None:
 
 def get_rt_lmp() -> list[dict]:
     """
-    Fetch most recent ERCOT SCED settlement point prices (15-min RT).
+    Fetch most recent ERCOT RT settlement point prices for hub nodes.
 
-    Returns list of dicts compatible with upsert_lmp() filtered to hub nodes.
+    Parses the public CDR HTML report (no auth required). The archive API
+    at data.ercot.com now requires a subscriber account.
+
+    CDR columns: Oper Day, Interval Ending, HB_BUSAVG, HB_HOUSTON,
+                 HB_HUBAVG, HB_NORTH, HB_PAN, HB_SOUTH, HB_WEST, LZ_*
     """
-    df = _fetch_latest_csv(_SCED_URL)
-    if df is None or df.empty:
+    import re
+
+    resp = _http.get(_RT_SPP_URL)
+    html = resp.text
+
+    headers = re.findall(r"<th[^>]*>([^<]+)</th>", html)
+    rows_html = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.DOTALL)
+
+    if not headers or len(rows_html) < 2:
         return []
 
-    df.columns = [c.strip() for c in df.columns]
-    node_col = _col(df, _NODE_COL_CANDIDATES)
-    spp_col  = _col(df, _SPP_COL_CANDIDATES)
+    hub_cols = {i: h for i, h in enumerate(headers) if h.upper() in HUB_NODES}
 
-    if not node_col or not spp_col:
-        return []
-
-    # Filter to hub nodes
-    mask = df[node_col].astype(str).str.upper().isin(HUB_NODES)
-    df = df[mask]
-
-    # Parse timestamp
-    ts_col = _col(df, _TS_COL_CANDIDATES)
-    rows: list[dict] = []
-    for _, row in df.iterrows():
-        ts = _parse_row_ts(row, ts_col)
-        if ts is None:
-            ts = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-
-        node_id = str(row[node_col]).strip().upper()
-        try:
-            lmp = float(row[spp_col])
-        except (TypeError, ValueError):
+    results: list[dict] = []
+    for row_html in rows_html[1:]:
+        cells = re.findall(r"<td[^>]*>([^<]+)</td>", row_html)
+        if len(cells) < len(headers):
             continue
 
-        rows.append({
-            "ts":         ts,
-            "iso":        "ERCOT",
-            "node_id":    node_id,
-            "node_name":  node_id,
-            "market":     "RT",
-            "lmp":        lmp,
-            "energy":     None,
-            "congestion": None,
-            "loss":       None,
-        })
+        # Oper Day: "06/25/2026", Interval Ending: "0015" = 00:15
+        try:
+            oper_day = cells[0].strip()
+            interval = cells[1].strip().zfill(4)
+            hour, minute = int(interval[:2]), int(interval[2:])
+            ts = datetime.strptime(oper_day, "%m/%d/%Y").replace(
+                hour=hour, minute=minute, tzinfo=timezone.utc
+            )
+        except (ValueError, IndexError):
+            continue
 
-    return rows
+        for col_idx, node_id in hub_cols.items():
+            try:
+                lmp = float(cells[col_idx])
+            except (ValueError, IndexError):
+                continue
+            results.append({
+                "ts":         ts,
+                "iso":        "ERCOT",
+                "node_id":    node_id,
+                "node_name":  node_id,
+                "market":     "RT",
+                "lmp":        lmp,
+                "energy":     None,
+                "congestion": None,
+                "loss":       None,
+            })
+
+    return results
 
 
 def get_da_lmp(target: date | None = None) -> list[dict]:

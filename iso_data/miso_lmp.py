@@ -20,7 +20,7 @@ import pandas as pd
 
 from . import _http
 
-_RT_URL = "https://api.misoenergy.org/MISO/LMP/current"
+_RT_URL = "https://public-api.misoenergy.org/api/MarketPricing/GetLmpConsolidatedTable"
 _DA_URL_TEMPLATE = "https://docs.misoenergy.org/marketreports/{date}_da_exante_lmp.csv"
 
 # Hub node IDs in the MISO system — exact strings as returned by the API
@@ -36,55 +36,38 @@ _HUB_KEYWORDS = {
 
 def get_rt_lmp() -> list[dict]:
     """
-    Fetch current real-time LMP from MISO public API.
+    Fetch current real-time 5-min LMP from MISO public API.
 
-    Returns list of dicts compatible with upsert_lmp():
-        ts, iso, node_id, node_name, market, lmp, energy, congestion, loss
+    Response shape (public-api.misoenergy.org):
+      {"LMPData": {"RefId": "25-Jun-2026 - Interval 02:25 EST",
+                   "FiveMinLMP": {"HourAndMin": "02:25",
+                                  "PricingNode": [{"name": ..., "LMP": ..., "MLC": ..., "MCC": ...}]}}}
     """
     resp = _http.get(_RT_URL, headers={"Accept": "application/json"})
     data = resp.json()
 
-    # Shape: {"LMPData": {"LMPNode": [{"name": ..., "value": ...}, ...]}, "RefId": ...}
-    # or sometimes the top-level is just a list
-    items: list[dict] = []
-    if isinstance(data, list):
-        items = data
-    elif isinstance(data, dict):
-        lmp_data = data.get("LMPData", data)
-        nodes = lmp_data.get("LMPNode", lmp_data.get("LmpNode", []))
-        if isinstance(nodes, dict):
-            nodes = [nodes]
-        items = nodes if isinstance(nodes, list) else []
+    lmp_data = data.get("LMPData", {})
+    raw_ts = lmp_data.get("RefId", "")
+    ts = _parse_ts(raw_ts) or datetime.now(timezone.utc).replace(second=0, microsecond=0)
 
-    # MISO RT endpoint returns a current-hour timestamp in the response
-    raw_ts = None
-    if isinstance(data, dict):
-        raw_ts = data.get("RefId") or data.get("Timestamp") or data.get("timestamp")
-    ts = _parse_ts(raw_ts) or datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    nodes = lmp_data.get("FiveMinLMP", {}).get("PricingNode", [])
 
     rows: list[dict] = []
-    for item in items:
-        name = str(item.get("name") or item.get("Name") or "")
-        if not name:
+    for item in nodes:
+        name = str(item.get("name", ""))
+        if "HUB" not in name.upper():
             continue
-        # Filter to hub nodes only (case-insensitive)
-        name_upper = name.upper().replace(" ", ".").replace("-", ".")
-        if not any(hub in name_upper for hub in _HUB_KEYWORDS):
-            # Also accept if name exactly matches common hub patterns
-            if "HUB" not in name_upper:
-                continue
-
-        lmp_val = _float(item.get("value") or item.get("Value") or item.get("LmpTotal"))
+        node_id = name.upper().replace(" ", ".")
         rows.append({
             "ts":         ts,
             "iso":        "MISO",
-            "node_id":    name_upper,
+            "node_id":    node_id,
             "node_name":  name,
             "market":     "RT",
-            "lmp":        lmp_val,
+            "lmp":        _float(item.get("LMP")),
             "energy":     None,
-            "congestion": None,
-            "loss":       None,
+            "congestion": _float(item.get("MCC")),
+            "loss":       _float(item.get("MLC")),
         })
 
     return rows
@@ -174,9 +157,21 @@ def _float(v: Any) -> float | None:
 def _parse_ts(raw: Any) -> datetime | None:
     if not raw:
         return None
+    s = str(raw)
+    # "25-Jun-2026 - Interval 02:25 EST"
+    import re as _re
+    m = _re.search(r"(\d{1,2}-\w{3}-\d{4})\s*-\s*Interval\s+(\d{2}:\d{2})", s)
+    if m:
+        try:
+            import pytz
+            eastern = pytz.timezone("US/Eastern")
+            dt = datetime.strptime(f"{m.group(1)} {m.group(2)}", "%d-%b-%Y %H:%M")
+            return eastern.localize(dt).astimezone(timezone.utc)
+        except Exception:
+            pass
     for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y%m%d%H%M"):
         try:
-            return datetime.strptime(str(raw)[:19], fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(s[:19], fmt).replace(tzinfo=timezone.utc)
         except ValueError:
             continue
     return None
