@@ -95,6 +95,43 @@ def get_gen_mix_latest() -> pd.DataFrame:
     return pd.read_csv(io.StringIO(r.text))
 
 
+def get_gen_mix_365() -> pd.DataFrame:
+    """
+    365-day rolling 5-min generation mix from SPP marketplace.
+
+    Columns split into Market/Self pairs per fuel. Returns a normalized
+    DataFrame matching the get_gen_mix_latest() schema (fuel totals combined).
+    """
+    url = "https://marketplace.spp.org/chart-api/gen-mix-365/asFile"
+    r = _http.get(url)
+    raw = pd.read_csv(io.StringIO(r.text))
+
+    fuel_pairs = [
+        ("Coal", "Coal"),
+        ("Diesel Fuel Oil", "Diesel Fuel Oil"),
+        ("Hydro", "Hydro"),
+        ("Natural Gas", "Natural Gas"),
+        ("Nuclear", "Nuclear"),
+        ("Solar", "Solar"),
+        ("Waste Disposal Services", "Waste Disposal Services"),
+        ("Wind", "Wind"),
+        ("Waste Heat", "Waste Heat"),
+        ("Other", "Other"),
+    ]
+
+    out = pd.DataFrame()
+    out["GMT MKT Interval"] = raw["GMT MKT Interval"]
+    out["BAA"] = "SPP"
+    for fuel, col_name in fuel_pairs:
+        market_col = f"{fuel} Market"
+        self_col = f"{fuel} Self"
+        out[col_name] = (
+            pd.to_numeric(raw.get(market_col, 0), errors="coerce").fillna(0)
+            + pd.to_numeric(raw.get(self_col, 0), errors="coerce").fillna(0)
+        )
+    return out
+
+
 def get_lmp_rtbm_latest() -> pd.DataFrame:
     """Latest 5-min RTBM LMP by settlement location.
     Columns: Interval, GMTIntervalEnd, Settlement Location, Pnode, LMP, MLC, MCC, MEC, BAA

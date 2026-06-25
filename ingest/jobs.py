@@ -575,6 +575,32 @@ def ingest_spp_fuel_mix():
     log.info("SPP fuel mix: %d rows", n)
 
 
+def ingest_spp_fuel_mix_backfill():
+    """SPP 365-day backfill — run once to populate historical fuel mix."""
+    from ingest.writer import upsert_fuel_mix
+    from iso_data import spp
+    df = spp.get_gen_mix_365()
+    if df.empty:
+        return
+    skip_cols = {"GMT MKT Interval", "BAA", "Load"}
+    rows = []
+    for r in df.to_dict("records"):
+        try:
+            ts = pd.to_datetime(r["GMT MKT Interval"], utc=True)
+        except Exception:
+            continue
+        for col, val in r.items():
+            if col in skip_cols:
+                continue
+            try:
+                mw = float(val)
+            except (TypeError, ValueError):
+                continue
+            rows.append({"ts": ts, "iso": "SPP", "fuel_type": col, "mw": mw})
+    n = upsert_fuel_mix(rows)
+    log.info("SPP fuel mix backfill: %d rows", n)
+
+
 # ---------------------------------------------------------------------------
 # EIA weekly natural gas storage  (#15)
 # ---------------------------------------------------------------------------
