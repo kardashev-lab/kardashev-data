@@ -18,7 +18,7 @@ from typing import Any
 
 from . import _http, eia
 
-# BAs that already have native fetchers — excluded to avoid duplicate data
+# BAs that already have native fetchers, excluded to avoid duplicate data
 _NATIVE_ISO_BAS = {"CISO", "ERCO", "PJM", "MISO", "NYIS", "ISNE", "SWPP", "BPAT"}
 
 # All non-ISO BAs to ingest via EIA-930

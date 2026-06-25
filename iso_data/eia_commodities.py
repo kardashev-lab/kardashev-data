@@ -1,5 +1,5 @@
 """
-EIA commodity price fetchers — power burn, coal, petroleum spot, STEO forecasts.
+EIA commodity price fetchers: power burn, coal, petroleum spot, STEO forecasts.
 
 All use EIA_API_KEY env var (same as eia.py).
 
@@ -182,7 +182,7 @@ _STEO_SERIES = [
 
 def get_steo_forecasts() -> list[dict]:
     """
-    EIA Short-Term Energy Outlook — 2-year monthly forecasts.
+    EIA Short-Term Energy Outlook, 2-year monthly forecasts.
 
     Returns list of dicts:
         period (str "YYYY-MM"), series_id (str), value (float), units (str)

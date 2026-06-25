@@ -2,7 +2,7 @@
 
 Live at **[data.kardashevlabs.org](https://data.kardashevlabs.org/health)** · Part of [Kardashev Labs](https://kardashevlabs.org)
 
-The shared data layer behind Kardashev Labs — ingests US grid datasets from ISO/RTO and
+The shared data layer behind Kardashev Labs. Ingests US grid datasets from ISO/RTO and
 EIA sources into Postgres and serves them through a read-only FastAPI API. Powers the
 [carbon intensity dashboard](https://carbon-dashboard.kardashevlabs.org),
 [curtailment tracker](https://curtailment-tracker.kardashevlabs.org),

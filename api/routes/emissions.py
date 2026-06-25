@@ -1,5 +1,5 @@
 """
-GET /emissions — EPA CAMPD hourly generator emissions.
+GET /emissions: EPA CAMPD hourly generator emissions.
 
 Filters: state, facility_id, date range.
 """
@@ -41,7 +41,7 @@ async def get_emissions(
 ):
     """
     Hourly measured SO2, NOx, CO2 emissions per generator from EPA CAMPD.
-    Defaults to last 7 days. Large dataset — use state/facility filters.
+    Defaults to last 7 days. Large dataset, use state/facility filters to narrow it down.
     """
     params: dict = {"lim": limit}
 

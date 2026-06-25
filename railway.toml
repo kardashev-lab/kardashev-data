@@ -2,24 +2,16 @@
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
-# ---------------------------------------------------------------------------
-# This file configures the BUILD. Railway services are configured separately
-# in the Railway dashboard. Create two services from this repo:
+# This file configures the BUILD only. Services are configured in the Railway dashboard.
+# Create two services from this repo:
 #
-#   Service 1 — "api"
-#     Start command: python /app/run.py        (migrates schema, then uvicorn)
-#     Health check:  GET /health               (verifies DB connectivity)
+#   api:    start command = python /app/run.py          health check = GET /health
+#   ingest: start command = python /app/start_ingest.py health check = none (daemon)
 #
-#   Service 2 — "ingest"
-#     Start command: python /app/start_ingest.py   (migrates schema, then schedules)
-#     Health check:  (none — long-running daemon)
-#
-# Both services share the same Dockerfile.
-# Both get DATABASE_URL injected from the Railway Postgres addon.
-# ---------------------------------------------------------------------------
+# Both share the same Dockerfile and get DATABASE_URL from the Railway Postgres addon.
 
 [deploy]
-# No healthcheckPath here — ingest is a daemon with no HTTP server.
-# Set healthcheckPath = "/health" only on the "api" service in Railway dashboard.
+# healthcheckPath is intentionally omitted here (ingest is a daemon, no HTTP).
+# Set healthcheckPath = "/health" on the api service in Railway dashboard.
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

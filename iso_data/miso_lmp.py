@@ -1,14 +1,8 @@
 """
-MISO LMP client — real-time and day-ahead prices.
+MISO LMP client for RT and day-ahead prices. No auth required.
 
-No authentication required.
-
-RT LMP:  https://api.misoenergy.org/MISO/LMP/current  (JSON)
-DA LMP:  https://docs.misoenergy.org/marketreports/{YYYYMMDD}_da_exante_lmp.csv
-
-Key hubs returned:
-  MISO.HUB   — system-wide aggregate hub
-  Indiana Hub, Illinois Hub, Michigan Hub, Minnesota Hub, Arkansas Hub
+RT endpoint: public-api.misoenergy.org (JSON)
+DA endpoint: docs.misoenergy.org market reports (CSV)
 """
 from __future__ import annotations
 
@@ -23,7 +17,7 @@ from . import _http
 _RT_URL = "https://public-api.misoenergy.org/api/MarketPricing/GetLmpConsolidatedTable"
 _DA_URL_TEMPLATE = "https://docs.misoenergy.org/marketreports/{date}_da_exante_lmp.csv"
 
-# Hub node IDs in the MISO system — exact strings as returned by the API
+# Hub node IDs, exact strings as returned by the API
 _HUB_KEYWORDS = {
     "MISO.HUB",
     "INDIANA.HUB",

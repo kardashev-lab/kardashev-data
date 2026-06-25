@@ -1,5 +1,5 @@
 """
-ERCOT Settlement Point Prices — public data portal (no auth since 2024).
+ERCOT Settlement Point Prices from the public CDR portal (no auth needed).
 
 SCED (RT 15-min): https://data.ercot.com/api/public-reports/archive/np6-788-er
 DAM  (DA hourly):  https://data.ercot.com/api/public-reports/archive/np4-190-er

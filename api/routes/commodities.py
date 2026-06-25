@@ -1,8 +1,8 @@
 """
-GET /commodities/coal         — EIA monthly coal prices by rank
-GET /commodities/petroleum    — EIA daily spot prices (WTI, Brent, RBOB, heating oil)
-GET /commodities/power-burn   — EIA monthly natural gas used for power generation
-GET /forecasts/steo           — EIA STEO monthly 2-year energy forecasts
+GET /commodities/coal:      EIA monthly coal prices by rank
+GET /commodities/petroleum: EIA daily spot prices (WTI, Brent, RBOB, heating oil)
+GET /commodities/power-burn: EIA monthly natural gas used for power generation
+GET /forecasts/steo:        EIA STEO monthly 2-year energy forecasts
 """
 from __future__ import annotations
 
@@ -161,7 +161,7 @@ async def get_steo(
     limit: int = Query(5_000, le=20_000),
 ):
     """
-    EIA Short-Term Energy Outlook — 2-year monthly forecasts for prices and generation.
+    EIA Short-Term Energy Outlook, 2-year monthly forecasts for prices and generation.
     """
     params: dict = {"lim": limit}
 

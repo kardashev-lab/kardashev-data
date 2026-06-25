@@ -1,4 +1,4 @@
--- Kardashev Data Platform — PostgreSQL schema (Railway-compatible)
+-- Kardashev Data Platform schema (PostgreSQL / Railway-compatible)
 -- Run once against a fresh database:
 --   psql $DATABASE_URL -f db/schema.sql
 --

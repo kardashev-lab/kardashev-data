@@ -40,7 +40,7 @@ _ISO_CATALOG = [
         "name": "California ISO",
         "region": "California",
         "datasets": ["fuel_mix", "lmp_rt", "lmp_da", "load", "curtailment", "curtailment_hourly"],
-        "curtailment_source": "HTML scrape — caiso.com daily renewable report",
+        "curtailment_source": "HTML scrape from caiso.com daily renewable report",
         "refresh_intervals": {"fuel_mix": "5min", "lmp": "5min", "curtailment": "daily"},
     },
     {
@@ -56,7 +56,7 @@ _ISO_CATALOG = [
         "name": "Electric Reliability Council of Texas",
         "region": "Texas",
         "datasets": ["fuel_mix", "load"],
-        "curtailment_source": "Not available — requires ERCOT MIS credentials (DUNS-gated)",
+        "curtailment_source": "Not available (requires ERCOT MIS credentials, DUNS-gated)",
         "refresh_intervals": {"fuel_mix": "15min"},
     },
     {
@@ -90,7 +90,7 @@ _ISO_CATALOG = [
         "datasets": ["fuel_mix", "lmp_rt", "lmp_da", "load", "wind_gen", "solar_gen"],
         "curtailment_source": "Not publicly available (no dedicated endpoint)",
         "refresh_intervals": {"fuel_mix": "1hr", "lmp": "5min"},
-        "auth_required": "Free API key — dataminer2.pjm.com",
+        "auth_required": "Free API key from dataminer2.pjm.com",
     },
 ]
 

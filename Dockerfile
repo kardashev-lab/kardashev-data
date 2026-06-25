@@ -6,10 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy everything first (no split — editable install needs source present)
+# Copy everything before install (editable install needs source present)
 COPY . .
 
-# Regular (non-editable) install — correct for production containers
+# Regular non-editable install for production containers
 RUN pip install --no-cache-dir ".[api,ingest]"
 
 ENV PYTHONUNBUFFERED=1

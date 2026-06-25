@@ -1,27 +1,16 @@
 """
-Ingestion daemon — plain while-loop scheduler (no APScheduler dependency).
+Simple while-loop scheduler for the ingest daemon. No external scheduler library.
 
-Run:
+Usage:
     python -m ingest.scheduler
     python -m ingest.scheduler backfill CAISO 90
 
-Schedule (UTC):
-    Every 5 min  : CAISO/NYISO/MISO/ISONE/SPP fuel mix
-                   + CAISO/ERCOT/MISO/NYISO realtime load (5-min native)
-                   + NYISO RT LMP + SPP RTBM LMP
-                   + ERCOT/PJM wind+solar forecast (gen_forecast)
-                   + CAISO battery storage + NYISO BTM solar
-                   + BPA 5-min balancesheet (wind, hydro, thermal, load)
-                   + MISO RT binding constraints
-    Every 15 min : ERCOT fuel mix
-    Every hour   : EIA load (ISONE/PJM/BPAT/TVA/SOCO/FPL/DUK/SRP/PSCO/PACE)
-                   + NYISO DA LMP + PJM/ISONE load forecast + PJM reserve margins
-                   + grid-area temperatures via Open-Meteo
-    Daily 03:00  : LMP retention purge (delete rows older than 14 days)
-    Daily 10:00  : Curtailment backfill (last 3 days) + EIA nat gas prices + EIA gas storage
-    Daily 14:00  : Curtailment retry (last 3 days — CAISO often publishes after 10:00 UTC)
-    Daily 07:00  : Interconnection queues (NYISO, PJM, ISONE)
-    Weekly Mon 08:00 : EIA-923 monthly generation, EIA-860 capacity, EIA-861 retail prices
+Rough schedule (UTC):
+    5 min:  fuel mix (CAISO/NYISO/MISO/ISONE/SPP), RT load, LMP, BPA, MISO constraints
+    15 min: ERCOT fuel mix
+    1 hr:   EIA load, DA LMP, forecasts, temperatures
+    daily:  curtailment, nat gas prices, storage, interconnection queues, LMP purge
+    weekly: EIA-923/860/861 static datasets
 """
 from __future__ import annotations
 
@@ -162,7 +151,7 @@ def run_load_forecasts():
 
 
 def run_btm_solar():
-    # NYISO btmactualforecast URL discontinued as of June 2026 — disabled until new endpoint found
+    # NYISO btmactualforecast URL discontinued as of June 2026, disabled until new endpoint found
     pass
 
 
@@ -209,44 +198,44 @@ def run_eia_fuel_mix_all():
 
 
 def run_nrc_reactor_status():
-    """NRC daily reactor status — run daily at 12:00 UTC."""
+    """NRC daily reactor status."""
     from ingest.jobs import ingest_nrc_reactor_status
     _run("nrc_reactor_status", ingest_nrc_reactor_status)
 
 
 def run_epa_campd_emissions():
-    """EPA CAMPD daily emissions — run daily."""
+    """EPA CAMPD daily emissions."""
     from ingest.jobs import ingest_epa_campd_emissions
     _run("epa_campd_emissions", ingest_epa_campd_emissions)
 
 
 def run_carbon_allowances():
-    """RGGI + CA ARB carbon allowance auction results — run weekly."""
+    """RGGI + CA ARB carbon allowance auction results."""
     from ingest.jobs import ingest_carbon_allowances
     _run("carbon_allowances", ingest_carbon_allowances)
 
 
 def run_usbr_reservoirs():
-    """USBR reservoir storage + USGS streamflow — run daily."""
+    """USBR reservoir storage + USGS streamflow."""
     from ingest.jobs import ingest_usbr_reservoirs, ingest_usgs_streamflow
     _run("usbr_reservoirs",  ingest_usbr_reservoirs)
     _run("usgs_streamflow",  ingest_usgs_streamflow)
 
 
 def run_eia_commodities():
-    """EIA commodity prices (coal, petroleum, power burn, STEO) — run weekly."""
+    """EIA commodity prices (coal, petroleum, power burn, STEO)."""
     from ingest.jobs import ingest_eia_commodities_all
     _run("eia_commodities", ingest_eia_commodities_all)
 
 
 def run_nrel_irradiance():
-    """NREL NSRDB solar irradiance for 10 grid locations — run hourly."""
+    """NREL NSRDB solar irradiance for 10 grid locations."""
     from ingest.jobs import ingest_nrel_solar_irradiance
     _run("nrel_irradiance", ingest_nrel_solar_irradiance)
 
 
 def run_eia_static():
-    """Monthly/annual EIA datasets — run weekly."""
+    """Monthly/annual EIA datasets (EIA-923/860/861)."""
     from ingest.jobs import (
         ingest_eia_generator_capacity,
         ingest_eia_monthly_generation,

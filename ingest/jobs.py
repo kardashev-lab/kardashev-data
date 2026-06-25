@@ -1,6 +1,5 @@
 """
-Ingestion jobs — one function per ISO per dataset.
-Each job is idempotent: safe to re-run, uses ON CONFLICT upserts.
+One ingest function per ISO per dataset. All jobs are idempotent via ON CONFLICT upserts.
 """
 from __future__ import annotations
 
@@ -159,7 +158,7 @@ def ingest_spp_curtailment(target: date):
 def ingest_ercot_curtailment(target: date):
     # ERCOT real curtailment requires MIS credentials (DUNS-gated).
     # Public dashboard data is too inaccurate to serve. Not ingested.
-    log.debug("ERCOT curtailment skipped — no public data source available")
+    log.debug("ERCOT curtailment skipped: no public data source available")
 
 
 # ---------------------------------------------------------------------------
@@ -274,7 +273,7 @@ _EIA_LOAD_REGIONS: dict[str, str] = {
     "PACE": "PACE",
 }
 
-# EIA Grid Monitor reports in LOCAL time per BA — not UTC.
+# EIA Grid Monitor reports in LOCAL time per BA, not UTC.
 # Map each respondent code to its IANA timezone string.
 _EIA_LOAD_TZ: dict[str, str] = {
     "CISO": "US/Pacific",    # CAISO → Pacific
@@ -303,7 +302,7 @@ def ingest_realtime_load_all():
     from ingest.writer import upsert_load
     rows: list[dict] = []
 
-    # CAISO — caiso.com/outlook/current/demand.csv, 5-min resolution
+    # CAISO: caiso.com/outlook/current/demand.csv, 5-min resolution
     try:
         from iso_data import caiso
         df = caiso.get_load()
@@ -329,7 +328,7 @@ def ingest_realtime_load_all():
     except Exception as exc:
         log.warning("realtime CAISO failed: %s", exc)
 
-    # ERCOT — supply-demand.json, 5-min resolution, epoch-based timestamps
+    # ERCOT: supply-demand.json, 5-min resolution, epoch-based timestamps
     try:
         from iso_data import ercot
         points = ercot.get_demand_today()
@@ -340,7 +339,7 @@ def ingest_realtime_load_all():
     except Exception as exc:
         log.warning("realtime ERCOT failed: %s", exc)
 
-    # MISO — FuelMix endpoint, single current interval
+    # MISO: FuelMix endpoint, single current interval
     try:
         from iso_data import miso
         pt = miso.get_realtime_total_mw()
@@ -351,7 +350,7 @@ def ingest_realtime_load_all():
     except Exception as exc:
         log.warning("realtime MISO failed: %s", exc)
 
-    # NYISO — zonal 5-min CSV, sum across zones for system total
+    # NYISO: zonal 5-min CSV, sum across zones for system total
     try:
         from iso_data import nyiso
         df = nyiso.get_load(date.today())
@@ -431,11 +430,11 @@ def ingest_nyiso_queue():
 
 def ingest_caiso_queue():
     """CAISO interconnection queue via OASIS (public)."""
-    log.info("CAISO queue: fetch not yet implemented — OASIS doesn't expose queue CSV")
+    log.info("CAISO queue: fetch not yet implemented (OASIS doesn't expose a queue CSV)")
 
 
 def ingest_pjm_queue():
-    """PJM interconnection queue — all active requests."""
+    """PJM interconnection queue, all active requests."""
     from ingest.writer import replace_interconnection_queue
     from iso_data import pjm
     df = pjm.get_interconnection_queue()
@@ -550,7 +549,7 @@ def ingest_isone_load_forecast():
 # ---------------------------------------------------------------------------
 
 def ingest_spp_fuel_mix():
-    """SPP 5-min generation mix — rolling ~2h window from marketplace API."""
+    """SPP 5-min generation mix, rolling ~2h window from marketplace API."""
     from ingest.writer import upsert_fuel_mix
     from iso_data import spp
     df = spp.get_gen_mix_latest()
@@ -576,7 +575,7 @@ def ingest_spp_fuel_mix():
 
 
 def ingest_spp_fuel_mix_backfill():
-    """SPP 365-day backfill — run once to populate historical fuel mix."""
+    """SPP 365-day backfill. Run once to populate historical fuel mix."""
     from ingest.writer import upsert_fuel_mix
     from iso_data import spp
     df = spp.get_gen_mix_365()
@@ -615,7 +614,7 @@ def ingest_eia_gas_storage():
 
     api_key = os.environ.get("EIA_API_KEY", "")
     if not api_key:
-        log.warning("EIA_API_KEY not set — skipping gas storage")
+        log.warning("EIA_API_KEY not set, skipping gas storage")
         return
 
     _REGIONS: list[tuple[str, str]] = [
@@ -846,13 +845,13 @@ def ingest_eia_nat_gas_prices():
 
     api_key = os.environ.get("EIA_API_KEY", "")
     if not api_key:
-        log.warning("EIA_API_KEY not set — skipping nat gas prices")
+        log.warning("EIA_API_KEY not set, skipping nat gas prices")
         return
 
     # Map of display name → EIA series duoarea+product facets
     _HUBS: list[tuple[str, str, str]] = [
         ("Henry Hub",        "NUS",  "RNGWHHD"),  # national spot, daily
-        ("Algonquin CG",     "Y05SF", "RNGWHHD"),  # NE hub — use regional if available
+        ("Algonquin CG",     "Y05SF", "RNGWHHD"),  # NE hub, use regional if available
         ("Transco Zone 6 NY", "Y44",  "RNGWHHD"),
         ("Chicago Citygate", "Y54",   "RNGWHHD"),
         ("Dominion South",   "Y71",   "RNGWHHD"),
@@ -1083,7 +1082,7 @@ def ingest_eia_monthly_generation():
 
     key = os.environ.get("EIA_API_KEY", "")
     if not key:
-        log.warning("EIA_API_KEY not set — skipping monthly generation")
+        log.warning("EIA_API_KEY not set, skipping monthly generation")
         return
 
     rows: list[dict] = []
@@ -1136,7 +1135,7 @@ def ingest_eia_generator_capacity():
 
     key = os.environ.get("EIA_API_KEY", "")
     if not key:
-        log.warning("EIA_API_KEY not set — skipping generator capacity")
+        log.warning("EIA_API_KEY not set, skipping generator capacity")
         return
 
     rows: list[dict] = []
@@ -1188,7 +1187,7 @@ def ingest_eia_retail_prices():
 
     key = os.environ.get("EIA_API_KEY", "")
     if not key:
-        log.warning("EIA_API_KEY not set — skipping retail prices")
+        log.warning("EIA_API_KEY not set, skipping retail prices")
         return
 
     now = datetime.now(timezone.utc)

@@ -1,18 +1,8 @@
 """
-NYISO (New York ISO) raw data client.
+NYISO data client. All endpoints are public CSV at mis.nyiso.com/public/csv/.
 
-Sources (no auth required) — all public CSV at mis.nyiso.com/public/csv/:
-  Fuel mix (RT)    : rtfuelmix/{YYYYMMDD}rtfuelmix.csv  (daily, ~11 days rolling)
-                     rtfuelmix/{YYYYMM}01rtfuelmix_csv.zip  (monthly archive)
-  Load (actual)    : pal/{YYYYMMDD}pal.csv  /  pal/{YYYYMM}01pal_csv.zip
-  Load (DA)        : damlbmp/{YYYYMMDD}damlbmp_zone.csv
-  LMP real-time    : realtime/{YYYYMMDD}realtime_zone.csv
-  Behind-meter solar: btmactualforecast/{YYYYMMDD}btmactualforecast.csv
-  Generator data   : generator/generator.csv
-  Interconnection  : interconnections/interconnections.csv
-
-Note: daily CSV files are only retained for ~11 days. Older data must come
-from the monthly ZIP archives (same base URL, first-of-month filename).
+Daily files are only kept for ~11 days. For older data, use the monthly ZIP
+archives (same base URL but first-of-month filename).
 """
 from __future__ import annotations
 

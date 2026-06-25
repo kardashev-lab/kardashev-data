@@ -1,25 +1,8 @@
 """
-NREL National Solar Radiation Database (NSRDB) PSM3 v2.2 client.
+NREL NSRDB PSM3 v2.2 client. Pulls hourly GHI/DNI/DHI irradiance for 10
+representative US grid locations (one city per major ISO/RTO).
 
-Auth: NREL_API_KEY env var — free key at https://developer.nrel.gov/signup/
-
-API endpoint:
-  https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-2-2-download.json
-
-Pulls hourly GHI (global horizontal), DNI (direct normal), DHI (diffuse
-horizontal) irradiance for representative grid-area locations.
-
-10 locations chosen to cover major US grid regions:
-  CAISO  → Los Angeles, CA         (34.05, -118.25)
-  ERCOT  → Dallas, TX              (32.78, -96.80)
-  PJM    → Washington, DC          (38.89, -77.03)
-  MISO   → Chicago, IL             (41.85, -87.65)
-  NYISO  → New York, NY            (40.71, -74.01)
-  ISONE  → Boston, MA              (42.36, -71.06)
-  SPP    → Oklahoma City, OK       (35.47, -97.52)
-  BPA    → Portland, OR            (45.52, -122.68)
-  TVA    → Nashville, TN           (36.17, -86.78)
-  SOCO   → Atlanta, GA             (33.75, -84.39)
+Requires NREL_API_KEY env var. Free key at https://developer.nrel.gov/signup/
 """
 from __future__ import annotations
 
@@ -51,7 +34,7 @@ def _api_key() -> str:
     key = os.environ.get("NREL_API_KEY", "")
     if not key:
         raise RuntimeError(
-            "NREL_API_KEY not set — register free at https://developer.nrel.gov/signup/"
+            "NREL_API_KEY not set. Register free at https://developer.nrel.gov/signup/"
         )
     return key
 
@@ -99,7 +82,7 @@ def get_irradiance_location(loc: dict, year: int | None = None) -> list[dict]:
         csv_resp = _http.get(download_url)
         csv_text = csv_resp.text
     elif "outputs" in data and isinstance(data["outputs"], dict):
-        # Inline data — not typical for PSM3 but handle gracefully
+        # Inline data (not typical for PSM3, but handle it anyway)
         return []
     else:
         return []

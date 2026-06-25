@@ -1,4 +1,4 @@
-"""API entry point — apply schema migration, then start uvicorn."""
+"""Apply schema migration, then start uvicorn."""
 import os
 
 import uvicorn

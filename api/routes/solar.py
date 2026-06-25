@@ -1,5 +1,5 @@
 """
-GET /solar/irradiance — NREL NSRDB hourly solar irradiance for 10 grid locations.
+GET /solar/irradiance: NREL NSRDB hourly solar irradiance for 10 representative grid locations.
 """
 from __future__ import annotations
 

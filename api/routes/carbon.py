@@ -10,28 +10,71 @@ from api.db import fetch
 
 router = APIRouter(prefix="/carbon", tags=["carbon"])
 
-# EPA eGRID 2022 emission factors (lbs CO₂/MWh)
-# Applied via SQL CASE on stored fuel_type strings.
-# ISOs use different labels — we match on lowercase substrings.
+# eGRID 2023 output emission rates (lbs CO2/MWh), from egrid2023_data_rev2.xlsx US23 sheet
+def emission_factor(fuel_type: str) -> float:
+    f = fuel_type.lower()
+    if "coal" in f:
+        return 2228.0
+    if "natural gas" in f or "nat gas" in f:
+        return 899.0
+    if f == "ng" or "gas" in f:
+        return 899.0
+    if "oil" in f or "petroleum" in f or f == "oil":
+        return 1555.0
+    if "nuclear" in f or f == "nuc":
+        return 0.0
+    if "wind" in f or f == "wnd":
+        return 0.0
+    if "solar" in f or f == "sun":
+        return 0.0
+    if "hydro" in f or f in ("wat", "ps", "snb", "bat"):
+        return 0.0
+    if "geotherm" in f:
+        return 38.0
+    if "biomass" in f or "wood" in f:
+        return 1500.0
+    if "other renewables" in f:
+        return 0.0
+    if "other" in f or f == "oth":
+        return 767.0
+    if "import" in f:
+        return 767.0
+    return 767.0
+
+
+def carbon_intensity(fuel_mix: list[tuple[str, float]]) -> float | None:
+    total = sum(mw for _, mw in fuel_mix if mw > 0)
+    if not total:
+        return None
+    return sum(emission_factor(f) * mw for f, mw in fuel_mix if mw > 0) / total
+
+
 _EMISSION_SQL = """
 CASE
-  WHEN lower(fuel_type) LIKE '%coal%'                         THEN 2249.0
-  WHEN lower(fuel_type) LIKE '%natural gas%'                  THEN 897.0
-  WHEN lower(fuel_type) LIKE '%nat gas%'                      THEN 897.0
-  WHEN lower(fuel_type) LIKE '%gas%'                          THEN 897.0
-  WHEN lower(fuel_type) LIKE '%oil%'                          THEN 1672.0
-  WHEN lower(fuel_type) LIKE '%petroleum%'                    THEN 1672.0
+  WHEN lower(fuel_type) LIKE '%coal%'                         THEN 2228.0
+  WHEN lower(fuel_type) LIKE '%natural gas%'                  THEN 899.0
+  WHEN lower(fuel_type) LIKE '%nat gas%'                      THEN 899.0
+  WHEN lower(fuel_type) IN ('ng')                             THEN 899.0
+  WHEN lower(fuel_type) LIKE '%gas%'                          THEN 899.0
+  WHEN lower(fuel_type) LIKE '%oil%'                          THEN 1555.0
+  WHEN lower(fuel_type) LIKE '%petroleum%'                    THEN 1555.0
+  WHEN lower(fuel_type) IN ('oil')                            THEN 1555.0
   WHEN lower(fuel_type) LIKE '%nuclear%'                      THEN 0.0
+  WHEN lower(fuel_type) IN ('nuc')                            THEN 0.0
   WHEN lower(fuel_type) LIKE '%wind%'                         THEN 0.0
+  WHEN lower(fuel_type) IN ('wnd')                            THEN 0.0
   WHEN lower(fuel_type) LIKE '%solar%'                        THEN 0.0
+  WHEN lower(fuel_type) IN ('sun')                            THEN 0.0
   WHEN lower(fuel_type) LIKE '%hydro%'                        THEN 0.0
+  WHEN lower(fuel_type) IN ('wat', 'ps', 'snb', 'bat')       THEN 0.0
   WHEN lower(fuel_type) LIKE '%geotherm%'                     THEN 38.0
   WHEN lower(fuel_type) LIKE '%biomass%'                      THEN 1500.0
   WHEN lower(fuel_type) LIKE '%wood%'                         THEN 1500.0
   WHEN lower(fuel_type) LIKE '%other renewables%'             THEN 0.0
-  WHEN lower(fuel_type) LIKE '%other%'                        THEN 550.0
-  WHEN lower(fuel_type) LIKE '%import%'                       THEN 600.0
-  ELSE 550.0
+  WHEN lower(fuel_type) LIKE '%other%'                        THEN 767.0
+  WHEN lower(fuel_type) IN ('oth')                            THEN 767.0
+  WHEN lower(fuel_type) LIKE '%import%'                       THEN 767.0
+  ELSE 767.0
 END
 """
 
@@ -57,10 +100,6 @@ async def get_carbon_intensity(
     hours: int = Query(24, ge=1, le=720),
     limit: int = Query(2000, le=50_000),
 ):
-    """
-    Hourly carbon intensity (lbs CO₂/MWh) derived from fuel mix.
-    Clean sources (nuclear, wind, solar, hydro) contribute 0 lbs/MWh.
-    """
     rows = await fetch(
         f"""
         SELECT
@@ -88,9 +127,6 @@ async def get_carbon_intensity(
 async def get_carbon_intensity_latest(
     iso: Optional[str] = Query(None, description="Filter by ISO. Omit for all ISOs."),
 ):
-    """
-    Most recent carbon intensity snapshot per ISO, plus % clean generation.
-    """
     iso_clause = "AND iso = :iso" if iso else ""
     params: dict = {}
     if iso:
@@ -119,6 +155,7 @@ async def get_carbon_intensity_latest(
                 CAST(
                     100.0 * SUM(CASE
                         WHEN lower(fuel_type) LIKE ANY(ARRAY['%wind%','%solar%','%hydro%','%nuclear%','%geotherm%','%other renew%'])
+                          OR lower(fuel_type) = ANY(ARRAY['wnd','sun','wat','nuc','ps','snb','bat'])
                         THEN mw ELSE 0 END
                     ) / NULLIF(SUM(mw), 0)
                 AS numeric),
@@ -134,5 +171,4 @@ async def get_carbon_intensity_latest(
 
 @router.get("/summary", response_model=list[CarbonLatest])
 async def get_carbon_summary():
-    """Latest carbon intensity for all ISOs with data."""
     return await get_carbon_intensity_latest(iso=None)

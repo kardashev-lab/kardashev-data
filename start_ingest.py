@@ -1,4 +1,4 @@
-"""Single entrypoint for the ingest service — migrate then schedule."""
+"""Migrate schema, then run the ingest scheduler."""
 from db.migrate import run as migrate
 from ingest.scheduler import start
 

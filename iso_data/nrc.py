@@ -35,7 +35,7 @@ def get_reactor_status() -> list[dict]:
     df = _http.get_csv(_URL, sep="\t", encoding="latin-1")
     df.columns = [c.strip() for c in df.columns]
 
-    # Normalise column names — NRC occasionally changes casing
+    # Normalise column names (NRC occasionally changes casing)
     col_map: dict[str, str] = {}
     for c in df.columns:
         key = c.strip().lower().replace(" ", "").replace("_", "")

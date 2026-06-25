@@ -1,5 +1,5 @@
 """
-Carbon allowance auction results — RGGI and CA ARB (WCI).
+Carbon allowance auction results for RGGI and CA ARB (WCI).
 
 RGGI CSV:
   https://www.rggi.org/sites/default/files/Uploads/Market/Auction_Results/
@@ -79,7 +79,7 @@ def get_ca_arb_auctions() -> list[dict]:
     page_resp = _http.get(_CA_ARB_PAGE)
     html = page_resp.text
 
-    # Find xlsx links — pattern: href="...auction...summary....xlsx"
+    # Find xlsx links matching href="...auction...summary....xlsx"
     xlsx_links = re.findall(r'href="([^"]+\.xlsx)"', html, re.IGNORECASE)
     # Also try absolute and relative URLs
     if not xlsx_links:

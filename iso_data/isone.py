@@ -1,7 +1,7 @@
 """
 ISONE (ISO New England) raw data client.
 
-Primary source — EIA Grid Monitor API (free key required):
+Primary source: EIA Grid Monitor API (free key required):
   https://www.eia.gov/opendata/register.php
   Set EIA_API_KEY environment variable.
   Respondent code: ISNE
@@ -117,7 +117,7 @@ def get_load_forecast(start: date, end: date | None = None) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# LMP prices (ISONE transform CSV — may require auth)
+# LMP prices (ISONE transform CSV, may require auth)
 # ---------------------------------------------------------------------------
 
 def _isone_session():

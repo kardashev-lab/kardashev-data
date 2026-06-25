@@ -1,16 +1,9 @@
 """
-EIA Grid Monitor API — generic client for any US balancing authority.
+EIA Grid Monitor API client. Works for any US balancing authority.
 
-Free API key: https://www.eia.gov/opendata/register.php
-Set EIA_API_KEY environment variable.
+Requires EIA_API_KEY env var (free at https://www.eia.gov/opendata/register.php).
 
-Common respondent codes:
-  CISO = CAISO        ERCO = ERCOT        PJM  = PJM
-  MISO = MISO         NYIS = NYISO        ISNE = ISONE
-  SWPP = SPP          BPAT = BPA/Bonneville
-  TVA  = TVA          SOCO = Southern Co  FPL  = FPL/NextEra
-  DUK  = Duke Energy  SRP  = SRP          PSCO = Xcel/PSCO
-  PACE = PacifiCorp East
+Common BA codes: CISO, ERCO, PJM, MISO, NYIS, ISNE, SWPP, BPAT, TVA, SOCO, FPL, DUK, SRP, PSCO, PACE
 """
 from __future__ import annotations
 
@@ -29,7 +22,7 @@ def api_key() -> str:
     key = os.environ.get("EIA_API_KEY", "")
     if not key:
         raise RuntimeError(
-            "EIA_API_KEY not set — register free at https://www.eia.gov/opendata/register.php"
+            "EIA_API_KEY not set. Register free at https://www.eia.gov/opendata/register.php"
         )
     return key
 

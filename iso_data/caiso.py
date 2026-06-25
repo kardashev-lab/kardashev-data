@@ -25,7 +25,7 @@ _CAISO_TZ = "US/Pacific"
 # ---------------------------------------------------------------------------
 
 _CURTAIL_VARS = {
-    # (solar_cols, wind_cols) — JS variable names embedded in the daily HTML report
+    # (solar_cols, wind_cols): JS variable names embedded in the daily HTML report
     "solar": [
         "curt_hr_tot_solar_econ_local_mwh",
         "curt_hr_tot_solar_econ_system_mwh",

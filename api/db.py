@@ -33,7 +33,7 @@ async def conn() -> AsyncIterator[AsyncConnection]:
 
 
 def _sanitize(row: dict) -> dict:
-    """Replace float NaN/Inf with None — Python's json.dumps rejects them."""
+    """Replace float NaN/Inf with None so json.dumps doesn't choke."""
     return {
         k: (None if isinstance(v, float) and not (v == v) else v)
         for k, v in row.items()

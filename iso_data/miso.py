@@ -49,7 +49,7 @@ def _parse_fuel_mix_response(data: dict) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     if df.empty:
         return df
-    # INTERVALEST timestamps are Eastern time — convert to UTC-aware
+    # INTERVALEST timestamps are Eastern time, convert to UTC-aware
     df["timestamp"] = (
         pd.to_datetime(df["timestamp"])
         .dt.tz_localize(_EST, ambiguous="infer", nonexistent="shift_forward")

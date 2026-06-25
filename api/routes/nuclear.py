@@ -1,5 +1,5 @@
 """
-GET /nuclear — NRC daily power reactor status.
+GET /nuclear: NRC daily power reactor status.
 
 Filters: unit name (partial match), date range.
 """
@@ -66,7 +66,7 @@ async def get_reactor_status(
 @router.get("/summary")
 async def get_reactor_summary():
     """
-    Latest power output for all reactors — one row per unit showing most recent
+    Latest power output for all reactors. One row per unit with most recent
     reported capacity percentage, plus fleet-wide totals.
     """
     rows = await fetch(

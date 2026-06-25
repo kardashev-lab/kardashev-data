@@ -1,6 +1,6 @@
 """
-GET /hydro/reservoirs  — USBR reservoir storage levels (Western US).
-GET /hydro/streamflow  — USGS streamflow at major river gauges.
+GET /hydro/reservoirs: USBR reservoir storage levels (Western US).
+GET /hydro/streamflow: USGS streamflow at major river gauges.
 """
 from __future__ import annotations
 

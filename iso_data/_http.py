@@ -37,8 +37,7 @@ def session(extra_headers: dict[str, str] | None = None) -> requests.Session:
     return s
 
 
-# Shared session for the module-level helpers — reuses connections across calls
-# instead of paying TLS handshake cost on every request.
+# Shared session so we reuse connections and avoid TLS handshake overhead on every request.
 _shared_session: requests.Session | None = None
 
 

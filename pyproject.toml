@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kardashev-data"
 version = "0.1.0"
-description = "Bloomberg Terminal for Energy — unified US grid data platform"
+description = "US energy grid data platform: fuel mix, carbon intensity, LMP, curtailment, and more."
 requires-python = ">=3.11"
 
 dependencies = [

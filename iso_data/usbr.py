@@ -1,6 +1,6 @@
 """
-USBR RISE API — reservoir storage levels for Western US hydro.
-USGS Water Services — streamflow at key gauge stations.
+USBR RISE API client for reservoir storage (Western US hydro).
+USGS Water Services client for streamflow at key gauge stations.
 
 USBR RISE:
   https://data.usbr.gov/rise/api/result/download?itemId={id}&type=csv

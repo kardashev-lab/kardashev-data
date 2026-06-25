@@ -1,5 +1,5 @@
 """
-EPA Clean Air Markets Program Data (CAMPD) — hourly measured emissions.
+EPA Clean Air Markets Program Data (CAMPD) client. Hourly measured emissions.
 
 API: https://api.epa.gov/easey/emissions-mgmt-api/emissions/apportioned/hourly
 No authentication required (public).

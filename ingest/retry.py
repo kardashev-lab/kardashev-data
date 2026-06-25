@@ -41,7 +41,7 @@ def with_retry(
                 break
             delay = base_delay * (2 ** (attempt - 1))
             log.warning(
-                "%s transient error (attempt %d/%d): %s — retrying in %.0fs",
+                "%s transient error (attempt %d/%d): %s, retrying in %.0fs",
                 getattr(fn, "__name__", repr(fn)),
                 attempt,
                 attempts,

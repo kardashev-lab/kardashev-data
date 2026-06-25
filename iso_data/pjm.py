@@ -14,7 +14,7 @@ Sources:
   Instantaneous: /inst_load?...
   Curtailment  : /capacity_reserve_margin?...  (no dedicated RE curtailment endpoint)
   Generator    : /gen_cap_list?...  (generator capacity by fuel type)
-  Intercon Q   : /atnmktyr?...  (queue items — use download URL instead)
+  Intercon Q   : /atnmktyr?...  (queue items; use download URL instead)
   Wind output  : /wind_gen?...
   Solar output : /solar_gen?...
   Reserves     : /reserve_requirements?...
@@ -23,7 +23,7 @@ All endpoints return JSON with a "items" array and pagination via startRow/rowCo
 Max rowCount per request: 50000.
 
 Environment variable:
-  PJM_API_KEY — your Dataminer2 subscription key
+  PJM_API_KEY: your Dataminer2 subscription key
 """
 from __future__ import annotations
 

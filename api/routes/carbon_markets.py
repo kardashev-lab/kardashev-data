@@ -1,5 +1,5 @@
 """
-GET /carbon-markets — RGGI and CA ARB carbon allowance auction results.
+GET /carbon-markets: RGGI and CA ARB carbon allowance auction results.
 """
 from __future__ import annotations
 
