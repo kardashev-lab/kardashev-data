@@ -44,16 +44,20 @@ async def lifespan(app: FastAPI):
         pass
 
 
-_is_dev = os.environ.get("ENVIRONMENT", "production") != "production"
-
 app = FastAPI(
     title="Kardashev Data Platform",
-    description="US energy grid data: fuel mix, carbon intensity, LMP, curtailment, and more.",
+    description=(
+        "Open API for US energy grid intelligence. "
+        "Real-time fuel mix, carbon intensity, LMP, curtailment, load, "
+        "generation, nat gas, hydro, nuclear, emissions, and more — "
+        "across all 7 major US ISOs. No key required.\n\n"
+        "Source: [github.com/kardashev-lab/kardashev-data](https://github.com/kardashev-lab/kardashev-data)"
+    ),
     version="0.1.0",
     lifespan=lifespan,
-    docs_url="/docs" if _is_dev else None,
-    redoc_url="/redoc" if _is_dev else None,
-    openapi_url="/openapi.json" if _is_dev else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 app.add_middleware(RateLimitMiddleware, requests_per_minute=requests_per_minute())
@@ -93,6 +97,32 @@ app.include_router(carbon_markets.router)
 app.include_router(hydro.router)
 app.include_router(commodities.router)
 app.include_router(solar.router)
+
+
+@app.get("/")
+async def root():
+    return {
+        "name": "Kardashev Data Platform",
+        "docs": "https://data.kardashevlabs.org/docs",
+        "source": "https://github.com/kardashev-lab/kardashev-data",
+        "endpoints": [
+            "/fuel-mix",
+            "/carbon/latest",
+            "/lmp",
+            "/lmp/map",
+            "/curtailment",
+            "/load",
+            "/generation",
+            "/interchange",
+            "/nat-gas/prices",
+            "/nuclear/status",
+            "/emissions",
+            "/hydro",
+            "/commodities",
+            "/queue",
+            "/weather",
+        ],
+    }
 
 
 @app.get("/health")
