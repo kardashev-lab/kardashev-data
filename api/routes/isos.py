@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter
+
+from api.db import fetch
 
 router = APIRouter(prefix="/isos", tags=["meta"])
 
@@ -93,6 +97,51 @@ _ISO_CATALOG = [
         "auth_required": "Free API key from dataminer2.pjm.com",
     },
 ]
+
+
+@router.get("/status")
+async def data_status():
+    """
+    Live data freshness for each ISO and dataset.
+
+    Returns how many seconds ago each dataset was last updated, and whether
+    it is current (within expected cadence) or stale.
+    """
+    now = datetime.now(timezone.utc)
+
+    def _age(ts) -> dict | None:
+        if ts is None:
+            return None
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        age_s = int((now - ts).total_seconds())
+        return {"ts": ts.isoformat(), "age_seconds": age_s}
+
+    # fuel_mix: latest ts per ISO
+    fm_rows = await fetch(
+        "SELECT iso, MAX(ts) AS latest FROM fuel_mix GROUP BY iso ORDER BY iso"
+    )
+    # lmp: latest ts per ISO+market
+    lmp_rows = await fetch(
+        "SELECT iso, market, MAX(ts) AS latest FROM lmp GROUP BY iso, market ORDER BY iso, market"
+    )
+    # curtailment: latest date per ISO
+    curt_rows = await fetch(
+        "SELECT iso, MAX(date) AS latest FROM curtailment GROUP BY iso ORDER BY iso"
+    )
+
+    fuel_mix = {r["iso"]: _age(r["latest"]) for r in fm_rows}
+    lmp: dict = {}
+    for r in lmp_rows:
+        lmp.setdefault(r["iso"], {})[r["market"]] = _age(r["latest"])
+    curtailment = {r["iso"]: _age(r["latest"]) for r in curt_rows}
+
+    return {
+        "as_of": now.isoformat(),
+        "fuel_mix": fuel_mix,
+        "lmp": lmp,
+        "curtailment": curtailment,
+    }
 
 
 @router.get("")
