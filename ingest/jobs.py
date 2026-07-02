@@ -1656,12 +1656,16 @@ def ingest_ercot_lmp_rt():
     try:
         import gridstatus
         iso = gridstatus.Ercot()
-        df = iso.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations="ALL")
+        # Ercot.get_lmp takes date + location_type (no market/locations kwargs)
+        df = iso.get_lmp(date="latest", location_type="settlement point")
+        if not df.empty and "Interval Start" in df.columns:
+            latest_ts = df["Interval Start"].max()
+            df = df[df["Interval Start"] == latest_ts]
         rows = _gridstatus_ercot_to_rows(df, "RT")
         n = upsert_lmp(rows)
         log.info("ERCOT RT LMP (gridstatus): %d rows, %d nodes", n, len(df["Location"].unique()) if not df.empty else 0)
     except Exception as exc:
-        log.warning("ERCOT RT LMP gridstatus failed, falling back to CDR HTML: %s", exc)
+        log.warning("ERCOT RT LMP gridstatus failed, falling back to CDR HTML: %s", exc, exc_info=True)
         from iso_data import ercot_lmp
         rows = ercot_lmp.get_rt_lmp()
         n = upsert_lmp(rows)
@@ -1669,17 +1673,15 @@ def ingest_ercot_lmp_rt():
 
 
 def ingest_ercot_lmp_da(target: date | None = None):
-    """ERCOT DAM settlement point prices via gridstatus (falls back to CDR archive)."""
+    """ERCOT DAM settlement point prices (CDR archive — gridstatus Ercot has no DA LMP method)."""
     from ingest.writer import upsert_lmp
     try:
-        import gridstatus
-        iso = gridstatus.Ercot()
-        df = iso.get_lmp(date="latest", market="DAY_AHEAD_HOURLY", locations="ALL")
-        rows = _gridstatus_ercot_to_rows(df, "DA")
+        from iso_data import ercot_lmp
+        rows = ercot_lmp.get_da_lmp(target)
         n = upsert_lmp(rows)
-        log.info("ERCOT DA LMP (gridstatus): %d rows", n)
+        log.info("ERCOT DA LMP: %d rows", n)
     except Exception as exc:
-        log.warning("ERCOT DA LMP gridstatus failed, falling back to CDR: %s", exc)
+        log.warning("ERCOT DA LMP failed: %s", exc)
         from iso_data import ercot_lmp
         rows = ercot_lmp.get_da_lmp(target)
         n = upsert_lmp(rows)
