@@ -37,19 +37,20 @@ class NodeRecord(TypedDict):
 
 NODES: list[NodeRecord] = [
     # -------------------------------------------------------------------------
-    # NYISO — 11 load zones (A through K)
+    # NYISO — 11 load zones identified by PTID (numeric IDs used in lmp table)
+    # PTIDs from NYISO public data; zones A-K
     # -------------------------------------------------------------------------
-    {"node_id": "CAPITL", "iso": "NYISO", "name": "Capital Zone (F)", "lat": 42.652, "lng": -73.756, "zone": "F", "voltage_kv": None},
-    {"node_id": "CENTRL", "iso": "NYISO", "name": "Central Zone (C)", "lat": 43.048, "lng": -76.147, "zone": "C", "voltage_kv": None},
-    {"node_id": "DUNWOD", "iso": "NYISO", "name": "Dunwoodie (H)", "lat": 40.937, "lng": -73.856, "zone": "H", "voltage_kv": None},
-    {"node_id": "GENESE", "iso": "NYISO", "name": "Genesee Zone (B)", "lat": 43.161, "lng": -77.610, "zone": "B", "voltage_kv": None},
-    {"node_id": "HUD VL", "iso": "NYISO", "name": "Hudson Valley (G)", "lat": 41.701, "lng": -74.024, "zone": "G", "voltage_kv": None},
-    {"node_id": "LONGIL", "iso": "NYISO", "name": "Long Island (K)", "lat": 40.789, "lng": -73.135, "zone": "K", "voltage_kv": None},
-    {"node_id": "MHK VL", "iso": "NYISO", "name": "Mohawk Valley (E)", "lat": 43.100, "lng": -75.232, "zone": "E", "voltage_kv": None},
-    {"node_id": "MILLWD", "iso": "NYISO", "name": "Millwood (I)", "lat": 41.202, "lng": -73.803, "zone": "I", "voltage_kv": None},
-    {"node_id": "N.Y.C.", "iso": "NYISO", "name": "New York City (J)", "lat": 40.713, "lng": -74.006, "zone": "J", "voltage_kv": None},
-    {"node_id": "NORTH", "iso": "NYISO", "name": "North Zone (D)", "lat": 44.698, "lng": -73.453, "zone": "D", "voltage_kv": None},
-    {"node_id": "WEST", "iso": "NYISO", "name": "West Zone (A)", "lat": 42.886, "lng": -78.878, "zone": "A", "voltage_kv": None},
+    {"node_id": "61752", "iso": "NYISO", "name": "Capital Zone (F)", "lat": 42.652, "lng": -73.756, "zone": "F", "voltage_kv": None},
+    {"node_id": "61753", "iso": "NYISO", "name": "Central Zone (C)", "lat": 43.048, "lng": -76.147, "zone": "C", "voltage_kv": None},
+    {"node_id": "61754", "iso": "NYISO", "name": "Dunwoodie Zone (I)", "lat": 40.937, "lng": -73.856, "zone": "I", "voltage_kv": None},
+    {"node_id": "61755", "iso": "NYISO", "name": "Genesee Zone (B)", "lat": 43.161, "lng": -77.610, "zone": "B", "voltage_kv": None},
+    {"node_id": "61756", "iso": "NYISO", "name": "Hudson Valley (G)", "lat": 41.701, "lng": -74.024, "zone": "G", "voltage_kv": None},
+    {"node_id": "61757", "iso": "NYISO", "name": "Long Island (K)", "lat": 40.789, "lng": -73.135, "zone": "K", "voltage_kv": None},
+    {"node_id": "61758", "iso": "NYISO", "name": "Mohawk Valley (E)", "lat": 43.100, "lng": -75.232, "zone": "E", "voltage_kv": None},
+    {"node_id": "61759", "iso": "NYISO", "name": "Millwood Zone (H)", "lat": 41.202, "lng": -73.803, "zone": "H", "voltage_kv": None},
+    {"node_id": "61760", "iso": "NYISO", "name": "New York City (J)", "lat": 40.713, "lng": -74.006, "zone": "J", "voltage_kv": None},
+    {"node_id": "61761", "iso": "NYISO", "name": "North Zone (D)", "lat": 44.698, "lng": -73.453, "zone": "D", "voltage_kv": None},
+    {"node_id": "61762", "iso": "NYISO", "name": "West Zone (A)", "lat": 42.886, "lng": -78.878, "zone": "A", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
     # ISONE — 6 load zones (CT, ME, NH, NEMA, RI, SEMA, VT, WCMA)
@@ -99,54 +100,45 @@ NODES: list[NodeRecord] = [
     {"node_id": "TIDC_APND", "iso": "CAISO", "name": "Turlock Irrigation District", "lat": 37.504, "lng": -120.850, "zone": "NP15", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # MISO — Load resource zones (LRZ 1–10)
+    # MISO — Hub nodes (actual node_ids used in lmp table)
     # -------------------------------------------------------------------------
-    {"node_id": "LRZ1", "iso": "MISO", "name": "LRZ 1 (Manitoba/Upper Midwest)", "lat": 46.879, "lng": -96.789, "zone": "LRZ1", "voltage_kv": None},
-    {"node_id": "LRZ2", "iso": "MISO", "name": "LRZ 2 (Minnesota/Wisconsin)", "lat": 44.978, "lng": -93.265, "zone": "LRZ2", "voltage_kv": None},
-    {"node_id": "LRZ3", "iso": "MISO", "name": "LRZ 3 (Michigan UP)", "lat": 46.516, "lng": -84.335, "zone": "LRZ3", "voltage_kv": None},
-    {"node_id": "LRZ4", "iso": "MISO", "name": "LRZ 4 (Michigan LP)", "lat": 43.453, "lng": -84.953, "zone": "LRZ4", "voltage_kv": None},
-    {"node_id": "LRZ5", "iso": "MISO", "name": "LRZ 5 (Illinois/Iowa)", "lat": 41.838, "lng": -88.010, "zone": "LRZ5", "voltage_kv": None},
-    {"node_id": "LRZ6", "iso": "MISO", "name": "LRZ 6 (Indiana/Ohio)", "lat": 39.769, "lng": -86.158, "zone": "LRZ6", "voltage_kv": None},
-    {"node_id": "LRZ7", "iso": "MISO", "name": "LRZ 7 (Missouri/Kansas)", "lat": 38.573, "lng": -92.174, "zone": "LRZ7", "voltage_kv": None},
-    {"node_id": "LRZ8", "iso": "MISO", "name": "LRZ 8 (Arkansas/Mississippi)", "lat": 34.746, "lng": -92.289, "zone": "LRZ8", "voltage_kv": None},
-    {"node_id": "LRZ9", "iso": "MISO", "name": "LRZ 9 (Louisiana)", "lat": 30.457, "lng": -91.187, "zone": "LRZ9", "voltage_kv": None},
-    {"node_id": "LRZ10", "iso": "MISO", "name": "LRZ 10 (Texas Panhandle)", "lat": 35.207, "lng": -101.835, "zone": "LRZ10", "voltage_kv": None},
+    {"node_id": "ARKANSAS.HUB", "iso": "MISO", "name": "Arkansas Hub", "lat": 34.746, "lng": -92.289, "zone": "ARKANSAS", "voltage_kv": None},
+    {"node_id": "ILLINOIS.HUB", "iso": "MISO", "name": "Illinois Hub", "lat": 40.633, "lng": -89.399, "zone": "ILLINOIS", "voltage_kv": None},
+    {"node_id": "INDIANA.HUB", "iso": "MISO", "name": "Indiana Hub", "lat": 39.769, "lng": -86.158, "zone": "INDIANA", "voltage_kv": None},
+    {"node_id": "LOUISIANA.HUB", "iso": "MISO", "name": "Louisiana Hub", "lat": 30.457, "lng": -91.187, "zone": "LOUISIANA", "voltage_kv": None},
+    {"node_id": "MICHIGAN.HUB", "iso": "MISO", "name": "Michigan Hub", "lat": 42.733, "lng": -84.555, "zone": "MICHIGAN", "voltage_kv": None},
+    {"node_id": "MINN.HUB", "iso": "MISO", "name": "Minnesota Hub", "lat": 44.978, "lng": -93.265, "zone": "MINNESOTA", "voltage_kv": None},
+    {"node_id": "MS.HUB", "iso": "MISO", "name": "Mississippi Hub", "lat": 32.298, "lng": -90.184, "zone": "MISSISSIPPI", "voltage_kv": None},
+    {"node_id": "TEXAS.HUB", "iso": "MISO", "name": "Texas Hub (MISO South)", "lat": 32.800, "lng": -96.800, "zone": "TEXAS", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # ERCOT — Settlement point hubs and load zones
+    # ERCOT — Settlement point hubs (actual node_ids from lmp table)
     # -------------------------------------------------------------------------
     {"node_id": "HB_BUSAVG", "iso": "ERCOT", "name": "ERCOT Bus Average Hub", "lat": 31.000, "lng": -100.000, "zone": "HUB", "voltage_kv": None},
     {"node_id": "HB_HOUSTON", "iso": "ERCOT", "name": "Houston Hub", "lat": 29.760, "lng": -95.369, "zone": "HOUSTON", "voltage_kv": 345.0},
+    {"node_id": "HB_HUBAVG", "iso": "ERCOT", "name": "ERCOT Hub Average", "lat": 31.000, "lng": -99.000, "zone": "HUB", "voltage_kv": None},
     {"node_id": "HB_NORTH", "iso": "ERCOT", "name": "North Hub (Dallas/Fort Worth)", "lat": 32.783, "lng": -97.350, "zone": "NORTH", "voltage_kv": 345.0},
     {"node_id": "HB_PAN", "iso": "ERCOT", "name": "Panhandle Hub (West Texas Wind)", "lat": 35.207, "lng": -101.835, "zone": "PAN", "voltage_kv": 345.0},
     {"node_id": "HB_SOUTH", "iso": "ERCOT", "name": "South Hub (San Antonio)", "lat": 29.425, "lng": -98.494, "zone": "SOUTH", "voltage_kv": 345.0},
     {"node_id": "HB_WEST", "iso": "ERCOT", "name": "West Hub (Permian Basin)", "lat": 31.849, "lng": -102.367, "zone": "WEST", "voltage_kv": 345.0},
-    {"node_id": "LZ_AEN", "iso": "ERCOT", "name": "AEN Load Zone (South Texas)", "lat": 27.800, "lng": -97.396, "zone": "AEN", "voltage_kv": None},
-    {"node_id": "LZ_CPS", "iso": "ERCOT", "name": "CPS Load Zone (San Antonio)", "lat": 29.425, "lng": -98.494, "zone": "CPS", "voltage_kv": None},
-    {"node_id": "LZ_HOUSTON", "iso": "ERCOT", "name": "Houston Load Zone", "lat": 29.760, "lng": -95.369, "zone": "HOUSTON", "voltage_kv": None},
-    {"node_id": "LZ_LCRA", "iso": "ERCOT", "name": "LCRA Load Zone (Central TX)", "lat": 30.267, "lng": -97.743, "zone": "LCRA", "voltage_kv": None},
-    {"node_id": "LZ_NORTH", "iso": "ERCOT", "name": "North Load Zone (DFW)", "lat": 32.783, "lng": -97.350, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "LZ_RAYBN", "iso": "ERCOT", "name": "Rayburn Load Zone (East TX)", "lat": 30.565, "lng": -96.300, "zone": "RAYBN", "voltage_kv": None},
-    {"node_id": "LZ_SOUTH", "iso": "ERCOT", "name": "South Load Zone", "lat": 28.696, "lng": -100.480, "zone": "SOUTH", "voltage_kv": None},
-    {"node_id": "LZ_WEST", "iso": "ERCOT", "name": "West Load Zone (Permian)", "lat": 31.849, "lng": -102.367, "zone": "WEST", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # SPP — North/South hubs and aggregates
+    # SPP — Hubs and aggregates (actual node_ids from lmp table)
     # -------------------------------------------------------------------------
-    {"node_id": "SPP_NORTH_HUB", "iso": "SPP", "name": "SPP North Hub", "lat": 41.257, "lng": -96.344, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "SPP_SOUTH_HUB", "iso": "SPP", "name": "SPP South Hub", "lat": 35.467, "lng": -97.517, "zone": "SOUTH", "voltage_kv": None},
-    {"node_id": "CSWS", "iso": "SPP", "name": "Central & South West Services (OK)", "lat": 35.467, "lng": -97.517, "zone": "SOUTH", "voltage_kv": None},
-    {"node_id": "GRDA", "iso": "SPP", "name": "Grand River Dam Authority (OK)", "lat": 36.476, "lng": -94.880, "zone": "SOUTH", "voltage_kv": None},
-    {"node_id": "INDN", "iso": "SPP", "name": "Indiana Michigan Power (IN)", "lat": 41.682, "lng": -86.251, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "KCPL", "iso": "SPP", "name": "Kansas City Power & Light (MO/KS)", "lat": 39.099, "lng": -94.578, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "NPPD", "iso": "SPP", "name": "Nebraska Public Power District", "lat": 40.797, "lng": -100.792, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "OKGE", "iso": "SPP", "name": "Oklahoma Gas & Electric", "lat": 35.467, "lng": -97.517, "zone": "SOUTH", "voltage_kv": None},
-    {"node_id": "OPPD", "iso": "SPP", "name": "Omaha Public Power District (NE)", "lat": 41.257, "lng": -95.956, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "SECI", "iso": "SPP", "name": "Sunflower Electric (KS)", "lat": 37.694, "lng": -97.314, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "SPRM", "iso": "SPP", "name": "Empire District Electric (MO)", "lat": 37.082, "lng": -94.514, "zone": "SOUTH", "voltage_kv": None},
-    {"node_id": "SPS", "iso": "SPP", "name": "Southwestern Public Service (TX panhandle)", "lat": 33.590, "lng": -101.855, "zone": "SOUTH", "voltage_kv": None},
-    {"node_id": "WR", "iso": "SPP", "name": "Westar Energy (KS)", "lat": 39.056, "lng": -95.689, "zone": "NORTH", "voltage_kv": None},
-    {"node_id": "WFEC", "iso": "SPP", "name": "Western Farmers Electric Coop (OK)", "lat": 35.225, "lng": -99.000, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "SPPNORTH_HUB", "iso": "SPP", "name": "SPP North Hub", "lat": 41.257, "lng": -96.344, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "SPPSOUTH_HUB", "iso": "SPP", "name": "SPP South Hub", "lat": 35.467, "lng": -97.517, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "CSWS_HUB", "iso": "SPP", "name": "AEP-SWEPCO Hub (OK/TX/AR)", "lat": 35.467, "lng": -97.517, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "GRDA_HUB", "iso": "SPP", "name": "Grand River Dam Authority Hub (OK)", "lat": 36.476, "lng": -94.880, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "INDN_INDN", "iso": "SPP", "name": "Indiana Michigan Power", "lat": 41.682, "lng": -86.251, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "KCPLHUB", "iso": "SPP", "name": "Kansas City Power & Light Hub (MO/KS)", "lat": 39.099, "lng": -94.578, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "NPPD_NPPD", "iso": "SPP", "name": "Nebraska Public Power District", "lat": 40.797, "lng": -100.792, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "OKGE_OKGE", "iso": "SPP", "name": "Oklahoma Gas & Electric", "lat": 35.467, "lng": -97.517, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "OPPD_OPPD", "iso": "SPP", "name": "Omaha Public Power District (NE)", "lat": 41.257, "lng": -95.956, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "SECI_HUB", "iso": "SPP", "name": "Sunflower Electric Hub (KS)", "lat": 37.694, "lng": -97.314, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "SPRM_SPRM", "iso": "SPP", "name": "Empire District Electric (MO)", "lat": 37.082, "lng": -94.514, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "SPS_SPS", "iso": "SPP", "name": "Southwestern Public Service (TX/NM panhandle)", "lat": 33.590, "lng": -101.855, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "WR_WR", "iso": "SPP", "name": "Evergy Kansas (formerly Westar)", "lat": 39.056, "lng": -95.689, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "WFEC_WFEC", "iso": "SPP", "name": "Western Farmers Electric Coop (OK)", "lat": 35.225, "lng": -99.000, "zone": "SOUTH", "voltage_kv": None},
 ]
 
 
