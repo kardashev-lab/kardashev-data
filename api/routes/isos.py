@@ -112,6 +112,9 @@ async def data_status():
     def _age(ts) -> dict | None:
         if ts is None:
             return None
+        from datetime import date as _date
+        if isinstance(ts, _date) and not isinstance(ts, datetime):
+            ts = datetime(ts.year, ts.month, ts.day, tzinfo=timezone.utc)
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=timezone.utc)
         age_s = int((now - ts).total_seconds())
