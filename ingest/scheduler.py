@@ -100,6 +100,14 @@ def run_lmp_rt():
     _run("isone_lmp_rt", ingest_isone_lmp_rt)
     _run("miso_lmp_rt",  ingest_miso_lmp_rt)
     _run("ercot_lmp_rt", ingest_ercot_lmp_rt)
+    # auto-seed coordinates for any new nodes that appeared
+    try:
+        import asyncio
+        from ingest.seed_lmp_nodes_auto import auto_seed
+        import os
+        asyncio.run(auto_seed(os.environ["DATABASE_URL"]))
+    except Exception as exc:
+        log.warning("auto_seed_lmp_nodes failed: %s", exc)
 
 
 def run_lmp_da():
