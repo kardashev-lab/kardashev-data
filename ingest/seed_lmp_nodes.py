@@ -51,6 +51,11 @@ NODES: list[NodeRecord] = [
     {"node_id": "61760", "iso": "NYISO", "name": "New York City (J)", "lat": 40.713, "lng": -74.006, "zone": "J", "voltage_kv": None},
     {"node_id": "61761", "iso": "NYISO", "name": "North Zone (D)", "lat": 44.698, "lng": -73.453, "zone": "D", "voltage_kv": None},
     {"node_id": "61762", "iso": "NYISO", "name": "West Zone (A)", "lat": 42.886, "lng": -78.878, "zone": "A", "voltage_kv": None},
+    # NYISO external interface nodes (import/export tie points)
+    {"node_id": "61844", "iso": "NYISO", "name": "Hydro Quebec Interface (H Q)", "lat": 45.005, "lng": -73.440, "zone": "HQ", "voltage_kv": None},
+    {"node_id": "61845", "iso": "NYISO", "name": "New England Interface (NPX)", "lat": 42.100, "lng": -72.700, "zone": "NPX", "voltage_kv": None},
+    {"node_id": "61846", "iso": "NYISO", "name": "Ontario Hydro Interface (O H)", "lat": 43.083, "lng": -79.060, "zone": "OH", "voltage_kv": None},
+    {"node_id": "61847", "iso": "NYISO", "name": "PJM Interface", "lat": 41.200, "lng": -76.000, "zone": "PJM", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
     # ISONE — 6 load zones (CT, ME, NH, NEMA, RI, SEMA, VT, WCMA)
