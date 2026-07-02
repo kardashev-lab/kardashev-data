@@ -21,7 +21,12 @@ _SCED_URL = "https://data.ercot.com/api/public-reports/archive/np6-788-er"
 _DAM_URL  = "https://data.ercot.com/api/public-reports/archive/np4-190-er"
 _RT_SPP_URL = "https://www.ercot.com/content/cdr/html/real_time_spp.html"
 
-HUB_NODES = {"HB_NORTH", "HB_SOUTH", "HB_WEST", "HB_HOUSTON", "HB_BUSAVG", "HB_HUBAVG", "HB_PAN"}
+HUB_NODES = {
+    # Settlement hubs
+    "HB_BUSAVG", "HB_HOUSTON", "HB_HUBAVG", "HB_NORTH", "HB_PAN", "HB_SOUTH", "HB_WEST",
+    # Load zones
+    "LZ_AEN", "LZ_CPS", "LZ_HOUSTON", "LZ_LCRA", "LZ_NORTH", "LZ_RAYBN", "LZ_SOUTH", "LZ_WEST",
+}
 
 # Column name variants observed in ERCOT CSVs
 _SPP_COL_CANDIDATES  = ["Settlement Point Price", "SPP", "Spp"]

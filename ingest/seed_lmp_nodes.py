@@ -65,26 +65,12 @@ NODES: list[NodeRecord] = [
     {"node_id": ".WCMA", "iso": "ISONE", "name": "West/Central Massachusetts", "lat": 42.102, "lng": -72.590, "zone": "WCMA", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # PJM — Major hubs and aggregates
+    # PJM — Major hubs (node_ids are PJM pnode IDs, matching the lmp table)
     # -------------------------------------------------------------------------
-    {"node_id": "AEP-DAYTON HUB", "iso": "PJM", "name": "AEP-Dayton Hub", "lat": 39.961, "lng": -83.003, "zone": "AEP", "voltage_kv": 345.0},
-    {"node_id": "AEP GEN HUB", "iso": "PJM", "name": "AEP Generation Hub", "lat": 38.887, "lng": -82.033, "zone": "AEP", "voltage_kv": 345.0},
-    {"node_id": "ATSI GEN HUB", "iso": "PJM", "name": "ATSI Generation Hub", "lat": 41.499, "lng": -81.695, "zone": "ATSI", "voltage_kv": 345.0},
-    {"node_id": "COMED HUB", "iso": "PJM", "name": "ComEd Hub (Chicago)", "lat": 41.833, "lng": -87.832, "zone": "COMED", "voltage_kv": 345.0},
-    {"node_id": "DOMINION HUB", "iso": "PJM", "name": "Dominion Hub (Virginia)", "lat": 37.431, "lng": -78.656, "zone": "DOM", "voltage_kv": 500.0},
-    {"node_id": "EASTERN HUB", "iso": "PJM", "name": "Eastern Hub", "lat": 40.440, "lng": -79.996, "zone": "PPL", "voltage_kv": 345.0},
-    {"node_id": "ILLINOIS HUB", "iso": "PJM", "name": "Illinois Hub", "lat": 40.633, "lng": -89.399, "zone": "AMIL", "voltage_kv": None},
-    {"node_id": "INDIANA HUB", "iso": "PJM", "name": "Indiana Hub", "lat": 39.769, "lng": -86.158, "zone": "AEP", "voltage_kv": None},
-    {"node_id": "JCPL ZONE", "iso": "PJM", "name": "Jersey Central Power & Light Zone", "lat": 40.222, "lng": -74.325, "zone": "JCPL", "voltage_kv": 230.0},
-    {"node_id": "METED ZONE", "iso": "PJM", "name": "Met-Ed Zone (PA)", "lat": 40.335, "lng": -76.418, "zone": "METED", "voltage_kv": None},
-    {"node_id": "NI HUB", "iso": "PJM", "name": "Northern Illinois Hub", "lat": 41.892, "lng": -87.632, "zone": "COMED", "voltage_kv": 345.0},
-    {"node_id": "OHIO HUB", "iso": "PJM", "name": "Ohio Hub", "lat": 40.417, "lng": -82.907, "zone": "AEP", "voltage_kv": None},
-    {"node_id": "PEPCO ZONE", "iso": "PJM", "name": "Potomac Electric Zone (DC/MD)", "lat": 38.907, "lng": -77.037, "zone": "PEPCO", "voltage_kv": 230.0},
-    {"node_id": "PJMW HUB", "iso": "PJM", "name": "PJM Western Hub", "lat": 40.440, "lng": -79.996, "zone": "AEP", "voltage_kv": 345.0},
-    {"node_id": "PPL ZONE", "iso": "PJM", "name": "PPL Zone (PA)", "lat": 40.602, "lng": -75.490, "zone": "PPL", "voltage_kv": 230.0},
-    {"node_id": "PSEG ZONE", "iso": "PJM", "name": "PSEG Zone (NJ)", "lat": 40.692, "lng": -74.044, "zone": "PSEG", "voltage_kv": 230.0},
-    {"node_id": "RECO ZONE", "iso": "PJM", "name": "Rockland Electric Zone (NY border)", "lat": 41.148, "lng": -74.159, "zone": "RECO", "voltage_kv": None},
-    {"node_id": "UGI ZONE", "iso": "PJM", "name": "UGI Zone (PA)", "lat": 40.243, "lng": -76.929, "zone": "UGI", "voltage_kv": None},
+    {"node_id": "33092371", "iso": "PJM", "name": "PJM Western Hub", "lat": 40.440, "lng": -79.996, "zone": "AEP", "voltage_kv": 345.0},
+    {"node_id": "50969827", "iso": "PJM", "name": "Eastern Hub", "lat": 40.222, "lng": -74.325, "zone": "PPL", "voltage_kv": 345.0},
+    {"node_id": "34508503", "iso": "PJM", "name": "AEP-Dayton Hub", "lat": 39.961, "lng": -83.003, "zone": "AEP", "voltage_kv": 345.0},
+    {"node_id": "33092396", "iso": "PJM", "name": "ComEd Hub (Chicago)", "lat": 41.833, "lng": -87.832, "zone": "COMED", "voltage_kv": 345.0},
 
     # -------------------------------------------------------------------------
     # CAISO — Trading hubs and major APNodes
@@ -121,6 +107,15 @@ NODES: list[NodeRecord] = [
     {"node_id": "HB_PAN", "iso": "ERCOT", "name": "Panhandle Hub (West Texas Wind)", "lat": 35.207, "lng": -101.835, "zone": "PAN", "voltage_kv": 345.0},
     {"node_id": "HB_SOUTH", "iso": "ERCOT", "name": "South Hub (San Antonio)", "lat": 29.425, "lng": -98.494, "zone": "SOUTH", "voltage_kv": 345.0},
     {"node_id": "HB_WEST", "iso": "ERCOT", "name": "West Hub (Permian Basin)", "lat": 31.849, "lng": -102.367, "zone": "WEST", "voltage_kv": 345.0},
+    # Load zones
+    {"node_id": "LZ_AEN", "iso": "ERCOT", "name": "AEN Load Zone (South Texas)", "lat": 27.800, "lng": -97.396, "zone": "AEN", "voltage_kv": None},
+    {"node_id": "LZ_CPS", "iso": "ERCOT", "name": "CPS Load Zone (San Antonio)", "lat": 29.425, "lng": -98.494, "zone": "CPS", "voltage_kv": None},
+    {"node_id": "LZ_HOUSTON", "iso": "ERCOT", "name": "Houston Load Zone", "lat": 29.760, "lng": -95.369, "zone": "HOUSTON", "voltage_kv": None},
+    {"node_id": "LZ_LCRA", "iso": "ERCOT", "name": "LCRA Load Zone (Central TX)", "lat": 30.267, "lng": -97.743, "zone": "LCRA", "voltage_kv": None},
+    {"node_id": "LZ_NORTH", "iso": "ERCOT", "name": "North Load Zone (DFW)", "lat": 32.783, "lng": -97.350, "zone": "NORTH", "voltage_kv": None},
+    {"node_id": "LZ_RAYBN", "iso": "ERCOT", "name": "Rayburn Load Zone (East TX)", "lat": 30.565, "lng": -96.300, "zone": "RAYBN", "voltage_kv": None},
+    {"node_id": "LZ_SOUTH", "iso": "ERCOT", "name": "South Load Zone", "lat": 28.696, "lng": -100.480, "zone": "SOUTH", "voltage_kv": None},
+    {"node_id": "LZ_WEST", "iso": "ERCOT", "name": "West Load Zone (Permian)", "lat": 31.849, "lng": -102.367, "zone": "WEST", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
     # SPP — Hubs and aggregates (actual node_ids from lmp table)

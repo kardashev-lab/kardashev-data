@@ -1430,9 +1430,15 @@ def ingest_pjm_lmp_da():
 # ---------------------------------------------------------------------------
 
 _CAISO_PRICE_AREAS: list[tuple[str, str]] = [
-    ("TH_SP15_GEN-APND", "SP15"),   # Southern California
+    # Trading hubs
     ("TH_NP15_GEN-APND", "NP15"),   # Northern California
+    ("TH_SP15_GEN-APND", "SP15"),   # Southern California
     ("TH_ZP26_GEN-APND", "ZP26"),   # Central California
+    # Load Aggregation Points (LAPs)
+    ("PGAE_APND", "PG&E"),
+    ("SCE_APND",  "SCE"),
+    ("SDGE_APND", "SDG&E"),
+    ("SMUD_APND", "SMUD"),
 ]
 
 
