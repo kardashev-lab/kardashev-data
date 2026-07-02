@@ -1504,17 +1504,21 @@ def _gridstatus_caiso_to_rows(df: pd.DataFrame, market: str) -> list[dict]:
 
 
 def ingest_caiso_lmp_rt():
-    """CAISO RT 5-min LMP for all nodes via gridstatus."""
+    """CAISO RT 5-min LMP for all nodes via gridstatus (latest interval only)."""
     from ingest.writer import upsert_lmp
     try:
         import gridstatus
         iso = gridstatus.CAISO()
         df = iso.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations="ALL")
+        if not df.empty and "Interval Start" in df.columns:
+            # Keep only the most recent 5-min interval to avoid writing 230k rows/cycle
+            latest_ts = df["Interval Start"].max()
+            df = df[df["Interval Start"] == latest_ts]
         rows = _gridstatus_caiso_to_rows(df, "RT")
         n = upsert_lmp(rows)
         log.info("CAISO RT LMP (gridstatus): %d rows, %d nodes", n, len(df["Location"].unique()) if not df.empty else 0)
     except Exception as exc:
-        log.warning("CAISO RT LMP gridstatus failed, falling back to OASIS: %s", exc)
+        log.warning("CAISO RT LMP gridstatus failed, falling back to OASIS: %s", exc, exc_info=True)
         from iso_data import caiso
         today = date.today()
         all_rows: list[dict] = []
