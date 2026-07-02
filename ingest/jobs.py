@@ -1651,7 +1651,7 @@ def ingest_ercot_lmp_rt():
     from ingest.writer import upsert_lmp
     try:
         import gridstatus
-        iso = gridstatus.ERCOT()
+        iso = gridstatus.Ercot()
         df = iso.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations="ALL")
         rows = _gridstatus_ercot_to_rows(df, "RT")
         n = upsert_lmp(rows)
@@ -1669,7 +1669,7 @@ def ingest_ercot_lmp_da(target: date | None = None):
     from ingest.writer import upsert_lmp
     try:
         import gridstatus
-        iso = gridstatus.ERCOT()
+        iso = gridstatus.Ercot()
         df = iso.get_lmp(date="latest", market="DAY_AHEAD_HOURLY", locations="ALL")
         rows = _gridstatus_ercot_to_rows(df, "DA")
         n = upsert_lmp(rows)
