@@ -404,6 +404,21 @@ CREATE TABLE IF NOT EXISTS steo_forecasts (
 CREATE INDEX IF NOT EXISTS steo_period ON steo_forecasts (period DESC);
 
 -- ---------------------------------------------------------------------------
+-- LMP node locations  (pricing nodes with lat/lng for map visualization)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS lmp_nodes (
+    node_id     TEXT             NOT NULL,
+    iso         TEXT             NOT NULL,
+    name        TEXT,
+    lat         NUMERIC(9, 6),
+    lng         NUMERIC(9, 6),
+    zone        TEXT,
+    voltage_kv  NUMERIC,
+    CONSTRAINT  lmp_nodes_pk PRIMARY KEY (node_id, iso)
+);
+CREATE INDEX IF NOT EXISTS lmp_nodes_iso ON lmp_nodes (iso);
+
+-- ---------------------------------------------------------------------------
 -- NREL NSRDB solar irradiance (hourly, 10 grid locations)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS solar_irradiance (
