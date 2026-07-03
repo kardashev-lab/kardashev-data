@@ -82,7 +82,7 @@ ISO APIs / EIA / ERCOT CDR / CAISO OASIS / NYISO Open Data
 - Python 3.12, FastAPI, asyncpg
 - PostgreSQL 16 (Railway managed)
 - Ingest scheduler: simple `while True` loop with per-job cadence tracking
-- `gridstatus` library for CAISO + ERCOT bus-level data
+- `kardashev` package for direct ISO data access (CAISO, ERCOT, MISO, NYISO, ISONE, SPP, PJM)
 - Railway (API service + ingest worker, both auto-deploy from `main`)
 
 **Data sources:** CAISO OASIS, ERCOT CDR, NYISO Open Data, MISO API, SPP Marketplace, EIA Open Data API, NRC daily status, EPA CAMPD API, USBR HydroMet, USGS Water Services, NREL NSRDB, NOAA weather.
