@@ -1161,6 +1161,8 @@ def ingest_spp_lmp_rt():
         try:
             ts = pd.to_datetime(row["GMTIntervalEnd"], utc=True)
             node_id = str(row.get("Settlement Location", ""))
+            if node_id not in _SPP_HUB_NODES:
+                continue
             key = (ts, node_id)
             if key in seen:
                 continue
@@ -1563,6 +1565,15 @@ _CAISO_HUB_NODES: frozenset[str] = frozenset({
 
 # HB_* hubs and LZ_* load zones only — ~15 nodes vs 1100+ resource nodes
 _ERCOT_HUB_PREFIXES: tuple[str, ...] = ("HB_", "LZ_")
+
+# SPP hub and load zone nodes only (matching lmp_nodes coordinates)
+_SPP_HUB_NODES: frozenset[str] = frozenset({
+    "SPP_NORTH_HUB", "SPP_SOUTH_HUB", "SPPNORTH_HUB", "SPPSOUTH_HUB",
+    "CSWS", "CSWS_HUB", "GRDA", "GRDA_HUB", "INDN", "INDN_INDN",
+    "KCPL", "KCPLHUB", "NPPD", "NPPD_NPPD", "OKGE", "OKGE_OKGE",
+    "OPPD", "OPPD_OPPD", "SECI", "SECI_HUB", "SPRM", "SPRM_SPRM",
+    "SPS", "SPS_SPS", "WR", "WR_WR", "WFEC", "WFEC_WFEC",
+})
 
 
 def _caiso_oasis_to_lmp_rows(
@@ -2183,7 +2194,14 @@ def purge_lmp_old_rows(days: int = 30) -> None:
             "DELETE FROM lmp WHERE iso = 'ERCOT' AND node_id NOT LIKE 'HB\\_%' AND node_id NOT LIKE 'LZ\\_%'"
         )
         ercot_res = cur.rowcount
-    log.info("LMP purge: %d old rows, %d CAISO bus nodes, %d ERCOT resource nodes removed", old, caiso_bus, ercot_res)
+        # Remove SPP non-hub nodes
+        spp_hubs = list(_SPP_HUB_NODES)
+        cur.execute(
+            "DELETE FROM lmp WHERE iso = 'SPP' AND node_id <> ALL(%s)",
+            (spp_hubs,),
+        )
+        spp_res = cur.rowcount
+    log.info("LMP purge: %d old, %d CAISO bus, %d ERCOT resource, %d SPP non-hub removed", old, caiso_bus, ercot_res, spp_res)
 
 
 def purge_fuel_mix_old_rows(days: int = 90) -> None:
