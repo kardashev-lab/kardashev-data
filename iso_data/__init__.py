@@ -1,5 +1,5 @@
 """
-Direct data clients for US ISO/RTOs. No gridstatus dependency.
+Direct data clients for US ISO/RTOs.
 
 Modules:
   caiso     - California ISO (curtailment HTML scrape + OASIS API)

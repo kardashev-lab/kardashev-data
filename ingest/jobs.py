@@ -1562,9 +1562,18 @@ def ingest_pjm_lmp_da():
 # ---------------------------------------------------------------------------
 
 _CAISO_PRICE_AREAS: list[tuple[str, str]] = [
-    ("TH_NP15_GEN-APND", "NP15"),   # Northern California
-    ("TH_SP15_GEN-APND", "SP15"),   # Southern California
-    ("TH_ZP26_GEN-APND", "ZP26"),   # Central California
+    ("TH_NP15_GEN-APND", "NP15"),    # Northern California trading hub
+    ("TH_SP15_GEN-APND", "SP15"),    # Southern California trading hub
+    ("TH_ZP26_GEN-APND", "ZP26"),    # Central California trading hub
+    ("PGAE_APND", "PGAE_APND"),      # PG&E area
+    ("SCE_APND",  "SCE_APND"),       # SCE area
+    ("SDGE_APND", "SDGE_APND"),      # SDG&E area
+    ("SMUD_APND", "SMUD_APND"),      # SMUD area
+    ("IID_APND",  "IID_APND"),       # IID area
+    ("VEA_APND",  "VEA_APND"),       # VEA area
+    ("TIDC_APND", "TIDC_APND"),      # TIDC area
+    ("BANC_APND", "BANC_APND"),      # BANC area
+    ("LDWP_APND", "LDWP_APND"),      # LADWP area
 ]
 
 # Hub and aggregated pricing nodes only — keeps DB small (vs 19k bus-level nodes)
@@ -1630,107 +1639,38 @@ def _caiso_oasis_to_lmp_rows(
     return rows
 
 
-def _gridstatus_caiso_to_rows(df: pd.DataFrame, market: str) -> list[dict]:
-    """Convert a gridstatus CAISO LMP DataFrame to upsert rows."""
-    rows: list[dict] = []
-    for _, row in df.iterrows():
-        try:
-            ts = pd.to_datetime(row["Interval Start"], utc=True)
-            if pd.isnull(ts):
-                continue
-            rows.append({
-                "ts":         ts,
-                "iso":        "CAISO",
-                "node_id":    str(row["Location"]),
-                "node_name":  str(row["Location"]),
-                "market":     market,
-                "lmp":        float(row.get("LMP") or 0),
-                "energy":     float(row.get("Energy") or 0),
-                "congestion": float(row.get("Congestion") or 0),
-                "loss":       float(row.get("Loss") or 0),
-            })
-        except Exception:
-            continue
-    return rows
 
 
 def ingest_caiso_lmp_rt():
-    """CAISO RT 5-min LMP for hub + APND nodes via gridstatus (latest interval only)."""
+    """CAISO RT 5-min LMP for hub + APND nodes via CAISO OASIS API."""
     from ingest.writer import upsert_lmp
-    try:
-        import gridstatus
-        caiso_gs = gridstatus.CAISO()
-        # "ALL" returns trading hubs (TH_*); "ALL_APNODES" returns LAP/APND nodes.
-        # Both calls needed to cover all 12 hub nodes we track.
-        frames = []
-        for loc in ("ALL", "ALL_APNODES"):
-            try:
-                df_part = caiso_gs.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations=loc)
-                if not df_part.empty:
-                    frames.append(df_part)
-            except Exception as e:
-                log.warning("CAISO RT LMP gridstatus locations=%s: %s", loc, e)
-        if not frames:
-            raise RuntimeError("both CAISO gridstatus calls failed")
-        df = pd.concat(frames, ignore_index=True).drop_duplicates(subset=["Location", "Interval Start"])
-        if not df.empty and "Interval Start" in df.columns:
-            latest_ts = df["Interval Start"].max()
-            df = df[df["Interval Start"] == latest_ts]
-        if not df.empty and "Location" in df.columns:
-            df = df[df["Location"].isin(_CAISO_HUB_NODES)]
-        rows = _gridstatus_caiso_to_rows(df, "RT")
-        n = upsert_lmp(rows)
-        log.info("CAISO RT LMP (gridstatus): %d rows, %d nodes", n, len(df["Location"].unique()) if not df.empty else 0)
-    except Exception as exc:
-        log.warning("CAISO RT LMP gridstatus failed, falling back to OASIS: %s", exc, exc_info=True)
-        from iso_data import caiso
-        today = date.today()
-        all_rows: list[dict] = []
-        for node_id, node_name in _CAISO_PRICE_AREAS:
-            try:
-                df = caiso.get_lmp_rtm(node_id, today, today)
-                all_rows.extend(_caiso_oasis_to_lmp_rows(df, node_id, node_name, "RT"))
-            except Exception as e:
-                log.warning("CAISO OASIS RT LMP %s: %s", node_name, e)
-        n = upsert_lmp(all_rows)
-        log.info("CAISO RT LMP (OASIS fallback): %d rows", n)
+    from iso_data import caiso
+    today = date.today()
+    all_rows: list[dict] = []
+    for node_id, node_name in _CAISO_PRICE_AREAS:
+        try:
+            df = caiso.get_lmp_rtm(node_id, today, today)
+            all_rows.extend(_caiso_oasis_to_lmp_rows(df, node_id, node_name, "RT"))
+        except Exception as e:
+            log.warning("CAISO RT LMP OASIS %s: %s", node_name, e)
+    n = upsert_lmp(all_rows)
+    log.info("CAISO RT LMP: %d rows, %d nodes", n, len(_CAISO_PRICE_AREAS))
 
 
 def ingest_caiso_lmp_da():
-    """CAISO DA hourly LMP for hub + APND nodes via gridstatus."""
+    """CAISO DA hourly LMP for hub + APND nodes via CAISO OASIS API."""
     from ingest.writer import upsert_lmp
-    try:
-        import gridstatus
-        caiso_gs = gridstatus.CAISO()
-        frames = []
-        for loc in ("ALL", "ALL_APNODES"):
-            try:
-                df_part = caiso_gs.get_lmp(date="latest", market="DAY_AHEAD_HOURLY", locations=loc)
-                if not df_part.empty:
-                    frames.append(df_part)
-            except Exception as e:
-                log.warning("CAISO DA LMP gridstatus locations=%s: %s", loc, e)
-        if not frames:
-            raise RuntimeError("both CAISO DA gridstatus calls failed")
-        df = pd.concat(frames, ignore_index=True).drop_duplicates(subset=["Location", "Interval Start"])
-        if not df.empty and "Location" in df.columns:
-            df = df[df["Location"].isin(_CAISO_HUB_NODES)]
-        rows = _gridstatus_caiso_to_rows(df, "DA")
-        n = upsert_lmp(rows)
-        log.info("CAISO DA LMP (gridstatus): %d rows", n)
-    except Exception as exc:
-        log.warning("CAISO DA LMP gridstatus failed, falling back to OASIS: %s", exc)
-        from iso_data import caiso
-        today = date.today()
-        all_rows: list[dict] = []
-        for node_id, node_name in _CAISO_PRICE_AREAS:
-            try:
-                df = caiso.get_lmp_dam(node_id, today, today)
-                all_rows.extend(_caiso_oasis_to_lmp_rows(df, node_id, node_name, "DA"))
-            except Exception as e:
-                log.warning("CAISO OASIS DA LMP %s: %s", node_name, e)
-        n = upsert_lmp(all_rows)
-        log.info("CAISO DA LMP (OASIS fallback): %d rows", n)
+    from iso_data import caiso
+    today = date.today()
+    all_rows: list[dict] = []
+    for node_id, node_name in _CAISO_PRICE_AREAS:
+        try:
+            df = caiso.get_lmp_dam(node_id, today, today)
+            all_rows.extend(_caiso_oasis_to_lmp_rows(df, node_id, node_name, "DA"))
+        except Exception as e:
+            log.warning("CAISO DA LMP OASIS %s: %s", node_name, e)
+    n = upsert_lmp(all_rows)
+    log.info("CAISO DA LMP: %d rows, %d nodes", n, len(_CAISO_PRICE_AREAS))
 
 
 # ---------------------------------------------------------------------------
@@ -1802,56 +1742,19 @@ def ingest_miso_lmp_da(target: date | None = None):
 # ERCOT LMP (public data portal)
 # ---------------------------------------------------------------------------
 
-def _gridstatus_ercot_to_rows(df: pd.DataFrame, market: str) -> list[dict]:
-    """Convert a gridstatus ERCOT LMP DataFrame to upsert rows."""
-    rows: list[dict] = []
-    for _, row in df.iterrows():
-        try:
-            ts = pd.to_datetime(row["Interval Start"], utc=True)
-            if pd.isnull(ts):
-                continue
-            rows.append({
-                "ts":         ts,
-                "iso":        "ERCOT",
-                "node_id":    str(row["Location"]),
-                "node_name":  str(row["Location"]),
-                "market":     market,
-                "lmp":        float(row.get("LMP") or 0),
-                "energy":     None,
-                "congestion": None,
-                "loss":       None,
-            })
-        except Exception:
-            continue
-    return rows
 
 
 def ingest_ercot_lmp_rt():
-    """ERCOT RT 5-min settlement point prices via gridstatus (falls back to CDR HTML)."""
+    """ERCOT RT 5-min settlement point prices via CDR HTML."""
     from ingest.writer import upsert_lmp
-    try:
-        import gridstatus
-        iso = gridstatus.Ercot()
-        # Ercot.get_lmp takes date + location_type (no market/locations kwargs)
-        df = iso.get_lmp(date="latest", location_type="settlement point")
-        if not df.empty and "Interval Start" in df.columns:
-            latest_ts = df["Interval Start"].max()
-            df = df[df["Interval Start"] == latest_ts]
-        if not df.empty and "Location" in df.columns:
-            df = df[df["Location"].str.startswith(_ERCOT_HUB_PREFIXES)]
-        rows = _gridstatus_ercot_to_rows(df, "RT")
-        n = upsert_lmp(rows)
-        log.info("ERCOT RT LMP (gridstatus): %d rows, %d nodes", n, len(df["Location"].unique()) if not df.empty else 0)
-    except Exception as exc:
-        log.warning("ERCOT RT LMP gridstatus failed, falling back to CDR HTML: %s", exc, exc_info=True)
-        from iso_data import ercot_lmp
-        rows = ercot_lmp.get_rt_lmp()
-        n = upsert_lmp(rows)
-        log.info("ERCOT RT LMP (CDR fallback): %d rows", n)
+    from iso_data import ercot_lmp
+    rows = ercot_lmp.get_rt_lmp()
+    n = upsert_lmp(rows)
+    log.info("ERCOT RT LMP: %d rows", n)
 
 
 def ingest_ercot_lmp_da(target: date | None = None):
-    """ERCOT DAM settlement point prices (CDR archive — gridstatus Ercot has no DA LMP method)."""
+    """ERCOT DAM settlement point prices via CDR archive."""
     from ingest.writer import upsert_lmp
     try:
         from iso_data import ercot_lmp

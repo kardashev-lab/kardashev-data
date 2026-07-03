@@ -16,7 +16,6 @@ dependencies = [
     "openpyxl>=3.1",
     "xlrd>=2.0",
     "pytz>=2024",
-    "gridstatus>=0.36",
 ]
 
 [project.optional-dependencies]
