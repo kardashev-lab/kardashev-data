@@ -1469,14 +1469,14 @@ _PJM_HUBS: list[tuple[str, str]] = [
 
 
 def ingest_pjm_lmp_rt():
-    """PJM RT 5-min LMP for major trading hubs via Dataminer API."""
+    """PJM RT hourly LMP for all hub + zone nodes via DataMiner2 (settled, posted ~11am ET)."""
     from ingest.writer import upsert_lmp
     from iso_data import pjm
-    today = date.today()
+    yesterday = date.today() - timedelta(days=1)
     rows: list[dict] = []
-    for pnode_id, hub_name in _PJM_HUBS:
+    for node_type in ("HUB", "ZONE"):
         try:
-            df = pjm.get_lmp_rt_fiveminute(pnode_id, today)
+            df = pjm.get_lmp_rt_hourly(yesterday, node_type=node_type)
             if df.empty:
                 continue
             for _, row in df.iterrows():
@@ -1488,10 +1488,11 @@ def ingest_pjm_lmp_rt():
                     if pd.isnull(ts):
                         continue
                     rows.append({
-                        "ts": ts, "iso": "PJM",
-                        "node_id": str(pnode_id),
-                        "node_name": hub_name,
-                        "market": "RT",
+                        "ts": ts,
+                        "iso": "PJM",
+                        "node_id":    str(row.get("pnode_id", "")),
+                        "node_name":  str(row.get("pnode_name", "")),
+                        "market":     "RT",
                         "lmp":        float(row.get("total_lmp_rt",           0) or 0),
                         "energy":     float(row.get("system_energy_price_rt", 0) or 0),
                         "congestion": float(row.get("congestion_price_rt",    0) or 0),
@@ -1500,20 +1501,20 @@ def ingest_pjm_lmp_rt():
                 except Exception:
                     continue
         except Exception as exc:
-            log.warning("PJM RT LMP %s (%s): %s", hub_name, pnode_id, exc)
+            log.warning("PJM RT LMP %s: %s", node_type, exc)
     n = upsert_lmp(rows)
     log.info("PJM RT LMP: %d rows", n)
 
 
 def ingest_pjm_lmp_da():
-    """PJM DA hourly LMP for major trading hubs."""
+    """PJM DA hourly LMP for all hub + zone nodes via DataMiner2."""
     from ingest.writer import upsert_lmp
     from iso_data import pjm
     today = date.today()
     rows: list[dict] = []
-    for pnode_id, hub_name in _PJM_HUBS:
+    for node_type in ("HUB", "ZONE"):
         try:
-            df = pjm.get_lmp_da_hourly(pnode_id, today)
+            df = pjm.get_lmp_da_hourly(today, node_type=node_type)
             if df.empty:
                 continue
             for _, row in df.iterrows():
@@ -1525,10 +1526,11 @@ def ingest_pjm_lmp_da():
                     if pd.isnull(ts):
                         continue
                     rows.append({
-                        "ts": ts, "iso": "PJM",
-                        "node_id": str(pnode_id),
-                        "node_name": hub_name,
-                        "market": "DA",
+                        "ts": ts,
+                        "iso": "PJM",
+                        "node_id":    str(row.get("pnode_id", "")),
+                        "node_name":  str(row.get("pnode_name", "")),
+                        "market":     "DA",
                         "lmp":        float(row.get("total_lmp_da",           0) or 0),
                         "energy":     float(row.get("system_energy_price_da", 0) or 0),
                         "congestion": float(row.get("congestion_price_da",    0) or 0),
@@ -1537,7 +1539,7 @@ def ingest_pjm_lmp_da():
                 except Exception:
                     continue
         except Exception as exc:
-            log.warning("PJM DA LMP %s (%s): %s", hub_name, pnode_id, exc)
+            log.warning("PJM DA LMP %s: %s", node_type, exc)
     n = upsert_lmp(rows)
     log.info("PJM DA LMP: %d rows", n)
 
