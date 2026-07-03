@@ -595,6 +595,31 @@ def upsert_steo_forecasts(rows: list[dict]) -> int:
 # NREL NSRDB solar irradiance
 # ---------------------------------------------------------------------------
 
+def upsert_ancillary_services(rows: list[dict]) -> int:
+    """rows: [{ts, iso, market, region, service_type, clearing_price, mw_awarded, mw_available}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO ancillary_services
+              (ts, iso, market, region, service_type, clearing_price, mw_awarded, mw_available)
+            VALUES %s
+            ON CONFLICT (ts, iso, market, service_type) DO UPDATE
+              SET clearing_price = EXCLUDED.clearing_price,
+                  mw_awarded     = EXCLUDED.mw_awarded,
+                  mw_available   = EXCLUDED.mw_available
+            """,
+            [
+                (r["ts"], r["iso"], r["market"], r.get("region"), r["service_type"],
+                 r.get("clearing_price"), r.get("mw_awarded"), r.get("mw_available"))
+                for r in rows
+            ],
+        )
+    return len(rows)
+
+
 def upsert_generator_outages(rows: list[dict]) -> int:
     """rows: [{iso, outage_id, start_time, end_time, resource_id, resource_name,
                outage_type, nature_of_work, mw_derated, mw_capacity, region,

@@ -419,6 +419,24 @@ CREATE TABLE IF NOT EXISTS lmp_nodes (
 CREATE INDEX IF NOT EXISTS lmp_nodes_iso ON lmp_nodes (iso);
 
 -- ---------------------------------------------------------------------------
+-- Ancillary services
+--   CAISO: DAM clearing prices ($/MW-hr) — NR, RD, RU, SR, RMD, RMU
+--   ERCOT: real-time operational capacity (MW) — RegUp, RegDown, RRS, NSRS, ECRS
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ancillary_services (
+    ts             TIMESTAMPTZ      NOT NULL,
+    iso            TEXT             NOT NULL,
+    market         TEXT             NOT NULL,    -- DAM | HASP | RTM
+    region         TEXT,
+    service_type   TEXT             NOT NULL,    -- RegUp | RegDown | Spinning | NonSpin | RRS | NSRS | ECRS | ...
+    clearing_price DOUBLE PRECISION,             -- $/MW-hr (CAISO DAM)
+    mw_awarded     DOUBLE PRECISION,             -- MW deployed / awarded (ERCOT)
+    mw_available   DOUBLE PRECISION,             -- MW available / undeployed (ERCOT)
+    CONSTRAINT ancillary_services_pk PRIMARY KEY (ts, iso, market, service_type)
+);
+CREATE INDEX IF NOT EXISTS as_iso_ts ON ancillary_services (iso, ts DESC);
+
+-- ---------------------------------------------------------------------------
 -- Generator outages
 --   unit-level (CAISO) and aggregate (MISO) in one table.
 --   granularity = 'unit' for per-generator rows, 'aggregate' for region-level.

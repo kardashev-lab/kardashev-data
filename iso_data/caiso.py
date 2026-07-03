@@ -229,3 +229,26 @@ def get_generator_outages(target: date) -> pd.DataFrame:
         content_io.seek(0)
         df = pd.read_excel(content_io, usecols="B:M", skiprows=idx, sheet_name="PREV_DAY_OUTAGES", engine="openpyxl")
     return df.dropna(axis=1, how="all")
+
+
+def get_as_prices_dam(target: date) -> pd.DataFrame:
+    """
+    CAISO Day-Ahead Market ancillary service clearing prices.
+    Types: NR (Non-Spin), RD (Reg Down), RU (Reg Up), SR (Spinning),
+           RMD (Mileage Down), RMU (Mileage Up).
+    Source: OASIS PRC_AS queryname.
+    """
+    import io
+    start = f"{target.strftime('%Y%m%d')}T00:00-0000"
+    end   = f"{target.strftime('%Y%m%d')}T23:00-0000"
+    url = (
+        "https://oasis.caiso.com/oasisapi/SingleZip"
+        f"?queryname=PRC_AS&startdatetime={start}&enddatetime={end}"
+        "&market_run_id=DAM&anc_type=ALL&anc_region=AS_CAISO&version=12&resultformat=6"
+    )
+    import zipfile
+    r = _http.get(url)
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        name = next(n for n in zf.namelist() if n.endswith(".csv"))
+        df = pd.read_csv(io.BytesIO(zf.read(name)))
+    return df

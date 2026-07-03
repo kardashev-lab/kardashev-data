@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from api.rate_limit import RateLimitMiddleware, requests_per_minute
 from api.routes import (
+    ancillary,
     bpa,
     carbon,
     carbon_markets,
@@ -99,6 +100,7 @@ app.include_router(hydro.router)
 app.include_router(commodities.router)
 app.include_router(solar.router)
 app.include_router(outages.router)
+app.include_router(ancillary.router)
 
 
 @app.get("/")

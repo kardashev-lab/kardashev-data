@@ -174,6 +174,41 @@ def get_load_summary() -> dict:
     return _dash("load-summary")
 
 
+def get_as_monitor() -> list[dict]:
+    """
+    Real-time ancillary service capacity monitor from ERCOT dashboard.
+    Returns ~700 records (last ~2h at 10-second resolution).
+    Fields: ts, deployed_reg_up_mw, undeployed_reg_up_mw, deployed_reg_down_mw,
+            undeployed_reg_down_mw, rrs_mw, nsrs_mw, ecrs_mw.
+    Source: ancillary-services.json ascapmon array.
+    """
+    import datetime as _dt
+    import pytz
+    _CT = pytz.timezone("US/Central")
+    data = _dash("ancillary-services")
+    rows = []
+    for point in data.get("ascapmon", []):
+        ts_str = point.get("timestamp")
+        if not ts_str:
+            continue
+        try:
+            ts_naive = _dt.datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+            ts = _CT.localize(ts_naive, is_dst=False).astimezone(_dt.timezone.utc)
+        except Exception:
+            continue
+        rows.append({
+            "ts": ts,
+            "deployed_reg_up_mw":   float(point.get("deployedRegUp", 0) or 0),
+            "undeployed_reg_up_mw": float(point.get("undeployedRegUp", 0) or 0),
+            "deployed_reg_down_mw":   float(point.get("deployedRegDown", 0) or 0),
+            "undeployed_reg_down_mw": float(point.get("undeployedRegDown", 0) or 0),
+            "rrs_mw":  float(point.get("rrs", 0) or 0),
+            "nsrs_mw": float(point.get("nsrs", 0) or 0),
+            "ecrs_mw": float(point.get("ecrs", 0) or 0),
+        })
+    return rows
+
+
 def get_load_forecast() -> list[dict]:
     """
     Hourly load forecast for next ~24h from ERCOT supply-demand dashboard.

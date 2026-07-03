@@ -1960,6 +1960,91 @@ def ingest_nrel_solar_irradiance():
 
 
 # ---------------------------------------------------------------------------
+# Ancillary services
+# ---------------------------------------------------------------------------
+
+_CAISO_AS_TYPE_MAP = {
+    "NR":  "NonSpinning",
+    "RD":  "RegDown",
+    "RMD": "RegMileageDown",
+    "RMU": "RegMileageUp",
+    "RU":  "RegUp",
+    "SR":  "Spinning",
+}
+
+def ingest_caiso_as_prices():
+    """CAISO DAM ancillary service clearing prices via OASIS PRC_AS."""
+    from ingest.writer import upsert_ancillary_services
+    from iso_data import caiso
+    target = date.today()
+    try:
+        df = caiso.get_as_prices_dam(target)
+    except Exception as exc:
+        log.warning("CAISO AS prices unavailable: %s", exc)
+        return
+    if df.empty:
+        return
+    rows = []
+    for _, r in df.iterrows():
+        ts_raw = r.get("INTERVALSTARTTIME_GMT")
+        anc_type = str(r.get("ANC_TYPE", ""))
+        mw = r.get("MW")
+        if pd.isnull(ts_raw) or not anc_type:
+            continue
+        try:
+            ts = pd.to_datetime(ts_raw, utc=True)
+            service = _CAISO_AS_TYPE_MAP.get(anc_type, anc_type)
+            rows.append({
+                "ts":            ts,
+                "iso":           "CAISO",
+                "market":        str(r.get("MARKET_RUN_ID", "DAM")),
+                "region":        str(r.get("ANC_REGION", "AS_CAISO")),
+                "service_type":  service,
+                "clearing_price": float(mw) if mw is not None and not pd.isna(mw) else None,
+                "mw_awarded":    None,
+                "mw_available":  None,
+            })
+        except Exception:
+            continue
+    n = upsert_ancillary_services(rows)
+    log.info("CAISO AS DAM prices: %d rows", n)
+
+
+def ingest_ercot_as_monitor():
+    """ERCOT real-time AS capacity monitor — deployed/available MW for RegUp/Down, RRS, NSRS, ECRS."""
+    from ingest.writer import upsert_ancillary_services
+    from iso_data import ercot
+    try:
+        points = ercot.get_as_monitor()
+    except Exception as exc:
+        log.warning("ERCOT AS monitor unavailable: %s", exc)
+        return
+    # Expand each point into per-service-type rows
+    service_fields = [
+        ("RegUp",    "deployed_reg_up_mw",    "undeployed_reg_up_mw"),
+        ("RegDown",  "deployed_reg_down_mw",  "undeployed_reg_down_mw"),
+        ("RRS",      "rrs_mw",                None),
+        ("NSRS",     "nsrs_mw",               None),
+        ("ECRS",     "ecrs_mw",               None),
+    ]
+    rows = []
+    for p in points:
+        for service, awarded_field, avail_field in service_fields:
+            rows.append({
+                "ts":           p["ts"],
+                "iso":          "ERCOT",
+                "market":       "RTM",
+                "region":       "ERCOT",
+                "service_type": service,
+                "clearing_price": None,
+                "mw_awarded":   p.get(awarded_field),
+                "mw_available": p.get(avail_field) if avail_field else None,
+            })
+    n = upsert_ancillary_services(rows)
+    log.info("ERCOT AS monitor: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
 # Generator outages
 # ---------------------------------------------------------------------------
 

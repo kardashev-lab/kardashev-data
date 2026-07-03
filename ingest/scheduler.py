@@ -270,6 +270,12 @@ def run_queue():
     _run("nyiso_queue", ingest_nyiso_queue)
 
 
+def run_ancillary_services():
+    from ingest.jobs import ingest_caiso_as_prices, ingest_ercot_as_monitor
+    _run("caiso_as_prices",   ingest_caiso_as_prices)
+    _run("ercot_as_monitor",  ingest_ercot_as_monitor)
+
+
 def run_generator_outages():
     from ingest.jobs import ingest_caiso_generator_outages, ingest_miso_generator_outages
     _run("caiso_generator_outages", ingest_caiso_generator_outages)
@@ -375,6 +381,7 @@ def start():
     _startup("eia_commodities",     run_eia_commodities)
     _startup("nrel_irradiance",     run_nrel_irradiance)
     _startup("generator_outages",   run_generator_outages)
+    _startup("ancillary_services",  run_ancillary_services)
 
     while True:
         try:
@@ -387,7 +394,7 @@ def start():
 
             if min5 != last_5min:
                 last_5min = min5
-                log.info("tick: 5-min data (fuel mix, load, LMP, wind/solar, battery, BPA, constraints)")
+                log.info("tick: 5-min data (fuel mix, load, LMP, wind/solar, battery, BPA, constraints, AS)")
                 run_fuel_mix()
                 run_spp_fuel_mix()
                 run_realtime_load()
@@ -398,6 +405,7 @@ def start():
                 run_btm_solar()
                 run_bpa()
                 run_binding_constraints()
+                run_ancillary_services()
 
             if min15 != last_15min:
                 last_15min = min15
