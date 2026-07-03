@@ -19,6 +19,54 @@ class LoadPoint(BaseModel):
     mw_forecast: Optional[float]
 
 
+@router.get("/forecast", response_model=list[LoadPoint])
+async def get_load_forecast(
+    iso: Optional[str] = Query(None, description="ISO code. Omit for all ISOs."),
+    hours: int = Query(24, ge=1, le=168, description="Hours ahead to return (max 7 days)."),
+    include_recent: bool = Query(True, description="Also include last 6h of actuals for comparison."),
+):
+    """
+    Upcoming load forecasts — future-timestamped rows with mw_forecast set.
+
+    Optionally include recent actuals (last 6h) alongside forecasts for
+    actual-vs-forecast comparison. Covers CAISO, NYISO, ERCOT, MISO, PJM, ISONE.
+    """
+    params: dict = {"ahead": hours, "back": 6}
+    iso_clause = "AND iso = :iso" if iso else ""
+    if iso:
+        params["iso"] = iso.upper()
+
+    if include_recent:
+        rows = await fetch(
+            f"""
+            SELECT ts, iso, zone, mw_actual, mw_forecast
+            FROM load_data
+            WHERE ts >= now() - :back * interval '1 hour'
+              AND ts <= now() + :ahead * interval '1 hour'
+              AND (mw_forecast IS NOT NULL OR (ts <= now() AND mw_actual IS NOT NULL))
+              {iso_clause}
+            ORDER BY iso, zone, ts
+            LIMIT 10000
+            """,
+            **params,
+        )
+    else:
+        rows = await fetch(
+            f"""
+            SELECT ts, iso, zone, mw_actual, mw_forecast
+            FROM load_data
+            WHERE ts >= now()
+              AND ts <= now() + :ahead * interval '1 hour'
+              AND mw_forecast IS NOT NULL
+              {iso_clause}
+            ORDER BY iso, zone, ts
+            LIMIT 10000
+            """,
+            **params,
+        )
+    return [dict(r) for r in rows]
+
+
 @router.get("", response_model=list[LoadPoint])
 async def get_load(
     iso: str = Query(...),

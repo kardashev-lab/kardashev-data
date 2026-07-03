@@ -174,6 +174,31 @@ def get_load_summary() -> dict:
     return _dash("load-summary")
 
 
+def get_load_forecast() -> list[dict]:
+    """
+    Hourly load forecast for next ~24h from ERCOT supply-demand dashboard.
+    Returns list of {ts: datetime (UTC), mw_forecast: float}.
+    """
+    import datetime as _dt
+    data = _dash("supply-demand")
+    rows = []
+    for point in data.get("forecast", []):
+        mw = point.get("forecastedDemand")
+        ts_str = point.get("deliveryDateHrBegin")
+        if mw is None or not ts_str:
+            continue
+        try:
+            # ERCOT timestamps are Central time ("2026-07-03 00:00:00")
+            import pytz
+            _CT = pytz.timezone("US/Central")
+            ts_naive = _dt.datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+            ts = _CT.localize(ts_naive, is_dst=False).astimezone(_dt.timezone.utc)
+        except Exception:
+            continue
+        rows.append({"ts": ts, "mw_forecast": float(mw)})
+    return rows
+
+
 def get_demand_today() -> list[dict]:
     """
     5-minute actual demand for today (midnight to latest interval).

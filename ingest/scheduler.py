@@ -153,9 +153,20 @@ def run_pjm_wind_solar():
 
 
 def run_load_forecasts():
-    from ingest.jobs import ingest_isone_load_forecast, ingest_pjm_load_forecast
+    from ingest.jobs import (
+        ingest_isone_load_forecast,
+        ingest_pjm_load_forecast,
+        ingest_nyiso_load_forecast,
+        ingest_miso_load_forecast,
+        ingest_spp_load_forecast,
+        ingest_ercot_load_forecast,
+    )
     _run("pjm_load_forecast",   ingest_pjm_load_forecast)
     _run("isone_load_forecast", ingest_isone_load_forecast)
+    _run("nyiso_load_forecast", ingest_nyiso_load_forecast)
+    _run("miso_load_forecast",  ingest_miso_load_forecast)
+    _run("spp_load_forecast",   ingest_spp_load_forecast)
+    _run("ercot_load_forecast", ingest_ercot_load_forecast)
 
 
 def run_btm_solar():

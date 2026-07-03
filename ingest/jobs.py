@@ -544,6 +544,123 @@ def ingest_isone_load_forecast():
     log.info("ISONE load forecast: %d rows", n)
 
 
+def ingest_nyiso_load_forecast():
+    """NYISO day-ahead load forecast by zone (isolf CSV)."""
+    import pytz
+    from ingest.writer import upsert_load
+    from iso_data import nyiso
+    _eastern = pytz.timezone("US/Eastern")
+    df = nyiso.get_load_forecast(date.today())
+    if df.empty:
+        return
+    zone_cols = [c for c in df.columns if c != "Time Stamp"]
+    rows = []
+    for _, row in df.iterrows():
+        try:
+            ts_naive = pd.to_datetime(row["Time Stamp"], format="%m/%d/%Y %H:%M")
+            ts = _eastern.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
+            continue
+        for zone in zone_cols:
+            val = row.get(zone)
+            if val is None or pd.isna(val):
+                continue
+            rows.append({
+                "ts": ts,
+                "iso": "NYISO",
+                "zone": zone,
+                "mw_actual": None,
+                "mw_forecast": float(val),
+            })
+    n = upsert_load(rows)
+    log.info("NYISO load forecast: %d rows", n)
+
+
+def ingest_miso_load_forecast():
+    """MISO day-ahead load forecast and actual by LRZ (df_al.xls)."""
+    import pytz
+    from ingest.writer import upsert_load
+    from iso_data import miso
+    _central = pytz.timezone("US/Central")
+    target = date.today() - timedelta(days=1)
+    df = miso.get_load_forecast_actual(target)
+    if df.empty:
+        return
+    rows = []
+    for _, row in df.iterrows():
+        market_day = row.get("Market Day")
+        hour = row.get("HourEnding")
+        try:
+            day = pd.to_datetime(market_day)
+            if pd.isnull(day) or pd.isnull(hour):
+                continue
+            ts_naive = day + timedelta(hours=int(hour) - 1)
+            ts = _central.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
+        except Exception:
+            continue
+        forecast = row.get("MISO MTLF (MWh)")
+        actual = row.get("MISO ActualLoad (MWh)")
+        rows.append({
+            "ts": ts,
+            "iso": "MISO",
+            "zone": "SYSTEM",
+            "mw_actual": float(actual) if actual is not None and not pd.isna(actual) else None,
+            "mw_forecast": float(forecast) if forecast is not None and not pd.isna(forecast) else None,
+        })
+    n = upsert_load(rows)
+    log.info("MISO load forecast: %d rows", n)
+
+
+def ingest_spp_load_forecast():
+    """SPP short-term load forecast vs actual (STLF-Vs-Actual CSV)."""
+    import pytz
+    from ingest.writer import upsert_load
+    from iso_data import spp
+    _central = pytz.timezone("US/Central")
+    target = date.today() - timedelta(days=1)
+    try:
+        df = spp.get_load_forecast(target)
+    except Exception as exc:
+        log.warning("SPP load forecast unavailable: %s", exc)
+        return
+    if df.empty:
+        return
+    rows = []
+    for _, row in df.iterrows():
+        try:
+            ts_str = row.get("GMTIntervalEnd") or row.get("Period") or row.get(df.columns[0])
+            ts = pd.to_datetime(ts_str, utc=True)
+            if pd.isnull(ts):
+                continue
+        except Exception:
+            continue
+        actual = row.get("Actual") or row.get("actual")
+        forecast = row.get("Forecast") or row.get("forecast")
+        rows.append({
+            "ts": ts,
+            "iso": "SPP",
+            "zone": "SYSTEM",
+            "mw_actual": float(actual) if actual is not None and not pd.isna(actual) else None,
+            "mw_forecast": float(forecast) if forecast is not None and not pd.isna(forecast) else None,
+        })
+    n = upsert_load(rows)
+    log.info("SPP load forecast: %d rows", n)
+
+
+def ingest_ercot_load_forecast():
+    """ERCOT ~24h load forecast from supply-demand dashboard."""
+    from ingest.writer import upsert_load
+    from iso_data import ercot
+    points = ercot.get_load_forecast()
+    rows = [
+        {"ts": p["ts"], "iso": "ERCOT", "zone": "SYSTEM",
+         "mw_actual": None, "mw_forecast": p["mw_forecast"]}
+        for p in points
+    ]
+    n = upsert_load(rows)
+    log.info("ERCOT load forecast: %d rows", n)
+
+
 # ---------------------------------------------------------------------------
 # SPP fuel mix  (#13)
 # ---------------------------------------------------------------------------
