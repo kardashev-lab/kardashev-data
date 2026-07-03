@@ -37,7 +37,7 @@ async def get_outages(
     limit: int = Query(1000, le=5000),
 ):
     """
-    Generator outages — unit-level (CAISO) and aggregate by region (MISO).
+    Generator outages: unit-level (CAISO) and aggregate by region (MISO).
 
     CAISO: individual generator outages with resource name, MW derated, start/end.
     MISO: 7-day forecast of total outage MW by region (North/Central/South) and type.

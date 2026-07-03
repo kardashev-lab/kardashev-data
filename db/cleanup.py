@@ -112,13 +112,13 @@ def _batch_delete(conn, label: str, sql: str, params: tuple) -> None:
         if deleted < _BATCH:
             break
         time.sleep(0.1)  # brief pause between batches to avoid I/O spike
-    log.info("Cleanup %s: done — %d rows removed", label, total)
+    log.info("Cleanup %s: done, %d rows removed", label, total)
 
 
 def run() -> None:
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
-        log.error("DATABASE_URL not set — skipping cleanup")
+        log.error("DATABASE_URL not set, skipping cleanup")
         return
 
     try:
@@ -131,7 +131,7 @@ def run() -> None:
     try:
         with conn.cursor() as cur:
             if _marker_exists(cur):
-                log.info("Cleanup already done — skipping")
+                log.info("Cleanup already done, skipping")
                 return
 
         for label, sql, params in _CLEANUPS:
@@ -139,7 +139,7 @@ def run() -> None:
             try:
                 _batch_delete(conn, label, sql, params)
             except Exception as exc:
-                log.error("Cleanup %s failed: %s — will retry next startup", label, exc)
+                log.error("Cleanup %s failed: %s, will retry next startup", label, exc)
                 conn.rollback()
                 return
 

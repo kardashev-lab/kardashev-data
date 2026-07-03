@@ -37,7 +37,7 @@ class NodeRecord(TypedDict):
 
 NODES: list[NodeRecord] = [
     # -------------------------------------------------------------------------
-    # NYISO — 11 load zones identified by PTID (numeric IDs used in lmp table)
+    # NYISO: 11 load zones identified by PTID (numeric IDs used in lmp table)
     # PTIDs from NYISO public data; zones A-K
     # -------------------------------------------------------------------------
     {"node_id": "61752", "iso": "NYISO", "name": "Capital Zone (F)", "lat": 42.652, "lng": -73.756, "zone": "F", "voltage_kv": None},
@@ -58,7 +58,7 @@ NODES: list[NodeRecord] = [
     {"node_id": "61847", "iso": "NYISO", "name": "PJM Interface", "lat": 41.200, "lng": -76.000, "zone": "PJM", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # ISONE — numeric location IDs used by ISO-NE web services API
+    # ISONE: numeric location IDs used by ISO-NE web services API
     # -------------------------------------------------------------------------
     {"node_id": "4000", "iso": "ISONE", "name": ".H.INTERNAL_HUB", "lat": 42.360, "lng": -71.058, "zone": "HUB", "voltage_kv": None},
     {"node_id": "4001", "iso": "ISONE", "name": "Maine", "lat": 45.253, "lng": -69.445, "zone": "ME", "voltage_kv": None},
@@ -71,7 +71,7 @@ NODES: list[NodeRecord] = [
     {"node_id": "4008", "iso": "ISONE", "name": "Northeast Massachusetts / Boston", "lat": 42.576, "lng": -71.006, "zone": "NEMA", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # PJM — Major hubs (node_ids are PJM pnode IDs, matching the lmp table)
+    # PJM: Major hubs (node_ids are PJM pnode IDs, matching the lmp table)
     # -------------------------------------------------------------------------
     {"node_id": "33092371", "iso": "PJM", "name": "PJM Western Hub", "lat": 40.440, "lng": -79.996, "zone": "AEP", "voltage_kv": 345.0},
     {"node_id": "50969827", "iso": "PJM", "name": "Eastern Hub", "lat": 40.222, "lng": -74.325, "zone": "PPL", "voltage_kv": 345.0},
@@ -79,7 +79,7 @@ NODES: list[NodeRecord] = [
     {"node_id": "33092396", "iso": "PJM", "name": "ComEd Hub (Chicago)", "lat": 41.833, "lng": -87.832, "zone": "COMED", "voltage_kv": 345.0},
 
     # -------------------------------------------------------------------------
-    # CAISO — Trading hubs and major APNodes
+    # CAISO: Trading hubs and major APNodes
     # -------------------------------------------------------------------------
     {"node_id": "TH_NP15_GEN-APND", "iso": "CAISO", "name": "NP15 Trading Hub (North)", "lat": 38.291, "lng": -121.500, "zone": "NP15", "voltage_kv": 500.0},
     {"node_id": "TH_SP15_GEN-APND", "iso": "CAISO", "name": "SP15 Trading Hub (South)", "lat": 34.052, "lng": -118.244, "zone": "SP15", "voltage_kv": 500.0},
@@ -92,7 +92,7 @@ NODES: list[NodeRecord] = [
     {"node_id": "TIDC_APND", "iso": "CAISO", "name": "Turlock Irrigation District", "lat": 37.504, "lng": -120.850, "zone": "NP15", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # MISO — Hub nodes (actual node_ids used in lmp table)
+    # MISO: Hub nodes (actual node_ids used in lmp table)
     # -------------------------------------------------------------------------
     {"node_id": "ARKANSAS.HUB", "iso": "MISO", "name": "Arkansas Hub", "lat": 34.746, "lng": -92.289, "zone": "ARKANSAS", "voltage_kv": None},
     {"node_id": "ILLINOIS.HUB", "iso": "MISO", "name": "Illinois Hub", "lat": 40.633, "lng": -89.399, "zone": "ILLINOIS", "voltage_kv": None},
@@ -104,7 +104,7 @@ NODES: list[NodeRecord] = [
     {"node_id": "TEXAS.HUB", "iso": "MISO", "name": "Texas Hub (MISO South)", "lat": 32.800, "lng": -96.800, "zone": "TEXAS", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # ERCOT — Settlement point hubs (actual node_ids from lmp table)
+    # ERCOT: Settlement point hubs (actual node_ids from lmp table)
     # -------------------------------------------------------------------------
     {"node_id": "HB_BUSAVG", "iso": "ERCOT", "name": "ERCOT Bus Average Hub", "lat": 31.000, "lng": -100.000, "zone": "HUB", "voltage_kv": None},
     {"node_id": "HB_HOUSTON", "iso": "ERCOT", "name": "Houston Hub", "lat": 29.760, "lng": -95.369, "zone": "HOUSTON", "voltage_kv": 345.0},
@@ -124,7 +124,7 @@ NODES: list[NodeRecord] = [
     {"node_id": "LZ_WEST", "iso": "ERCOT", "name": "West Load Zone (Permian)", "lat": 31.849, "lng": -102.367, "zone": "WEST", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # SPP — Hubs and aggregates (actual node_ids from lmp table)
+    # SPP: Hubs and aggregates (actual node_ids from lmp table)
     # -------------------------------------------------------------------------
     {"node_id": "SPPNORTH_HUB", "iso": "SPP", "name": "SPP North Hub", "lat": 41.257, "lng": -96.344, "zone": "NORTH", "voltage_kv": None},
     {"node_id": "SPPSOUTH_HUB", "iso": "SPP", "name": "SPP South Hub", "lat": 35.467, "lng": -97.517, "zone": "SOUTH", "voltage_kv": None},

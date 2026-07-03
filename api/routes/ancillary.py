@@ -36,16 +36,16 @@ async def get_ancillary_services(
     Ancillary service clearing prices and operational capacity.
 
     **CAISO** (market=DAM): Clearing prices in $/MW-hr for:
-    - RegUp, RegDown — frequency regulation
-    - Spinning — synchronized spinning reserve
-    - NonSpinning — non-synchronized reserve
-    - RegMileageUp, RegMileageDown — regulation mileage
+    - RegUp, RegDown: frequency regulation
+    - Spinning: synchronized spinning reserve
+    - NonSpinning: non-synchronized reserve
+    - RegMileageUp, RegMileageDown: regulation mileage
 
     **ERCOT** (market=RTM): Real-time MW deployed/available for:
-    - RegUp, RegDown — deployed and undeployed MW
-    - RRS — Responsive Reserve Service MW
-    - NSRS — Non-Spinning Reserve Service MW
-    - ECRS — ERCOT Contingency Reserve Service MW
+    - RegUp, RegDown: deployed and undeployed MW
+    - RRS: Responsive Reserve Service MW
+    - NSRS: Non-Spinning Reserve Service MW
+    - ECRS: ERCOT Contingency Reserve Service MW
 
     Updated every 5 minutes.
     """
@@ -91,7 +91,7 @@ async def get_ancillary_latest(
 ):
     """
     Latest ancillary service snapshot per ISO and service type.
-    One row per (ISO, market, service_type) — most recent value only.
+    One row per (ISO, market, service_type). Most recent value only.
     """
     params: dict = {}
     iso_clause = "AND iso = :iso" if iso else ""

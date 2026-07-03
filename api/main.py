@@ -51,7 +51,7 @@ app = FastAPI(
     description=(
         "Open API for US energy grid intelligence. "
         "Real-time fuel mix, carbon intensity, LMP, curtailment, load, "
-        "generation, nat gas, hydro, nuclear, emissions, and more — "
+        "generation, nat gas, hydro, nuclear, emissions, and more, "
         "across all 7 major US ISOs. No key required.\n\n"
         "Source: [github.com/kardashev-lab/kardashev-data](https://github.com/kardashev-lab/kardashev-data)"
     ),

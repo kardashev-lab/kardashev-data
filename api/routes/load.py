@@ -26,7 +26,7 @@ async def get_load_forecast(
     include_recent: bool = Query(True, description="Also include last 6h of actuals for comparison."),
 ):
     """
-    Upcoming load forecasts — future-timestamped rows with mw_forecast set.
+    Upcoming load forecasts. Future-timestamped rows with mw_forecast set.
 
     Optionally include recent actuals (last 6h) alongside forecasts for
     actual-vs-forecast comparison. Covers CAISO, NYISO, ERCOT, MISO, PJM, ISONE.

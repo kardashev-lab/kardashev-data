@@ -2,7 +2,7 @@
 
 Self-hosted US energy grid data platform. Ingests 15+ real-time datasets from ISO/EIA/ERCOT/CAISO sources into Postgres, serves them through a read-only REST API, and powers the [Kardashev Labs](https://kardashevlabs.org) tools.
 
-**Live API:** `https://data.kardashevlabs.org` — [interactive docs](https://data.kardashevlabs.org/docs)
+**Live API:** `https://data.kardashevlabs.org` ([interactive docs](https://data.kardashevlabs.org/docs))
 
 ---
 
@@ -17,7 +17,7 @@ curl https://data.kardashevlabs.org/carbon/latest
 # Live LMP prices at NYISO zone hubs
 curl "https://data.kardashevlabs.org/lmp?iso=NYISO&market=RT&limit=20"
 
-# Nodal price map — every priced node in ERCOT right now
+# Nodal price map: every priced node in ERCOT right now
 curl "https://data.kardashevlabs.org/lmp/map?iso=ERCOT&market=RT"
 
 # Fuel mix across all 7 ISOs (last 24h)
@@ -38,7 +38,7 @@ curl "https://data.kardashevlabs.org/nat-gas/latest"
 |----------|---------|----------------|------------|
 | `/fuel-mix` | 5 min | All 7 ISOs + 20+ EIA BAs | Generation by fuel type (MW) |
 | `/carbon/latest` | 5 min | All 7 ISOs + 20+ EIA BAs | CO₂ intensity (lbs/MWh), eGRID 2023 factors |
-| `/lmp` | 5 min | NYISO, ERCOT, MISO, SPP, CAISO | Locational marginal prices — energy, congestion, loss |
+| `/lmp` | 5 min | NYISO, ERCOT, MISO, SPP, CAISO | Locational marginal prices: energy, congestion, loss |
 | `/lmp/map` | 5 min | NYISO, ERCOT, MISO, SPP, CAISO | Nodal prices with lat/lng for map rendering |
 | `/curtailment` | Daily | CAISO, ERCOT, SPP | Solar + wind curtailment (MWh/day) |
 | `/load` | 5 min | CAISO, NYISO, MISO, ISONE, PJM | Real-time grid load (MW) |
@@ -47,7 +47,7 @@ curl "https://data.kardashevlabs.org/nat-gas/latest"
 | `/generation/reserve-margins` | Hourly | PJM, ISONE | Reserve margin forecast |
 | `/nat-gas` | Daily | EIA | Henry Hub + regional hub spot prices |
 | `/nat-gas/storage` | Weekly | EIA | Natural gas in storage (Bcf) |
-| `/nuclear` | Daily | NRC | US reactor status — % capacity, rolling 365 days |
+| `/nuclear` | Daily | NRC | US reactor status: % capacity, rolling 365 days |
 | `/emissions` | Daily | EPA CAMPD | Hourly SO₂, NOₓ, CO₂ by plant |
 | `/carbon-markets` | Quarterly | RGGI, CA ARB | Carbon allowance auction prices ($/ton) |
 | `/commodities/coal` | Monthly | EIA | Coal spot prices by region |
@@ -93,7 +93,7 @@ ISO APIs / EIA / ERCOT CDR / CAISO OASIS / NYISO Open Data
 
 | Tool | URL | What it shows |
 |------|-----|---------------|
-| Nodal LMP Price Map | [lmp-map.kardashevlabs.org](https://lmp-map.kardashevlabs.org) | Live nodal electricity prices on a map — all ISOs, 60s refresh |
+| Nodal LMP Price Map | [lmp-map.kardashevlabs.org](https://lmp-map.kardashevlabs.org) | Live nodal electricity prices on a map, all ISOs, 60s refresh |
 | Carbon Intensity Dashboard | [carbon-dashboard.kardashevlabs.org](https://carbon-dashboard.kardashevlabs.org) | Real-time CO₂ intensity, 27+ US grid regions |
 | LMP Dashboard | [lmp.kardashevlabs.org](https://lmp.kardashevlabs.org) | Electricity spot prices + fuel mix + context |
 | Curtailment Tracker | [curtailment-tracker.kardashevlabs.org](https://curtailment-tracker.kardashevlabs.org) | Daily renewable curtailment by ISO |

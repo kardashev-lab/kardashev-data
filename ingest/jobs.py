@@ -1429,7 +1429,7 @@ def ingest_miso_binding_constraints():
     seen: set[str] = set()
     for r in df.to_dict("records"):
         try:
-            # MISO API field names vary — try all known variants
+            # MISO API field names vary, try all known variants
             name = str(
                 r.get("ConstraintName")
                 or r.get("constraint_name")
@@ -1576,14 +1576,14 @@ _CAISO_PRICE_AREAS: list[tuple[str, str]] = [
     ("LDWP_APND", "LDWP_APND"),      # LADWP area
 ]
 
-# Hub and aggregated pricing nodes only — keeps DB small (vs 19k bus-level nodes)
+# Hub and aggregated pricing nodes only, keeps DB small (vs 19k bus-level nodes)
 _CAISO_HUB_NODES: frozenset[str] = frozenset({
     "TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND",
     "PGAE_APND", "SCE_APND", "SDGE_APND", "SMUD_APND",
     "IID_APND", "VEA_APND", "TIDC_APND", "BANC_APND", "LDWP_APND",
 })
 
-# HB_* hubs and LZ_* load zones only — ~15 nodes vs 1100+ resource nodes
+# HB_* hubs and LZ_* load zones only, ~15 nodes vs 1100+ resource nodes
 _ERCOT_HUB_PREFIXES: tuple[str, ...] = ("HB_", "LZ_")
 
 # SPP hub and load zone nodes only (matching lmp_nodes coordinates)
@@ -1975,7 +1975,7 @@ def ingest_caiso_as_prices():
 
 
 def ingest_ercot_as_monitor():
-    """ERCOT real-time AS capacity monitor — deployed/available MW for RegUp/Down, RRS, NSRS, ECRS."""
+    """ERCOT real-time AS capacity monitor. Deployed/available MW for RegUp/Down, RRS, NSRS, ECRS."""
     from ingest.writer import upsert_ancillary_services
     from kardashev import _ercot as ercot
     try:
@@ -2061,7 +2061,7 @@ def ingest_caiso_generator_outages():
 def ingest_miso_generator_outages():
     """
     MISO 7-day generation outage forecast by region and type (mom.xlsx OUTAGE sheet).
-    Aggregate MW — not unit-level.
+    Aggregate MW, not unit-level.
     """
     from ingest.writer import upsert_generator_outages
     from kardashev import _miso as miso
