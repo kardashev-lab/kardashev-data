@@ -1655,12 +1655,24 @@ def _gridstatus_caiso_to_rows(df: pd.DataFrame, market: str) -> list[dict]:
 
 
 def ingest_caiso_lmp_rt():
-    """CAISO RT 5-min LMP for all nodes via gridstatus (latest interval only)."""
+    """CAISO RT 5-min LMP for hub + APND nodes via gridstatus (latest interval only)."""
     from ingest.writer import upsert_lmp
     try:
         import gridstatus
-        iso = gridstatus.CAISO()
-        df = iso.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations="ALL")
+        caiso_gs = gridstatus.CAISO()
+        # "ALL" returns trading hubs (TH_*); "ALL_APNODES" returns LAP/APND nodes.
+        # Both calls needed to cover all 12 hub nodes we track.
+        frames = []
+        for loc in ("ALL", "ALL_APNODES"):
+            try:
+                df_part = caiso_gs.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations=loc)
+                if not df_part.empty:
+                    frames.append(df_part)
+            except Exception as e:
+                log.warning("CAISO RT LMP gridstatus locations=%s: %s", loc, e)
+        if not frames:
+            raise RuntimeError("both CAISO gridstatus calls failed")
+        df = pd.concat(frames, ignore_index=True).drop_duplicates(subset=["Location", "Interval Start"])
         if not df.empty and "Interval Start" in df.columns:
             latest_ts = df["Interval Start"].max()
             df = df[df["Interval Start"] == latest_ts]
@@ -1685,12 +1697,22 @@ def ingest_caiso_lmp_rt():
 
 
 def ingest_caiso_lmp_da():
-    """CAISO DA hourly LMP for all nodes via gridstatus."""
+    """CAISO DA hourly LMP for hub + APND nodes via gridstatus."""
     from ingest.writer import upsert_lmp
     try:
         import gridstatus
-        iso = gridstatus.CAISO()
-        df = iso.get_lmp(date="latest", market="DAY_AHEAD_HOURLY", locations="ALL")
+        caiso_gs = gridstatus.CAISO()
+        frames = []
+        for loc in ("ALL", "ALL_APNODES"):
+            try:
+                df_part = caiso_gs.get_lmp(date="latest", market="DAY_AHEAD_HOURLY", locations=loc)
+                if not df_part.empty:
+                    frames.append(df_part)
+            except Exception as e:
+                log.warning("CAISO DA LMP gridstatus locations=%s: %s", loc, e)
+        if not frames:
+            raise RuntimeError("both CAISO DA gridstatus calls failed")
+        df = pd.concat(frames, ignore_index=True).drop_duplicates(subset=["Location", "Interval Start"])
         if not df.empty and "Location" in df.columns:
             df = df[df["Location"].isin(_CAISO_HUB_NODES)]
         rows = _gridstatus_caiso_to_rows(df, "DA")
