@@ -1426,10 +1426,21 @@ def ingest_miso_binding_constraints():
 
     now = datetime.now(timezone.utc)
     rows = []
+    seen: set[str] = set()
     for r in df.to_dict("records"):
         try:
-            name = str(r.get("ConstraintName", r.get("constraint_name", "Unknown")))
-            price = r.get("ShadowPrice", r.get("shadow_price"))
+            # MISO API field names vary — try all known variants
+            name = str(
+                r.get("ConstraintName")
+                or r.get("constraint_name")
+                or r.get("Constraint")
+                or r.get("name")
+                or ""
+            ).strip() or "Unknown"
+            price = r.get("ShadowPrice", r.get("shadow_price", r.get("Price")))
+            if name in seen:
+                continue
+            seen.add(name)
             rows.append({
                 "ts":              now,
                 "iso":             "MISO",
