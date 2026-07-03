@@ -208,3 +208,24 @@ def get_lmp_rtm(node: str, start: date, end: date) -> pd.DataFrame:
 def get_load_forecast(start: date, end: date) -> pd.DataFrame:
     """CAISO system load forecast (day-ahead)."""
     return _oasis_query("SLD_FCST", start, end)
+
+
+def get_generator_outages(target: date) -> pd.DataFrame:
+    """
+    Curtailed and non-operational generator report for target date.
+    Published daily by CAISO. Returns unit-level outage records for the prior trade date.
+    Source: https://www.caiso.com/documents/curtailed-non-operational-generator-prior-trade-date-report-{date}.xlsx
+    """
+    import io, warnings
+    date_str = target.strftime("%Y%m%d")
+    url = f"https://www.caiso.com/documents/curtailed-non-operational-generator-prior-trade-date-report-{date_str}.xlsx"
+    r = _http.get(url)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        content_io = io.BytesIO(r.content)
+        test = pd.read_excel(content_io, usecols="B:M", sheet_name="PREV_DAY_OUTAGES", engine="openpyxl")
+        first_col = test[test.columns[0]]
+        idx = first_col[first_col == "OUTAGE MRID"].index[0] + 1
+        content_io.seek(0)
+        df = pd.read_excel(content_io, usecols="B:M", skiprows=idx, sheet_name="PREV_DAY_OUTAGES", engine="openpyxl")
+    return df.dropna(axis=1, how="all")

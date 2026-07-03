@@ -1960,6 +1960,103 @@ def ingest_nrel_solar_irradiance():
 
 
 # ---------------------------------------------------------------------------
+# Generator outages
+# ---------------------------------------------------------------------------
+
+def ingest_caiso_generator_outages():
+    """
+    CAISO curtailed and non-operational generator report (prior trade date).
+    Published daily ~8am PT. Unit-level outages with MW derated and timestamps.
+    """
+    from ingest.writer import upsert_generator_outages
+    from iso_data import caiso
+    target = date.today() - timedelta(days=1)
+    try:
+        df = caiso.get_generator_outages(target)
+    except Exception as exc:
+        log.warning("CAISO generator outages unavailable for %s: %s", target, exc)
+        return
+    if df.empty:
+        return
+    rows = []
+    for _, r in df.iterrows():
+        outage_id = str(r.get("OUTAGE MRID", ""))
+        start_raw = r.get("CURTAILMENT START DATE TIME")
+        end_raw   = r.get("CURTAILMENT END DATE TIME")
+        if not outage_id or pd.isnull(start_raw):
+            continue
+        try:
+            start = pd.to_datetime(start_raw, utc=True)
+            end   = pd.to_datetime(end_raw, utc=True) if pd.notna(end_raw) else None
+        except Exception:
+            continue
+        rows.append({
+            "iso":            "CAISO",
+            "outage_id":      f"{outage_id}_{start.isoformat()}",
+            "start_time":     start,
+            "end_time":       end,
+            "resource_id":    str(r.get("RESOURCE ID", "")),
+            "resource_name":  str(r.get("RESOURCE NAME", "")),
+            "outage_type":    str(r.get("OUTAGE TYPE", "")),
+            "nature_of_work": str(r.get("NATURE OF WORK", "")),
+            "mw_derated":     float(r["CURTAILMENT MW"]) if pd.notna(r.get("CURTAILMENT MW")) else None,
+            "mw_capacity":    float(r["RESOURCE PMAX MW"]) if pd.notna(r.get("RESOURCE PMAX MW")) else None,
+            "region":         None,
+            "granularity":    "unit",
+            "report_date":    target,
+        })
+    n = upsert_generator_outages(rows)
+    log.info("CAISO generator outages: %d rows for %s", n, target)
+
+
+def ingest_miso_generator_outages():
+    """
+    MISO 7-day generation outage forecast by region and type (mom.xlsx OUTAGE sheet).
+    Aggregate MW — not unit-level.
+    """
+    from ingest.writer import upsert_generator_outages
+    from iso_data import miso
+    target = date.today() - timedelta(days=1)
+    try:
+        df = miso.get_generation_outages(target)
+    except Exception as exc:
+        log.warning("MISO generation outages unavailable for %s: %s", target, exc)
+        return
+    if df.empty:
+        return
+    rows = []
+    for _, r in df.iterrows():
+        d = r.get("date")
+        region = str(r.get("region", ""))
+        outage_type = str(r.get("outage_type", ""))
+        mw = r.get("mw")
+        if not region or not outage_type or pd.isnull(d):
+            continue
+        try:
+            start = pd.to_datetime(d).tz_localize("US/Central") if pd.to_datetime(d).tzinfo is None else pd.to_datetime(d)
+            start = start.astimezone(timezone.utc)
+        except Exception:
+            continue
+        rows.append({
+            "iso":         "MISO",
+            "outage_id":   f"MISO_{region}_{outage_type}_{start.date().isoformat()}",
+            "start_time":  start,
+            "end_time":    start + timedelta(days=1),
+            "resource_id":   None,
+            "resource_name": None,
+            "outage_type": outage_type.upper(),
+            "nature_of_work": None,
+            "mw_derated":  float(mw) if mw is not None and not pd.isna(mw) else None,
+            "mw_capacity": None,
+            "region":      region,
+            "granularity": "aggregate",
+            "report_date": target,
+        })
+    n = upsert_generator_outages(rows)
+    log.info("MISO generator outages: %d rows", n)
+
+
+# ---------------------------------------------------------------------------
 # LMP retention
 # ---------------------------------------------------------------------------
 

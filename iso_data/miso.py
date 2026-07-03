@@ -153,3 +153,50 @@ def get_rt_binding_constraints_annual(year: int) -> pd.DataFrame:
     """Full-year real-time binding constraints CSV. Source: {YYYY}_rt_bc_HIST.csv"""
     url = f"{_MARKET_REPORTS}/{year}_rt_bc_HIST.csv"
     return _http.get_csv(url)
+
+
+def get_generation_outages(target: date) -> pd.DataFrame:
+    """
+    7-day generation outage forecast by region and type from MISO mom.xlsx OUTAGE sheet.
+    Columns: [report_date, region, outage_type, date, mw, is_forecast]
+    """
+    import io, warnings
+    url = f"https://docs.misoenergy.org/marketreports/{target.strftime('%Y%m%d')}_mom.xlsx"
+    r = _http.get(url)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        df_raw = pd.read_excel(io.BytesIO(r.content), sheet_name="OUTAGE", header=None, engine="openpyxl")
+
+    # Row 6 is date headers, rows 7-22 are data (North/Central/South/MISO x Derated/Forced/Planned/Unplanned)
+    # Find date header row
+    date_row = None
+    for i, row in df_raw.iterrows():
+        vals = [str(v) for v in row if str(v) != "nan"]
+        if vals and any("/" in v and "26" in v or "25" in v for v in vals):
+            date_row = i
+            break
+    if date_row is None:
+        return pd.DataFrame()
+
+    dates = [v for v in df_raw.iloc[date_row] if str(v) != "nan" and "/" in str(v)]
+    rows = []
+    for i in range(date_row + 1, len(df_raw)):
+        r_data = df_raw.iloc[i]
+        non_nan = [str(v) for v in r_data if str(v) != "nan"]
+        if len(non_nan) < 3:
+            continue
+        region = non_nan[0]
+        outage_type = non_nan[1]
+        if region not in ("North", "Central", "South", "MISO"):
+            continue
+        values = [v for v in r_data if str(v) != "nan"][2:]
+        for j, d_str in enumerate(dates):
+            if j >= len(values):
+                break
+            try:
+                d = pd.to_datetime(d_str.replace(" **", "").replace(" *", ""))
+                mw = float(str(values[j]).replace(",", ""))
+                rows.append({"region": region, "outage_type": outage_type, "date": d, "mw": mw})
+            except Exception:
+                continue
+    return pd.DataFrame(rows)

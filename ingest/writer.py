@@ -595,6 +595,39 @@ def upsert_steo_forecasts(rows: list[dict]) -> int:
 # NREL NSRDB solar irradiance
 # ---------------------------------------------------------------------------
 
+def upsert_generator_outages(rows: list[dict]) -> int:
+    """rows: [{iso, outage_id, start_time, end_time, resource_id, resource_name,
+               outage_type, nature_of_work, mw_derated, mw_capacity, region,
+               granularity, report_date}]"""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO generator_outages
+              (iso, outage_id, start_time, end_time, resource_id, resource_name,
+               outage_type, nature_of_work, mw_derated, mw_capacity, region,
+               granularity, report_date)
+            VALUES %s
+            ON CONFLICT (iso, outage_id, start_time) DO UPDATE
+              SET end_time       = EXCLUDED.end_time,
+                  mw_derated     = EXCLUDED.mw_derated,
+                  outage_type    = EXCLUDED.outage_type,
+                  nature_of_work = EXCLUDED.nature_of_work,
+                  report_date    = EXCLUDED.report_date
+            """,
+            [
+                (r["iso"], r["outage_id"], r["start_time"], r.get("end_time"),
+                 r.get("resource_id"), r.get("resource_name"), r.get("outage_type"),
+                 r.get("nature_of_work"), r.get("mw_derated"), r.get("mw_capacity"),
+                 r.get("region"), r.get("granularity", "unit"), r.get("report_date"))
+                for r in rows
+            ],
+        )
+    return len(rows)
+
+
 def upsert_solar_irradiance(rows: list[dict]) -> int:
     """rows: [{ts, location, lat, lon, ghi, dni, dhi}]"""
     if not rows:

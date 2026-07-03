@@ -27,6 +27,7 @@ from api.routes import (
     load,
     nat_gas,
     nuclear,
+    outages,
     queue,
     solar,
     weather,
@@ -97,6 +98,7 @@ app.include_router(carbon_markets.router)
 app.include_router(hydro.router)
 app.include_router(commodities.router)
 app.include_router(solar.router)
+app.include_router(outages.router)
 
 
 @app.get("/")

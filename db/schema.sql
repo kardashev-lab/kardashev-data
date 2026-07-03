@@ -419,6 +419,30 @@ CREATE TABLE IF NOT EXISTS lmp_nodes (
 CREATE INDEX IF NOT EXISTS lmp_nodes_iso ON lmp_nodes (iso);
 
 -- ---------------------------------------------------------------------------
+-- Generator outages
+--   unit-level (CAISO) and aggregate (MISO) in one table.
+--   granularity = 'unit' for per-generator rows, 'aggregate' for region-level.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS generator_outages (
+    iso            TEXT             NOT NULL,
+    outage_id      TEXT             NOT NULL,
+    start_time     TIMESTAMPTZ      NOT NULL,
+    end_time       TIMESTAMPTZ,
+    resource_id    TEXT,
+    resource_name  TEXT,
+    outage_type    TEXT,            -- FORCED | PLANNED | UNPLANNED | DERATED
+    nature_of_work TEXT,
+    mw_derated     DOUBLE PRECISION,
+    mw_capacity    DOUBLE PRECISION,
+    region         TEXT,
+    granularity    TEXT             NOT NULL DEFAULT 'unit',
+    report_date    DATE,
+    CONSTRAINT generator_outages_pk PRIMARY KEY (iso, outage_id, start_time)
+);
+CREATE INDEX IF NOT EXISTS go_iso_date   ON generator_outages (iso, report_date DESC);
+CREATE INDEX IF NOT EXISTS go_active     ON generator_outages (iso, start_time, end_time);
+
+-- ---------------------------------------------------------------------------
 -- NREL NSRDB solar irradiance (hourly, 10 grid locations)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS solar_irradiance (

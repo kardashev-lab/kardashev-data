@@ -270,6 +270,12 @@ def run_queue():
     _run("nyiso_queue", ingest_nyiso_queue)
 
 
+def run_generator_outages():
+    from ingest.jobs import ingest_caiso_generator_outages, ingest_miso_generator_outages
+    _run("caiso_generator_outages", ingest_caiso_generator_outages)
+    _run("miso_generator_outages",  ingest_miso_generator_outages)
+
+
 def run_lmp_purge(days: int = 14):
     from ingest.jobs import purge_lmp_old_rows
     _run("lmp_purge", purge_lmp_old_rows, days)
@@ -368,6 +374,7 @@ def start():
     _startup("carbon_allowances",   run_carbon_allowances)
     _startup("eia_commodities",     run_eia_commodities)
     _startup("nrel_irradiance",     run_nrel_irradiance)
+    _startup("generator_outages",   run_generator_outages)
 
     while True:
         try:
@@ -436,6 +443,8 @@ def start():
                 log.info("tick: interconnection queues (NYISO + PJM + ISONE)")
                 run_queue()
                 run_queue_all()
+                log.info("tick: generator outages (CAISO + MISO)")
+                run_generator_outages()
 
             if hour == 8 and week != last_static_week:
                 last_static_week = week
