@@ -282,9 +282,10 @@ def run_generator_outages():
     _run("miso_generator_outages",  ingest_miso_generator_outages)
 
 
-def run_lmp_purge(days: int = 14):
-    from ingest.jobs import purge_lmp_old_rows
-    _run("lmp_purge", purge_lmp_old_rows, days)
+def run_lmp_purge(days: int = 30):
+    from ingest.jobs import purge_fuel_mix_old_rows, purge_lmp_old_rows
+    _run("lmp_purge",      purge_lmp_old_rows,      days)
+    _run("fuel_mix_purge", purge_fuel_mix_old_rows, 90)
 
 
 # ---------------------------------------------------------------------------

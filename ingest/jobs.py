@@ -1554,6 +1554,16 @@ _CAISO_PRICE_AREAS: list[tuple[str, str]] = [
     ("TH_ZP26_GEN-APND", "ZP26"),   # Central California
 ]
 
+# Hub and aggregated pricing nodes only — keeps DB small (vs 19k bus-level nodes)
+_CAISO_HUB_NODES: frozenset[str] = frozenset({
+    "TH_NP15_GEN-APND", "TH_SP15_GEN-APND", "TH_ZP26_GEN-APND",
+    "PGAE_APND", "SCE_APND", "SDGE_APND", "SMUD_APND",
+    "IID_APND", "VEA_APND", "TIDC_APND", "BANC_APND", "LDWP_APND",
+})
+
+# HB_* hubs and LZ_* load zones only — ~15 nodes vs 1100+ resource nodes
+_ERCOT_HUB_PREFIXES: tuple[str, ...] = ("HB_", "LZ_")
+
 
 def _caiso_oasis_to_lmp_rows(
     df: pd.DataFrame, node_id: str, node_name: str, market: str
@@ -1630,9 +1640,10 @@ def ingest_caiso_lmp_rt():
         iso = gridstatus.CAISO()
         df = iso.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations="ALL")
         if not df.empty and "Interval Start" in df.columns:
-            # Keep only the most recent 5-min interval to avoid writing 230k rows/cycle
             latest_ts = df["Interval Start"].max()
             df = df[df["Interval Start"] == latest_ts]
+        if not df.empty and "Location" in df.columns:
+            df = df[df["Location"].isin(_CAISO_HUB_NODES)]
         rows = _gridstatus_caiso_to_rows(df, "RT")
         n = upsert_lmp(rows)
         log.info("CAISO RT LMP (gridstatus): %d rows, %d nodes", n, len(df["Location"].unique()) if not df.empty else 0)
@@ -1658,6 +1669,8 @@ def ingest_caiso_lmp_da():
         import gridstatus
         iso = gridstatus.CAISO()
         df = iso.get_lmp(date="latest", market="DAY_AHEAD_HOURLY", locations="ALL")
+        if not df.empty and "Location" in df.columns:
+            df = df[df["Location"].isin(_CAISO_HUB_NODES)]
         rows = _gridstatus_caiso_to_rows(df, "DA")
         n = upsert_lmp(rows)
         log.info("CAISO DA LMP (gridstatus): %d rows", n)
@@ -1780,6 +1793,8 @@ def ingest_ercot_lmp_rt():
         if not df.empty and "Interval Start" in df.columns:
             latest_ts = df["Interval Start"].max()
             df = df[df["Interval Start"] == latest_ts]
+        if not df.empty and "Location" in df.columns:
+            df = df[df["Location"].str.startswith(_ERCOT_HUB_PREFIXES)]
         rows = _gridstatus_ercot_to_rows(df, "RT")
         n = upsert_lmp(rows)
         log.info("ERCOT RT LMP (gridstatus): %d rows, %d nodes", n, len(df["Location"].unique()) if not df.empty else 0)
@@ -2147,18 +2162,37 @@ def ingest_miso_generator_outages():
 # LMP retention
 # ---------------------------------------------------------------------------
 
-def purge_lmp_old_rows(days: int = 14) -> None:
-    """Delete LMP rows older than `days` days to keep volume under control."""
-    import asyncio
-    from api.db import fetch_one
-    result = asyncio.run(fetch_one(
-        """
-        WITH deleted AS (
-            DELETE FROM lmp WHERE ts < now() - :days * interval '1 day' RETURNING 1
+def purge_lmp_old_rows(days: int = 30) -> None:
+    """Delete LMP rows older than `days` days and non-hub bus-level nodes."""
+    from ingest.writer import cursor
+    with cursor() as cur:
+        cur.execute(
+            "DELETE FROM lmp WHERE ts < now() - %s * interval '1 day'",
+            (days,),
         )
-        SELECT count(*) AS count FROM deleted
-        """,
-        days=days,
-    ))
-    deleted = result.get("count") if result else 0
-    log.info("LMP purge: deleted %s rows older than %d days", deleted, days)
+        old = cur.rowcount
+        # Remove CAISO bus-level nodes (keep only hub/APND nodes)
+        caiso_hubs = list(_CAISO_HUB_NODES)
+        cur.execute(
+            "DELETE FROM lmp WHERE iso = 'CAISO' AND node_id <> ALL(%s)",
+            (caiso_hubs,),
+        )
+        caiso_bus = cur.rowcount
+        # Remove ERCOT resource nodes (keep only HB_* and LZ_*)
+        cur.execute(
+            "DELETE FROM lmp WHERE iso = 'ERCOT' AND node_id NOT LIKE 'HB\\_%' AND node_id NOT LIKE 'LZ\\_%'"
+        )
+        ercot_res = cur.rowcount
+    log.info("LMP purge: %d old rows, %d CAISO bus nodes, %d ERCOT resource nodes removed", old, caiso_bus, ercot_res)
+
+
+def purge_fuel_mix_old_rows(days: int = 90) -> None:
+    """Delete fuel_mix rows older than `days` days."""
+    from ingest.writer import cursor
+    with cursor() as cur:
+        cur.execute(
+            "DELETE FROM fuel_mix WHERE ts < now() - %s * interval '1 day'",
+            (days,),
+        )
+        deleted = cur.rowcount
+    log.info("fuel_mix purge: deleted %d rows older than %d days", deleted, days)
