@@ -45,6 +45,14 @@ _KNOWN: dict[tuple[str, str], tuple[str, float, float, str | None]] = {
     ("4006", "ISONE"): ("Southeast Massachusetts",       41.902,  -71.024, "SEMA"),
     ("4007", "ISONE"): ("West/Central Massachusetts",    42.102,  -72.590, "WCMA"),
     ("4008", "ISONE"): ("Northeast Massachusetts/Boston",42.576,  -71.006, "NEMA"),
+    # ISONE external interface nodes (tie points to neighboring systems)
+    ("4010", "ISONE"): (".I.SALBRYNB345 (NB Power tie)",     45.194,  -67.265, "NB"),
+    ("4011", "ISONE"): (".I.ROSETON 345 (NYISO tie)",         41.497,  -74.001, "NY"),
+    ("4012", "ISONE"): (".I.HQ_P1_P2345 (HQ DC tie)",        42.563,  -71.569, "HQ"),
+    ("4013", "ISONE"): (".I.HQHIGATE120 (HQ Highgate AC)",   44.956,  -73.042, "HQ"),
+    ("4014", "ISONE"): (".I.SHOREHAM138 (NYISO VT tie)",     43.997,  -73.315, "NY"),
+    ("4017", "ISONE"): (".I.NRTHPORT138 (NYISO LI tie)",     41.117,  -73.407, "NY"),
+    ("4018", "ISONE"): (".I.HQMRL_RD345 (NECEC HQ DC tie)", 44.080,  -70.150, "HQ"),
     # CAISO trading hubs
     ("TH_NP15_GEN-APND", "CAISO"): ("NP15 Trading Hub (North CA)", 38.291, -121.500, "NP15"),
     ("TH_SP15_GEN-APND", "CAISO"): ("SP15 Trading Hub (South CA)", 34.052, -118.244, "SP15"),
