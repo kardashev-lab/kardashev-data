@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Query
@@ -27,7 +27,9 @@ async def get_ancillary_services(
     iso: Optional[str] = Query(None, description="ISO code (CAISO, ERCOT). Omit for all."),
     market: Optional[str] = Query(None, description="DAM | RTM"),
     service_type: Optional[str] = Query(None, description="RegUp | RegDown | Spinning | NonSpinning | RRS | NSRS | ECRS"),
-    hours: int = Query(24, ge=1, le=168),
+    start: Optional[date] = Query(None, description="Start date (UTC). Defaults to last N hours."),
+    end: Optional[date] = Query(None, description="End date (UTC, inclusive)."),
+    hours: int = Query(24, ge=1, le=8760),
     limit: int = Query(2000, le=10000),
 ):
     """
@@ -47,8 +49,16 @@ async def get_ancillary_services(
 
     Updated every 5 minutes.
     """
-    params: dict = {"hours": hours, "lim": limit}
-    clauses = ["ts >= now() - :hours * interval '1 hour'"]
+    params: dict = {"lim": limit}
+    if start:
+        clauses = ["ts >= :start_ts"]
+        params["start_ts"] = datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc)
+    else:
+        clauses = ["ts >= now() - :hours * interval '1 hour'"]
+        params["hours"] = hours
+    if end:
+        clauses.append("ts <= :end_ts")
+        params["end_ts"] = datetime.combine(end, datetime.max.time().replace(microsecond=0), tzinfo=timezone.utc)
 
     if iso:
         clauses.append("iso = :iso")

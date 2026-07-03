@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Query
@@ -97,9 +97,23 @@ class CarbonLatest(BaseModel):
 @router.get("", response_model=list[CarbonPoint])
 async def get_carbon_intensity(
     iso: str = Query(..., description="ISO code, e.g. CAISO"),
-    hours: int = Query(24, ge=1, le=720),
+    start: Optional[date] = Query(None, description="Start date (UTC). Defaults to last 24 hours."),
+    end: Optional[date] = Query(None, description="End date (UTC, inclusive)."),
+    hours: int = Query(24, ge=1, le=8760, description="Hours of history when start/end not given."),
     limit: int = Query(2000, le=50_000),
 ):
+    params: dict = {"iso": iso.upper(), "lim": limit}
+    if start:
+        start_clause = "AND ts >= :start_ts"
+        params["start_ts"] = datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc)
+    else:
+        start_clause = "AND ts >= now() - :hours * interval '1 hour'"
+        params["hours"] = hours
+    end_clause = ""
+    if end:
+        end_clause = "AND ts <= :end_ts"
+        params["end_ts"] = datetime.combine(end, datetime.max.time().replace(microsecond=0), tzinfo=timezone.utc)
+
     rows = await fetch(
         f"""
         SELECT
@@ -109,16 +123,15 @@ async def get_carbon_intensity(
             SUM(mw) / NULLIF(COUNT(DISTINCT ts), 0) AS total_mw
         FROM fuel_mix
         WHERE iso = :iso
-          AND ts >= now() - :hours * interval '1 hour'
+          {start_clause}
+          {end_clause}
           AND mw IS NOT NULL
           AND mw > 0
         GROUP BY date_trunc('hour', ts), iso
         ORDER BY ts DESC
         LIMIT :lim
         """,
-        iso=iso.upper(),
-        hours=hours,
-        lim=limit,
+        **params,
     )
     return [dict(r) for r in rows]
 
