@@ -74,8 +74,8 @@ _CLEANUPS: list[tuple[str, str, tuple]] = [
         WHERE ctid IN (
             SELECT ctid FROM lmp
             WHERE iso = 'ERCOT'
-              AND node_id NOT LIKE 'HB\_%'
-              AND node_id NOT LIKE 'LZ\_%'
+              AND node_id NOT LIKE 'HB\\_%'
+              AND node_id NOT LIKE 'LZ\\_%'
             LIMIT %s
         )
         """,
