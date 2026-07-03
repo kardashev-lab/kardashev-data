@@ -58,16 +58,17 @@ NODES: list[NodeRecord] = [
     {"node_id": "61847", "iso": "NYISO", "name": "PJM Interface", "lat": 41.200, "lng": -76.000, "zone": "PJM", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
-    # ISONE — 6 load zones (CT, ME, NH, NEMA, RI, SEMA, VT, WCMA)
+    # ISONE — numeric location IDs used by ISO-NE web services API
     # -------------------------------------------------------------------------
-    {"node_id": ".CT", "iso": "ISONE", "name": "Connecticut", "lat": 41.603, "lng": -72.723, "zone": "CT", "voltage_kv": None},
-    {"node_id": ".ME", "iso": "ISONE", "name": "Maine", "lat": 45.253, "lng": -69.445, "zone": "ME", "voltage_kv": None},
-    {"node_id": ".NH", "iso": "ISONE", "name": "New Hampshire", "lat": 43.193, "lng": -71.572, "zone": "NH", "voltage_kv": None},
-    {"node_id": ".NEMA", "iso": "ISONE", "name": "Northeast Massachusetts", "lat": 42.576, "lng": -71.006, "zone": "NEMA", "voltage_kv": None},
-    {"node_id": ".RI", "iso": "ISONE", "name": "Rhode Island", "lat": 41.700, "lng": -71.477, "zone": "RI", "voltage_kv": None},
-    {"node_id": ".SEMA", "iso": "ISONE", "name": "Southeast Massachusetts", "lat": 41.902, "lng": -71.024, "zone": "SEMA", "voltage_kv": None},
-    {"node_id": ".VT", "iso": "ISONE", "name": "Vermont", "lat": 44.045, "lng": -72.710, "zone": "VT", "voltage_kv": None},
-    {"node_id": ".WCMA", "iso": "ISONE", "name": "West/Central Massachusetts", "lat": 42.102, "lng": -72.590, "zone": "WCMA", "voltage_kv": None},
+    {"node_id": "4000", "iso": "ISONE", "name": ".H.INTERNAL_HUB", "lat": 42.360, "lng": -71.058, "zone": "HUB", "voltage_kv": None},
+    {"node_id": "4001", "iso": "ISONE", "name": "Maine", "lat": 45.253, "lng": -69.445, "zone": "ME", "voltage_kv": None},
+    {"node_id": "4002", "iso": "ISONE", "name": "New Hampshire", "lat": 43.193, "lng": -71.572, "zone": "NH", "voltage_kv": None},
+    {"node_id": "4003", "iso": "ISONE", "name": "Vermont", "lat": 44.045, "lng": -72.710, "zone": "VT", "voltage_kv": None},
+    {"node_id": "4004", "iso": "ISONE", "name": "Connecticut", "lat": 41.603, "lng": -72.723, "zone": "CT", "voltage_kv": None},
+    {"node_id": "4005", "iso": "ISONE", "name": "Rhode Island", "lat": 41.700, "lng": -71.477, "zone": "RI", "voltage_kv": None},
+    {"node_id": "4006", "iso": "ISONE", "name": "Southeast Massachusetts", "lat": 41.902, "lng": -71.024, "zone": "SEMA", "voltage_kv": None},
+    {"node_id": "4007", "iso": "ISONE", "name": "West/Central Massachusetts", "lat": 42.102, "lng": -72.590, "zone": "WCMA", "voltage_kv": None},
+    {"node_id": "4008", "iso": "ISONE", "name": "Northeast Massachusetts / Boston", "lat": 42.576, "lng": -71.006, "zone": "NEMA", "voltage_kv": None},
 
     # -------------------------------------------------------------------------
     # PJM — Major hubs (node_ids are PJM pnode IDs, matching the lmp table)

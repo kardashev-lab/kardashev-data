@@ -35,6 +35,16 @@ _KNOWN: dict[tuple[str, str], tuple[str, float, float, str | None]] = {
     ("LZ_RAYBN",   "ERCOT"): ("Rayburn Load Zone (East TX)",30.565, -96.300, "RAYBN"),
     ("LZ_SOUTH",   "ERCOT"): ("South Load Zone",           28.696, -100.480, "SOUTH"),
     ("LZ_WEST",    "ERCOT"): ("West Load Zone (Permian)",  31.849, -102.367, "WEST"),
+    # ISONE load zones (numeric location IDs from ISO-NE web services API)
+    ("4000", "ISONE"): (".H.INTERNAL_HUB",              42.360,  -71.058, "HUB"),
+    ("4001", "ISONE"): ("Maine",                         45.253,  -69.445, "ME"),
+    ("4002", "ISONE"): ("New Hampshire",                 43.193,  -71.572, "NH"),
+    ("4003", "ISONE"): ("Vermont",                       44.045,  -72.710, "VT"),
+    ("4004", "ISONE"): ("Connecticut",                   41.603,  -72.723, "CT"),
+    ("4005", "ISONE"): ("Rhode Island",                  41.700,  -71.477, "RI"),
+    ("4006", "ISONE"): ("Southeast Massachusetts",       41.902,  -71.024, "SEMA"),
+    ("4007", "ISONE"): ("West/Central Massachusetts",    42.102,  -72.590, "WCMA"),
+    ("4008", "ISONE"): ("Northeast Massachusetts/Boston",42.576,  -71.006, "NEMA"),
     # CAISO trading hubs
     ("TH_NP15_GEN-APND", "CAISO"): ("NP15 Trading Hub (North CA)", 38.291, -121.500, "NP15"),
     ("TH_SP15_GEN-APND", "CAISO"): ("SP15 Trading Hub (South CA)", 34.052, -118.244, "SP15"),
