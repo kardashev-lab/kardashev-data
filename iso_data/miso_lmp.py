@@ -78,7 +78,9 @@ def get_da_lmp(target: date) -> list[dict]:
     url = _DA_URL_TEMPLATE.format(date=date_str)
 
     try:
-        df = _http.get_csv(url)
+        r = _http.get(url)
+        # MISO DA CSVs have a 4-line preamble before the actual header row
+        df = pd.read_csv(io.StringIO(r.text), skiprows=4)
     except Exception:
         import logging
         logging.getLogger(__name__).warning("MISO DA LMP: no CSV for %s", date_str)
@@ -95,17 +97,13 @@ def get_da_lmp(target: date) -> list[dict]:
     # Find type column to filter for LMP rows
     type_col = next((c for c in df.columns if c.upper() in ("TYPE", "LMPTYPE", "VALUE TYPE")), None)
 
-    # Hour-ending columns: HE1..HE24
-    he_cols = [c for c in df.columns if c.upper().startswith("HE") and c[2:].isdigit()]
+    # Hour-ending columns: "HE 1".."HE 24" (space between HE and digit)
+    he_cols = [c for c in df.columns if c.upper().startswith("HE") and c[2:].strip().isdigit()]
     if not he_cols:
         return []
 
-    # Filter to LMP rows
-    if type_col:
-        df = df[df[type_col].str.strip().str.upper() == "LMP"]
-
-    # Filter to hub nodes
-    df = df[df[node_col].str.upper().str.contains("HUB", na=False)]
+    # Filter to MISO aggregate hub nodes (names ending in .HUB e.g. ILLINOIS.HUB)
+    df = df[df[node_col].str.upper().str.contains(r"\.HUB$", na=False, regex=True)]
 
     rows: list[dict] = []
     for _, row in df.iterrows():
