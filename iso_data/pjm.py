@@ -55,7 +55,7 @@ def _dm2_fetch(feed: str, start: date, end: date, node_type: str | None = None) 
         if node_type:
             params["type"] = node_type
 
-        r = _http.get(f"{_DM2_BASE}/{feed}/csv", params=params, timeout=120)
+        r = _http.get(f"{_DM2_BASE}/{feed}/csv", params=params)
         df = pd.read_csv(io.StringIO(r.text))
         if df.empty:
             break

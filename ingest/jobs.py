@@ -4,7 +4,7 @@ One ingest function per ISO per dataset. All jobs are idempotent via ON CONFLICT
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 
