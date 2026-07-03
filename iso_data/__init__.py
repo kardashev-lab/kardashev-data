@@ -1,54 +1,52 @@
 """
-Direct data clients for US ISO/RTOs.
+Supplementary data clients for kardashev-data (non-ISO sources).
 
-Modules:
-  caiso     - California ISO (curtailment HTML scrape + OASIS API)
-  ercot     - ERCOT Texas (dashboard JSON, ~15-min latency)
-  isone     - ISO New England (EIA-930 + transform CSV)
-  miso      - Midcontinent ISO (public API + market reports)
-  nyiso     - New York ISO (public MIS CSV endpoints)
-  pjm       - PJM Interconnection (Dataminer2 API, free key required)
-  spp       - Southwest Power Pool (VER curtailment CSV + gen mix)
+ISO/RTO modules (CAISO, ERCOT, MISO, NYISO, ISONE, SPP, PJM) are now
+provided by the `kardashev` package. Import them as:
+    from kardashev import _caiso as caiso, _ercot as ercot, ...
 
-Shared HTTP utils in _http (retry, zip helpers).
-
-Usage:
-    from iso_data import caiso, spp, ercot
-    from datetime import date
-
-    totals = caiso.get_curtailment_daily_totals(date(2025, 6, 1))
-    df = spp.get_ver_curtailments_raw(date(2025, 6, 1))
-
-    # PJM needs a free key from dataminer2.pjm.com:
-    from iso_data import pjm
-    pjm.set_api_key("your-key")
-    df = pjm.get_fuel_mix(date(2025, 6, 1))
+This package retains only sources not yet in kardashev:
+  bpa            - Bonneville Power Administration
+  eia            - EIA API (generation, storage, capacity)
+  eia_930        - EIA-930 balancing authority data
+  eia_commodities - EIA commodity prices
+  epa            - EPA emissions data
+  nrc            - NRC reactor status
+  nrel           - NREL solar/wind resource data
+  rggi           - RGGI carbon market
+  usbr           - Bureau of Reclamation hydro
+  weather        - Weather observations
 """
+
+from kardashev import (
+    _caiso as caiso,
+    _eia as eia,
+    _ercot as ercot,
+    _ercot_lmp as ercot_lmp,
+    _isone as isone,
+    _isone_api as isone_api,
+    _miso as miso,
+    _miso_lmp as miso_lmp,
+    _nyiso as nyiso,
+    _pjm as pjm,
+    _spp as spp,
+)
 
 from . import (
     _http,
-    caiso,
-    eia,
+    bpa,
     eia_930,
     eia_commodities,
-    ercot,
-    ercot_lmp,
     epa,
-    isone,
-    isone_api,
-    miso,
-    miso_lmp,
     nrc,
     nrel,
-    nyiso,
-    pjm,
     rggi,
-    spp,
     usbr,
+    weather,
 )
 
 __all__ = [
     "caiso", "eia", "eia_930", "eia_commodities", "ercot", "ercot_lmp", "epa",
     "isone", "isone_api", "miso", "miso_lmp", "nrc", "nrel", "nyiso", "pjm",
-    "rggi", "spp", "usbr", "_http",
+    "rggi", "spp", "usbr", "weather", "_http",
 ]

@@ -1,6 +1,6 @@
 import math
 
-from iso_data.caiso import _extract_js_array
+from kardashev._caiso import _extract_js_array
 
 
 def test_extracts_plain_array():

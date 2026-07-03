@@ -9,7 +9,7 @@ description = "US energy grid data platform: fuel mix, carbon intensity, LMP, cu
 requires-python = ">=3.11"
 
 dependencies = [
-    # ISO data layer
+    "kardashev>=0.2.0",
     "requests>=2.32",
     "pandas>=2.2",
     "numpy>=1.26",
