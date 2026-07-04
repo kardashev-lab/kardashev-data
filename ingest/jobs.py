@@ -412,6 +412,33 @@ def ingest_eia_load_all(hours: int = 3):
 # Interconnection queue
 # ---------------------------------------------------------------------------
 
+def _clean(v):
+    """NaN -> None. Postgres has no cast from float NaN into TEXT/DATE columns,
+    and pandas leaves missing cells as float('nan') even in otherwise-string columns."""
+    if v is None:
+        return None
+    try:
+        if pd.isna(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return v
+
+
+def _parse_month_year(v):
+    """NYISO's 'Date of Initial Operation' column is 'MM-YYYY' / 'MM/YYYY', not
+    a full date. Normalise to the first of that month; drop anything else."""
+    v = _clean(v)
+    if v is None:
+        return None
+    for fmt in ("%m-%Y", "%m/%Y"):
+        try:
+            return datetime.strptime(str(v), fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
 def ingest_nyiso_queue():
     from ingest.writer import replace_interconnection_queue
     from kardashev import _nyiso as nyiso
@@ -419,18 +446,65 @@ def ingest_nyiso_queue():
     if df.empty:
         return
     rows = df.to_dict("records")
-    rows = [{"id": str(r.get("Queue Pos", "")), "project_name": r.get("Project Name"),
-              "county": r.get("County"), "state": r.get("State"), "fuel_type": r.get("Fuel Type"),
-              "mw": r.get("SP (MW)"), "status": r.get("Status"), "queue_date": r.get("Queue Date"),
-              "online_date": r.get("Date of Initial Operation"), "withdrawal_date": None,
+    rows = [{"id": str(_clean(r.get("Queue Pos")) or ""), "project_name": _clean(r.get("Project Name")),
+              "county": _clean(r.get("County")), "state": _clean(r.get("State")),
+              "fuel_type": _clean(r.get("Fuel Type")), "mw": _clean(r.get("SP (MW)")),
+              "status": _clean(r.get("Status")), "queue_date": _clean(r.get("Queue Date")),
+              "online_date": _parse_month_year(r.get("Date of Initial Operation")), "withdrawal_date": None,
               "updated_at": datetime.now(timezone.utc)} for r in rows]
     n = replace_interconnection_queue("NYISO", rows)
     log.info("NYISO queue: %d rows", n)
 
 
+def _ingest_normalized_queue(iso: str, get_queue_fn):
+    """Shared path for ISOs whose client already returns snake_case columns
+    (queue_position, county, state, fuel_type, mw, status, queue_date,
+    online_date, withdrawal_date) — CAISO, ERCOT, MISO, SPP."""
+    from ingest.writer import replace_interconnection_queue
+    df = get_queue_fn()
+    if df.empty:
+        return
+    rows = []
+    for r in df.to_dict("records"):
+        rows.append({
+            "id":               str(_clean(r.get("queue_position")) or ""),
+            "project_name":     _clean(r.get("project_name")),
+            "county":           _clean(r.get("county")),
+            "state":            _clean(r.get("state")),
+            "fuel_type":        _clean(r.get("fuel_type")),
+            "mw":               _clean(r.get("mw")),
+            "status":           _clean(r.get("status")),
+            "queue_date":       _clean(r.get("queue_date")),
+            "online_date":      _clean(r.get("online_date")),
+            "withdrawal_date":  _clean(r.get("withdrawal_date")),
+            "updated_at":       datetime.now(timezone.utc),
+        })
+    n = replace_interconnection_queue(iso, rows)
+    log.info("%s queue: %d rows", iso, n)
+
+
 def ingest_caiso_queue():
-    """CAISO interconnection queue via OASIS (public)."""
-    log.info("CAISO queue: fetch not yet implemented (OASIS doesn't expose a queue CSV)")
+    """CAISO interconnection queue (public xlsx, active projects only)."""
+    from kardashev import _caiso as caiso
+    _ingest_normalized_queue("CAISO", caiso.get_interconnection_queue)
+
+
+def ingest_ercot_queue():
+    """ERCOT interconnection queue (public GIS report, large-gen projects only)."""
+    from kardashev import _ercot as ercot
+    _ingest_normalized_queue("ERCOT", ercot.get_interconnection_queue)
+
+
+def ingest_miso_queue():
+    """MISO interconnection queue (public JSON API)."""
+    from kardashev import _miso as miso
+    _ingest_normalized_queue("MISO", miso.get_interconnection_queue)
+
+
+def ingest_spp_queue():
+    """SPP interconnection queue (public CSV)."""
+    from kardashev import _spp as spp
+    _ingest_normalized_queue("SPP", spp.get_interconnection_queue)
 
 
 def ingest_pjm_queue():
@@ -444,16 +518,16 @@ def ingest_pjm_queue():
     rows = []
     for r in df.to_dict("records"):
         rows.append({
-            "id":               str(r.get("queue_position", r.get("Queue Position", ""))),
-            "project_name":     r.get("project_name", r.get("Project Name")),
-            "county":           r.get("county", r.get("County")),
-            "state":            r.get("state", r.get("State")),
-            "fuel_type":        r.get("fuel_type", r.get("Fuel Type")),
-            "mw":               r.get("mw", r.get("MW")),
-            "status":           r.get("status", r.get("Status")),
-            "queue_date":       r.get("queue_date", r.get("Queue Date")),
-            "online_date":      r.get("online_date", r.get("Commercial Operation Date")),
-            "withdrawal_date":  r.get("withdrawal_date"),
+            "id":               str(_clean(r.get("queue_position", r.get("Queue Position"))) or ""),
+            "project_name":     _clean(r.get("project_name", r.get("Project Name"))),
+            "county":           _clean(r.get("county", r.get("County"))),
+            "state":            _clean(r.get("state", r.get("State"))),
+            "fuel_type":        _clean(r.get("fuel_type", r.get("Fuel Type"))),
+            "mw":               _clean(r.get("mw", r.get("MW"))),
+            "status":           _clean(r.get("status", r.get("Status"))),
+            "queue_date":       _clean(r.get("queue_date", r.get("Queue Date"))),
+            "online_date":      _clean(r.get("online_date", r.get("Commercial Operation Date"))),
+            "withdrawal_date":  _clean(r.get("withdrawal_date")),
             "updated_at":       datetime.now(timezone.utc),
         })
     n = replace_interconnection_queue("PJM", rows)
@@ -474,15 +548,15 @@ def ingest_isone_queue():
     rows = []
     for r in df.to_dict("records"):
         rows.append({
-            "id":               str(r.get("Queue No", r.get("queue_no", ""))),
-            "project_name":     r.get("Project Name", r.get("project_name")),
-            "county":           r.get("Town", r.get("town")),
-            "state":            r.get("State", r.get("state")),
-            "fuel_type":        r.get("Fuel Type", r.get("fuel_type")),
-            "mw":               r.get("Summer Capacity (MW)", r.get("mw")),
-            "status":           r.get("Status", r.get("status")),
-            "queue_date":       r.get("Queue Date", r.get("queue_date")),
-            "online_date":      r.get("Proposed In-Service", r.get("online_date")),
+            "id":               str(_clean(r.get("Queue No", r.get("queue_no"))) or ""),
+            "project_name":     _clean(r.get("Project Name", r.get("project_name"))),
+            "county":           _clean(r.get("Town", r.get("town"))),
+            "state":            _clean(r.get("State", r.get("state"))),
+            "fuel_type":        _clean(r.get("Fuel Type", r.get("fuel_type"))),
+            "mw":               _clean(r.get("Summer Capacity (MW)", r.get("mw"))),
+            "status":           _clean(r.get("Status", r.get("status"))),
+            "queue_date":       _clean(r.get("Queue Date", r.get("queue_date"))),
+            "online_date":      _clean(r.get("Proposed In-Service", r.get("online_date"))),
             "withdrawal_date":  None,
             "updated_at":       datetime.now(timezone.utc),
         })
