@@ -70,12 +70,51 @@ _KNOWN: dict[tuple[str, str], tuple[str, float, float, str | None]] = {
 }
 
 
+# PJM zone/hub name keywords -> (lat, lng, zone_code)
+# Matched case-insensitively against node_name from the lmp table.
+_PJM_COORDS: list[tuple[str, float, float, str]] = [
+    ("WESTERN HUB",   40.440, -79.996, "WEST"),
+    ("EASTERN HUB",   40.222, -74.325, "EAST"),
+    ("AEP GEN HUB",   39.961, -83.003, "AEP"),
+    ("COMED GEN HUB", 41.833, -87.832, "COMED"),
+    ("AEP-DAYTON",    39.961, -83.003, "AEP"),
+    ("AEP",           39.000, -82.000, "AEP"),
+    ("AP ",           40.440, -80.000, "AP"),
+    ("ATSI",          41.500, -81.690, "ATSI"),
+    ("BGE",           39.290, -76.610, "BGE"),
+    ("COMED",         41.833, -87.832, "COMED"),
+    ("DAY",           39.760, -84.190, "DAY"),
+    ("DEOK",          39.100, -84.510, "DEOK"),
+    ("DOM",           37.540, -77.430, "DOM"),
+    ("DPL",           38.910, -75.530, "DPL"),
+    ("DUQ",           40.440, -80.000, "DUQ"),
+    ("EKPC",          37.840, -84.270, "EKPC"),
+    ("JCPL",          40.010, -74.300, "JCPL"),
+    (" ME ",          40.340, -75.930, "ME"),
+    (" PE ",          39.950, -75.160, "PE"),
+    ("PEP",           38.900, -77.040, "PEP"),
+    (" PL ",          40.510, -78.400, "PL"),
+    (" PN ",          41.000, -80.000, "PN"),
+    (" PS ",          40.490, -74.450, "PS"),
+    ("RECO",          41.100, -74.400, "RECO"),
+    ("UGI",           40.600, -76.500, "UGI"),
+]
+
+
+def _pjm_coords(name: str) -> tuple[float, float, str] | None:
+    upper = f" {name.upper()} "
+    for keyword, lat, lng, zone in _PJM_COORDS:
+        if keyword.upper() in upper:
+            return lat, lng, zone
+    return None
+
+
 async def auto_seed(database_url: str) -> None:
     conn = await asyncpg.connect(database_url)
     try:
         # Find node_ids in lmp that have no lmp_nodes entry
         missing = await conn.fetch("""
-            SELECT DISTINCT l.node_id, l.iso
+            SELECT DISTINCT l.node_id, l.iso, l.node_name
             FROM lmp l
             LEFT JOIN lmp_nodes n ON n.node_id = l.node_id AND n.iso = l.iso
             WHERE n.node_id IS NULL
@@ -85,6 +124,20 @@ async def auto_seed(database_url: str) -> None:
         seeded = 0
         for row in missing:
             key = (row["node_id"], row["iso"])
+
+            if row["iso"] == "PJM":
+                coords = _pjm_coords(row["node_name"] or "")
+                if coords is None:
+                    continue
+                lat, lng, zone = coords
+                await conn.execute("""
+                    INSERT INTO lmp_nodes (node_id, iso, name, lat, lng, zone)
+                    VALUES ($1, 'PJM', $2, $3, $4, $5)
+                    ON CONFLICT (node_id, iso) DO NOTHING
+                """, row["node_id"], row["node_name"] or row["node_id"], lat, lng, zone)
+                seeded += 1
+                continue
+
             if key not in _KNOWN:
                 continue
             name, lat, lng, zone = _KNOWN[key]
@@ -99,8 +152,9 @@ async def auto_seed(database_url: str) -> None:
         print(f"Auto-seeded {seeded} new nodes. {skipped} nodes skipped (no known coords).")
         if skipped > 0:
             unknown = [(r["node_id"], r["iso"]) for r in missing
-                       if (r["node_id"], r["iso"]) not in _KNOWN][:10]
-            print("Sample unknown nodes:", unknown)
+                       if (r["node_id"], r["iso"]) not in _KNOWN and r["iso"] != "PJM"][:10]
+            if unknown:
+                print("Sample unknown nodes:", unknown)
     finally:
         await conn.close()
 
