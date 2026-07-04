@@ -70,13 +70,13 @@ NODES: list[NodeRecord] = [
     {"node_id": "4007", "iso": "ISONE", "name": "West/Central Massachusetts", "lat": 42.102, "lng": -72.590, "zone": "WCMA", "voltage_kv": None},
     {"node_id": "4008", "iso": "ISONE", "name": "Northeast Massachusetts / Boston", "lat": 42.576, "lng": -71.006, "zone": "NEMA", "voltage_kv": None},
 
-    # -------------------------------------------------------------------------
-    # PJM: Major hubs (node_ids are PJM pnode IDs, matching the lmp table)
-    # -------------------------------------------------------------------------
-    {"node_id": "33092371", "iso": "PJM", "name": "PJM Western Hub", "lat": 40.440, "lng": -79.996, "zone": "AEP", "voltage_kv": 345.0},
-    {"node_id": "50969827", "iso": "PJM", "name": "Eastern Hub", "lat": 40.222, "lng": -74.325, "zone": "PPL", "voltage_kv": 345.0},
+    # PJM nodes are seeded dynamically from the lmp table via seed_pjm_from_lmp()
+    # to ensure node_ids always match what DataMiner2 returns. Static entries below
+    # are fallbacks for the 4 major hubs in case the lmp table is empty.
+    {"node_id": "33092371", "iso": "PJM", "name": "PJM Western Hub", "lat": 40.440, "lng": -79.996, "zone": "WEST", "voltage_kv": 345.0},
+    {"node_id": "50969827", "iso": "PJM", "name": "Eastern Hub", "lat": 40.222, "lng": -74.325, "zone": "EAST", "voltage_kv": 345.0},
     {"node_id": "34508503", "iso": "PJM", "name": "AEP-Dayton Hub", "lat": 39.961, "lng": -83.003, "zone": "AEP", "voltage_kv": 345.0},
-    {"node_id": "33092396", "iso": "PJM", "name": "ComEd Hub (Chicago)", "lat": 41.833, "lng": -87.832, "zone": "COMED", "voltage_kv": 345.0},
+    {"node_id": "33092396", "iso": "PJM", "name": "ComEd Hub", "lat": 41.833, "lng": -87.832, "zone": "COMED", "voltage_kv": 345.0},
 
     # -------------------------------------------------------------------------
     # CAISO: Trading hubs and major APNodes
@@ -143,6 +143,74 @@ NODES: list[NodeRecord] = [
 ]
 
 
+# PJM zone/hub name keywords -> (lat, lng, zone_code)
+# Matched case-insensitively against pnode_name from DataMiner2.
+_PJM_COORDS: list[tuple[str, float, float, str]] = [
+    ("WESTERN HUB",  40.440, -79.996, "WEST"),
+    ("EASTERN HUB",  40.222, -74.325, "EAST"),
+    ("AEP GEN HUB",  39.961, -83.003, "AEP"),
+    ("COMED GEN HUB",41.833, -87.832, "COMED"),
+    ("AEP-DAYTON",   39.961, -83.003, "AEP"),
+    ("AEP",          39.000, -82.000, "AEP"),
+    ("AP ",          40.440, -80.000, "AP"),
+    ("ATSI",         41.500, -81.690, "ATSI"),
+    ("BGE",          39.290, -76.610, "BGE"),
+    ("COMED",        41.833, -87.832, "COMED"),
+    ("DAY",          39.760, -84.190, "DAY"),
+    ("DEOK",         39.100, -84.510, "DEOK"),
+    ("DOM",          37.540, -77.430, "DOM"),
+    ("DPL",          38.910, -75.530, "DPL"),
+    ("DUQ",          40.440, -80.000, "DUQ"),
+    ("EKPC",         37.840, -84.270, "EKPC"),
+    ("JCPL",         40.010, -74.300, "JCPL"),
+    (" ME ",         40.340, -75.930, "ME"),
+    (" PE ",         39.950, -75.160, "PE"),
+    ("PEP",          38.900, -77.040, "PEP"),
+    (" PL ",         40.510, -78.400, "PL"),
+    (" PN ",         41.000, -80.000, "PN"),
+    (" PS ",         40.490, -74.450, "PS"),
+    ("RECO",         41.100, -74.400, "RECO"),
+    ("UGI",          40.600, -76.500, "UGI"),
+]
+
+
+def _pjm_coords(name: str) -> tuple[float, float, str] | None:
+    upper = f" {name.upper()} "
+    for keyword, lat, lng, zone in _PJM_COORDS:
+        if keyword.upper() in upper:
+            return lat, lng, zone
+    return None
+
+
+async def seed_pjm_from_lmp(conn: asyncpg.Connection) -> int:
+    """Read distinct PJM node_ids from the lmp table and upsert into lmp_nodes."""
+    rows = await conn.fetch(
+        "SELECT DISTINCT node_id, node_name FROM lmp WHERE iso = 'PJM'"
+    )
+    inserted = 0
+    for row in rows:
+        node_id = row["node_id"]
+        node_name = row["node_name"] or ""
+        coords = _pjm_coords(node_name)
+        if coords is None:
+            continue
+        lat, lng, zone = coords
+        await conn.execute(
+            """
+            INSERT INTO lmp_nodes (node_id, iso, name, lat, lng, zone, voltage_kv)
+            VALUES ($1, 'PJM', $2, $3, $4, $5, NULL)
+            ON CONFLICT (node_id, iso) DO UPDATE SET
+                name = EXCLUDED.name,
+                lat  = EXCLUDED.lat,
+                lng  = EXCLUDED.lng,
+                zone = EXCLUDED.zone
+            """,
+            node_id, node_name, lat, lng, zone,
+        )
+        inserted += 1
+    return inserted
+
+
 async def seed(database_url: str) -> None:
     conn = await asyncpg.connect(database_url)
     try:
@@ -165,7 +233,10 @@ async def seed(database_url: str) -> None:
                 for n in NODES
             ],
         )
-        print(f"Seeded {len(NODES)} nodes across {len({n['iso'] for n in NODES})} ISOs.")
+        print(f"Seeded {len(NODES)} static nodes.")
+
+        pjm_count = await seed_pjm_from_lmp(conn)
+        print(f"Seeded {pjm_count} PJM nodes from lmp table.")
     finally:
         await conn.close()
 
