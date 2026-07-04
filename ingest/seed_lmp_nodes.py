@@ -38,19 +38,22 @@ class NodeRecord(TypedDict):
 NODES: list[NodeRecord] = [
     # -------------------------------------------------------------------------
     # NYISO: 11 load zones identified by PTID (numeric IDs used in lmp table)
-    # PTIDs from NYISO public data; zones A-K
+    # PTIDs verified directly against NYISO's own realtime_zone.csv (mis.nyiso.com) -
+    # previous table sorted zone names alphabetically and assigned PTIDs 61752-61762
+    # in that order, which does not match NYISO's actual PTID assignment (zone-letter
+    # order A-K). 9 of 11 zones were mislabeled as a result.
     # -------------------------------------------------------------------------
-    {"node_id": "61752", "iso": "NYISO", "name": "Capital Zone (F)", "lat": 42.652, "lng": -73.756, "zone": "F", "voltage_kv": None},
-    {"node_id": "61753", "iso": "NYISO", "name": "Central Zone (C)", "lat": 43.048, "lng": -76.147, "zone": "C", "voltage_kv": None},
-    {"node_id": "61754", "iso": "NYISO", "name": "Dunwoodie Zone (I)", "lat": 40.937, "lng": -73.856, "zone": "I", "voltage_kv": None},
-    {"node_id": "61755", "iso": "NYISO", "name": "Genesee Zone (B)", "lat": 43.161, "lng": -77.610, "zone": "B", "voltage_kv": None},
-    {"node_id": "61756", "iso": "NYISO", "name": "Hudson Valley (G)", "lat": 41.701, "lng": -74.024, "zone": "G", "voltage_kv": None},
-    {"node_id": "61757", "iso": "NYISO", "name": "Long Island (K)", "lat": 40.789, "lng": -73.135, "zone": "K", "voltage_kv": None},
-    {"node_id": "61758", "iso": "NYISO", "name": "Mohawk Valley (E)", "lat": 43.100, "lng": -75.232, "zone": "E", "voltage_kv": None},
+    {"node_id": "61752", "iso": "NYISO", "name": "West Zone (A)", "lat": 42.886, "lng": -78.878, "zone": "A", "voltage_kv": None},
+    {"node_id": "61753", "iso": "NYISO", "name": "Genesee Zone (B)", "lat": 43.161, "lng": -77.610, "zone": "B", "voltage_kv": None},
+    {"node_id": "61754", "iso": "NYISO", "name": "Central Zone (C)", "lat": 43.048, "lng": -76.147, "zone": "C", "voltage_kv": None},
+    {"node_id": "61755", "iso": "NYISO", "name": "North Zone (D)", "lat": 44.698, "lng": -73.453, "zone": "D", "voltage_kv": None},
+    {"node_id": "61756", "iso": "NYISO", "name": "Mohawk Valley (E)", "lat": 43.100, "lng": -75.232, "zone": "E", "voltage_kv": None},
+    {"node_id": "61757", "iso": "NYISO", "name": "Capital Zone (F)", "lat": 42.652, "lng": -73.756, "zone": "F", "voltage_kv": None},
+    {"node_id": "61758", "iso": "NYISO", "name": "Hudson Valley (G)", "lat": 41.701, "lng": -74.024, "zone": "G", "voltage_kv": None},
     {"node_id": "61759", "iso": "NYISO", "name": "Millwood Zone (H)", "lat": 41.202, "lng": -73.803, "zone": "H", "voltage_kv": None},
-    {"node_id": "61760", "iso": "NYISO", "name": "New York City (J)", "lat": 40.713, "lng": -74.006, "zone": "J", "voltage_kv": None},
-    {"node_id": "61761", "iso": "NYISO", "name": "North Zone (D)", "lat": 44.698, "lng": -73.453, "zone": "D", "voltage_kv": None},
-    {"node_id": "61762", "iso": "NYISO", "name": "West Zone (A)", "lat": 42.886, "lng": -78.878, "zone": "A", "voltage_kv": None},
+    {"node_id": "61760", "iso": "NYISO", "name": "Dunwoodie Zone (I)", "lat": 40.937, "lng": -73.856, "zone": "I", "voltage_kv": None},
+    {"node_id": "61761", "iso": "NYISO", "name": "New York City (J)", "lat": 40.713, "lng": -74.006, "zone": "J", "voltage_kv": None},
+    {"node_id": "61762", "iso": "NYISO", "name": "Long Island (K)", "lat": 40.789, "lng": -73.135, "zone": "K", "voltage_kv": None},
     # NYISO external interface nodes (import/export tie points)
     {"node_id": "61844", "iso": "NYISO", "name": "Hydro Quebec Interface (H Q)", "lat": 45.005, "lng": -73.440, "zone": "HQ", "voltage_kv": None},
     {"node_id": "61845", "iso": "NYISO", "name": "New England Interface (NPX)", "lat": 42.100, "lng": -72.700, "zone": "NPX", "voltage_kv": None},
