@@ -672,3 +672,42 @@ def upsert_solar_irradiance(rows: list[dict]) -> int:
              for r in rows],
         )
     return len(rows)
+
+
+def upsert_ercot_large_load_snapshot(row: dict) -> int:
+    """row: one month's extracted figures from the LLWG large-load deck.
+    See ingest/ercot_large_load.py for the extraction schema."""
+    with cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO ercot_large_load_snapshots
+              (snapshot_month, report_date, total_mw, colocated_mw, standalone_mw,
+               by_status, by_size_bucket, by_type, by_zone,
+               approved_to_energize_mw, planning_studies_approved_mw, source_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (snapshot_month) DO UPDATE SET
+              report_date = EXCLUDED.report_date,
+              total_mw = EXCLUDED.total_mw,
+              colocated_mw = EXCLUDED.colocated_mw,
+              standalone_mw = EXCLUDED.standalone_mw,
+              by_status = EXCLUDED.by_status,
+              by_size_bucket = EXCLUDED.by_size_bucket,
+              by_type = EXCLUDED.by_type,
+              by_zone = EXCLUDED.by_zone,
+              approved_to_energize_mw = EXCLUDED.approved_to_energize_mw,
+              planning_studies_approved_mw = EXCLUDED.planning_studies_approved_mw,
+              source_url = EXCLUDED.source_url,
+              extracted_at = now()
+            """,
+            (
+                row["snapshot_month"], row.get("report_date"), row.get("total_mw"),
+                row.get("colocated_mw"), row.get("standalone_mw"),
+                psycopg2.extras.Json(row.get("by_status")) if row.get("by_status") else None,
+                psycopg2.extras.Json(row.get("by_size_bucket")) if row.get("by_size_bucket") else None,
+                psycopg2.extras.Json(row.get("by_type")) if row.get("by_type") else None,
+                psycopg2.extras.Json(row.get("by_zone")) if row.get("by_zone") else None,
+                row.get("approved_to_energize_mw"), row.get("planning_studies_approved_mw"),
+                row.get("source_url"),
+            ),
+        )
+    return 1

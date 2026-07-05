@@ -19,6 +19,7 @@ from api.routes import (
     curtailment,
     eia_static,
     emissions,
+    ercot_large_load,
     fuel_mix,
     generation,
     hydro,
@@ -101,6 +102,7 @@ app.include_router(commodities.router)
 app.include_router(solar.router)
 app.include_router(outages.router)
 app.include_router(ancillary.router)
+app.include_router(ercot_large_load.router)
 
 
 @app.get("/")

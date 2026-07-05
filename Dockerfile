@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev \
+    gcc libpq-dev libreoffice-impress \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy everything before install (editable install needs source present)

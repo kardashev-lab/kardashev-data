@@ -185,6 +185,11 @@ def run_queue_all():
     _run("isone_queue", ingest_isone_queue)
 
 
+def run_ercot_large_load():
+    from ingest.ercot_large_load import ingest_ercot_large_load
+    _run("ercot_large_load", ingest_ercot_large_load)
+
+
 def run_reserve_margins():
     from ingest.jobs import ingest_pjm_reserve_margins
     _run("pjm_reserve_margins", ingest_pjm_reserve_margins)
@@ -345,6 +350,7 @@ def start():
     last_carbon_week     = -1
     last_commodities_week = -1
     last_lmp_purge_day   = -1
+    last_ercot_large_load_ym = None  # (year, month) -- ERCOT LLWG posts roughly monthly
 
     def _startup(name: str, fn) -> None:
         try:
@@ -465,6 +471,11 @@ def start():
                 log.info("tick: weekly carbon allowances + EIA commodities")
                 run_carbon_allowances()
                 run_eia_commodities()
+
+            if hour == 15 and (now.year, now.month) != last_ercot_large_load_ym:
+                last_ercot_large_load_ym = (now.year, now.month)
+                log.info("tick: ERCOT large load queue (monthly, vision extraction)")
+                run_ercot_large_load()
 
             if hour == 3 and day != last_lmp_purge_day:
                 last_lmp_purge_day = day

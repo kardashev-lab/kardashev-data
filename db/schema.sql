@@ -475,3 +475,27 @@ CREATE TABLE IF NOT EXISTS solar_irradiance (
 );
 CREATE INDEX IF NOT EXISTS si_ts_brin  ON solar_irradiance USING BRIN (ts);
 CREATE INDEX IF NOT EXISTS si_location ON solar_irradiance (location, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- ERCOT large load interconnection queue (monthly snapshot from the Large Load
+-- Working Group's "Large Load Interconnection Status Update" deck, posted to
+-- the LLWG meeting calendar page as a chart-based PDF -- extracted via vision
+-- LLM since the source has no structured table/CSV, see ingest/ercot_large_load.py)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ercot_large_load_snapshots (
+    snapshot_month              DATE             NOT NULL,  -- month the chart data point represents
+    report_date                 DATE,                       -- LLWG meeting / report publish date
+    total_mw                    DOUBLE PRECISION,
+    colocated_mw                DOUBLE PRECISION,
+    standalone_mw                DOUBLE PRECISION,
+    by_status                   JSONB,                      -- {"no_studies_submitted": mw, "under_ercot_review": mw, ...}
+    by_size_bucket               JSONB,                      -- {"75-250mw": {"count": n, "mw": mw}, ...}
+    by_type                      JSONB,                      -- {"data_center": {"pct": p, "mw": mw}, "crypto": {...}, ...}
+    by_zone                      JSONB,                      -- {"lz_west": mw, "lz_north": mw, "other": mw}
+    approved_to_energize_mw      DOUBLE PRECISION,           -- cumulative
+    planning_studies_approved_mw DOUBLE PRECISION,           -- cumulative
+    source_url                   TEXT,
+    extracted_at                 TIMESTAMPTZ      DEFAULT now(),
+    CONSTRAINT ercot_large_load_snapshots_pk PRIMARY KEY (snapshot_month)
+);
+CREATE INDEX IF NOT EXISTS ells_month ON ercot_large_load_snapshots (snapshot_month DESC);
