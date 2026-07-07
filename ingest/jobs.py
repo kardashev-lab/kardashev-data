@@ -4,6 +4,7 @@ One ingest function per ISO per dataset. All jobs are idempotent via ON CONFLICT
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
@@ -2183,9 +2184,16 @@ def ingest_miso_generator_outages():
 # LMP retention
 # ---------------------------------------------------------------------------
 
-def purge_lmp_old_rows(days: int = 30) -> None:
-    """Delete LMP rows older than `days` days and non-hub bus-level nodes."""
+def purge_lmp_old_rows(days: int | None = None) -> None:
+    """Delete LMP rows older than the retention window and non-hub bus-level nodes.
+
+    Retention defaults to LMP_RETENTION_DAYS (3650) — hub-level history is the
+    moat for forecasting work, so age-based deletion is effectively disabled.
+    Node-level cleanup below still runs to keep bus-level rows out.
+    """
     from ingest.writer import cursor
+    if days is None:
+        days = int(os.environ.get("LMP_RETENTION_DAYS", "3650"))
     with cursor() as cur:
         cur.execute(
             "DELETE FROM lmp WHERE ts < now() - %s * interval '1 day'",

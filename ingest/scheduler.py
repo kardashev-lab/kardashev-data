@@ -287,7 +287,8 @@ def run_generator_outages():
     _run("miso_generator_outages",  ingest_miso_generator_outages)
 
 
-def run_lmp_purge(days: int = 30):
+def run_lmp_purge(days: int | None = None):
+    # days=None → LMP_RETENTION_DAYS env (default 3650); keeps hub-level history
     from ingest.jobs import purge_fuel_mix_old_rows, purge_lmp_old_rows
     _run("lmp_purge",      purge_lmp_old_rows,      days)
     _run("fuel_mix_purge", purge_fuel_mix_old_rows, 90)
