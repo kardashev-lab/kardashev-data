@@ -20,6 +20,7 @@ from api.routes import (
     eia_static,
     emissions,
     ercot_large_load,
+    forecast,
     fuel_mix,
     generation,
     hydro,
@@ -103,6 +104,7 @@ app.include_router(solar.router)
 app.include_router(outages.router)
 app.include_router(ancillary.router)
 app.include_router(ercot_large_load.router)
+app.include_router(forecast.router)
 
 
 @app.get("/")

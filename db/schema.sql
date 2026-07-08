@@ -499,3 +499,38 @@ CREATE TABLE IF NOT EXISTS ercot_large_load_snapshots (
     CONSTRAINT ercot_large_load_snapshots_pk PRIMARY KEY (snapshot_month)
 );
 CREATE INDEX IF NOT EXISTS ells_month ON ercot_large_load_snapshots (snapshot_month DESC);
+
+-- ---------------------------------------------------------------------------
+-- Live forward test: day-ahead RT-DA spread forecasts (issued daily by the
+-- forecasting repo's live_forecast.py) and their realized scores. Forecasts
+-- are immutable once issued (insert ON CONFLICT DO NOTHING) -- that is the
+-- whole point of a public track record.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS spread_forecast (
+    ts        TIMESTAMPTZ      NOT NULL,   -- target hour, interval start UTC
+    iso       TEXT             NOT NULL DEFAULT 'ERCOT',
+    node_id   TEXT             NOT NULL,
+    issued_at TIMESTAMPTZ      NOT NULL,   -- when the forecast was generated
+    p10       DOUBLE PRECISION,
+    p50       DOUBLE PRECISION,
+    p90       DOUBLE PRECISION,
+    da        DOUBLE PRECISION,            -- DA price known at issuance
+    model     TEXT,
+    CONSTRAINT spread_forecast_pk PRIMARY KEY (ts, iso, node_id)
+);
+CREATE INDEX IF NOT EXISTS sf_issued ON spread_forecast (issued_at DESC);
+
+CREATE TABLE IF NOT EXISTS forecast_scores (
+    ts         TIMESTAMPTZ      NOT NULL,
+    iso        TEXT             NOT NULL DEFAULT 'ERCOT',
+    node_id    TEXT             NOT NULL,
+    rt         DOUBLE PRECISION,           -- realized hourly RT (mean of 15-min)
+    spread     DOUBLE PRECISION,           -- rt - da
+    err_p50    DOUBLE PRECISION,           -- spread - p50
+    covered    BOOLEAN,                    -- p10 <= spread <= p90
+    side       SMALLINT,                   -- DART signal: +1 long RT, -1 short, 0 flat
+    pnl        DOUBLE PRECISION,           -- side * spread - fee (0 if flat)
+    scored_at  TIMESTAMPTZ      DEFAULT now(),
+    CONSTRAINT forecast_scores_pk PRIMARY KEY (ts, iso, node_id)
+);
+CREATE INDEX IF NOT EXISTS fs_ts ON forecast_scores (ts DESC);
