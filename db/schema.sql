@@ -530,7 +530,11 @@ CREATE TABLE IF NOT EXISTS forecast_scores (
     covered    BOOLEAN,                    -- p10 <= spread <= p90
     side       SMALLINT,                   -- DART signal: +1 long RT, -1 short, 0 flat
     pnl        DOUBLE PRECISION,           -- side * spread - fee (0 if flat)
+    model      TEXT,                       -- copied from spread_forecast at scoring time
     scored_at  TIMESTAMPTZ      DEFAULT now(),
     CONSTRAINT forecast_scores_pk PRIMARY KEY (ts, iso, node_id)
 );
 CREATE INDEX IF NOT EXISTS fs_ts ON forecast_scores (ts DESC);
+-- Added 2026-07-09 for the v1/v2 track-record split; ALTER for pre-existing tables.
+ALTER TABLE forecast_scores ADD COLUMN IF NOT EXISTS model TEXT;
+CREATE INDEX IF NOT EXISTS fs_model ON forecast_scores (model, ts DESC);

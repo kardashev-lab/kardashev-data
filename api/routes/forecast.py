@@ -29,7 +29,7 @@ async def spread_forecast_history(
     """Issued forecasts joined with realized outcomes for one node."""
     return await fetch(
         """
-        SELECT f.ts, f.p10, f.p50, f.p90, f.da, f.issued_at,
+        SELECT f.ts, f.p10, f.p50, f.p90, f.da, f.issued_at, f.model,
                s.rt, s.spread, s.covered, s.side, s.pnl
         FROM spread_forecast f
         LEFT JOIN forecast_scores s
@@ -44,10 +44,12 @@ async def spread_forecast_history(
 
 @router.get("/track-record")
 async def track_record():
-    """Cumulative live forward-test stats plus a daily P&L series."""
-    summary = await fetch_one(
+    """Cumulative live forward-test stats plus a daily P&L series, broken down
+    per model so a v1 -> v2 (or any future) transition stays transparent."""
+    by_model = await fetch(
         """
-        SELECT min(ts)                                    AS first_hour,
+        SELECT model,
+               min(ts)                                    AS first_hour,
                max(ts)                                    AS last_hour,
                count(*)                                   AS node_hours,
                avg(abs(err_p50))                          AS mae_model,
@@ -57,16 +59,37 @@ async def track_record():
                avg((pnl > 0)::int) FILTER (WHERE side <> 0) AS hit_rate,
                sum(pnl) FILTER (WHERE side <> 0)          AS total_pnl
         FROM forecast_scores
+        GROUP BY model ORDER BY min(ts)
         """
     )
     daily = await fetch(
         """
-        SELECT date_trunc('day', ts) AS day,
+        SELECT model, date_trunc('day', ts) AS day,
                sum(pnl) FILTER (WHERE side <> 0) AS pnl,
                count(*) FILTER (WHERE side <> 0) AS hours_traded,
                avg(covered::int)                 AS coverage
         FROM forecast_scores
-        GROUP BY 1 ORDER BY 1
+        GROUP BY model, 2 ORDER BY model, 2
         """
     )
-    return {"summary": summary, "daily": daily}
+    daily_by_model: dict[str, list] = {}
+    for row in daily:
+        daily_by_model.setdefault(row["model"], []).append(row)
+
+    models = [
+        {**row, "daily": daily_by_model.get(row["model"], [])}
+        for row in by_model
+    ]
+    # combined view across all models, for a single "overall" tile if wanted
+    overall = await fetch_one(
+        """
+        SELECT min(ts) AS first_hour, max(ts) AS last_hour, count(*) AS node_hours,
+               avg(abs(err_p50)) AS mae_model, avg(abs(spread)) AS mae_da,
+               avg(covered::int) AS coverage,
+               count(*) FILTER (WHERE side <> 0) AS hours_traded,
+               avg((pnl > 0)::int) FILTER (WHERE side <> 0) AS hit_rate,
+               sum(pnl) FILTER (WHERE side <> 0) AS total_pnl
+        FROM forecast_scores
+        """
+    )
+    return {"models": models, "overall": overall}
