@@ -28,6 +28,7 @@ from api.routes import (
     isos,
     lmp,
     load,
+    load_forecast,
     nat_gas,
     nuclear,
     outages,
@@ -105,6 +106,7 @@ app.include_router(outages.router)
 app.include_router(ancillary.router)
 app.include_router(ercot_large_load.router)
 app.include_router(forecast.router)
+app.include_router(load_forecast.router)
 
 
 @app.get("/")

@@ -538,3 +538,22 @@ CREATE INDEX IF NOT EXISTS fs_ts ON forecast_scores (ts DESC);
 -- Added 2026-07-09 for the v1/v2 track-record split; ALTER for pre-existing tables.
 ALTER TABLE forecast_scores ADD COLUMN IF NOT EXISTS model TEXT;
 CREATE INDEX IF NOT EXISTS fs_model ON forecast_scores (model, ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- Public accuracy tracker for ERCOT's OWN official day-ahead load forecast
+-- (EIA-930 DF series) vs realized load (D series) -- not our model, scoring
+-- the grid operator's published forecast. Same immutable-scoring pattern as
+-- forecast_scores/spread_forecast. Backfillable immediately: both series
+-- already exist for the full 2019-> history in ercot_features.parquet.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS load_forecast_scores (
+    ts             TIMESTAMPTZ      NOT NULL,
+    iso            TEXT             NOT NULL DEFAULT 'ERCOT',
+    forecast_load  DOUBLE PRECISION NOT NULL,  -- EIA-930 DF series, day-ahead
+    actual_load    DOUBLE PRECISION NOT NULL,  -- EIA-930 D series, realized
+    err            DOUBLE PRECISION,           -- actual - forecast
+    pct_err        DOUBLE PRECISION,           -- err / actual
+    scored_at      TIMESTAMPTZ      DEFAULT now(),
+    CONSTRAINT load_forecast_scores_pk PRIMARY KEY (ts, iso)
+);
+CREATE INDEX IF NOT EXISTS lfs_ts ON load_forecast_scores (ts DESC);
