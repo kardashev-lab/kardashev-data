@@ -515,8 +515,8 @@ CREATE TABLE IF NOT EXISTS spread_forecast (
     p50       DOUBLE PRECISION,
     p90       DOUBLE PRECISION,
     da        DOUBLE PRECISION,            -- DA price known at issuance
-    model     TEXT,
-    CONSTRAINT spread_forecast_pk PRIMARY KEY (ts, iso, node_id)
+    model     TEXT             NOT NULL,   -- part of the PK: v1 and v2 both issue live
+    CONSTRAINT spread_forecast_pk PRIMARY KEY (ts, iso, node_id, model)
 );
 CREATE INDEX IF NOT EXISTS sf_issued ON spread_forecast (issued_at DESC);
 
@@ -530,13 +530,19 @@ CREATE TABLE IF NOT EXISTS forecast_scores (
     covered    BOOLEAN,                    -- p10 <= spread <= p90
     side       SMALLINT,                   -- DART signal: +1 long RT, -1 short, 0 flat
     pnl        DOUBLE PRECISION,           -- side * spread - fee (0 if flat)
-    model      TEXT,                       -- copied from spread_forecast at scoring time
+    model      TEXT             NOT NULL,  -- copied from spread_forecast at scoring time
     scored_at  TIMESTAMPTZ      DEFAULT now(),
-    CONSTRAINT forecast_scores_pk PRIMARY KEY (ts, iso, node_id)
+    CONSTRAINT forecast_scores_pk PRIMARY KEY (ts, iso, node_id, model)
 );
 CREATE INDEX IF NOT EXISTS fs_ts ON forecast_scores (ts DESC);
--- Added 2026-07-09 for the v1/v2 track-record split; ALTER for pre-existing tables.
-ALTER TABLE forecast_scores ADD COLUMN IF NOT EXISTS model TEXT;
+-- 2026-07-09: added model column for the v1/v2 track-record split.
+-- 2026-07-10: widened both PKs to (ts, iso, node_id, model) so v1 and v2 can
+-- both issue/score live for the same hour instead of one silently overwriting
+-- the other via ON CONFLICT. ALTER for pre-existing tables:
+--   ALTER TABLE spread_forecast DROP CONSTRAINT spread_forecast_pk;
+--   ALTER TABLE spread_forecast ADD CONSTRAINT spread_forecast_pk PRIMARY KEY (ts, iso, node_id, model);
+--   ALTER TABLE forecast_scores DROP CONSTRAINT forecast_scores_pk;
+--   ALTER TABLE forecast_scores ADD CONSTRAINT forecast_scores_pk PRIMARY KEY (ts, iso, node_id, model);
 CREATE INDEX IF NOT EXISTS fs_model ON forecast_scores (model, ts DESC);
 
 -- ---------------------------------------------------------------------------
