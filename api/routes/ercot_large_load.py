@@ -49,3 +49,72 @@ async def get_history():
         f"SELECT {_COLUMNS} FROM ercot_large_load_snapshots ORDER BY snapshot_month ASC"
     )
     return rows
+
+
+@router.get("/summary")
+async def get_summary():
+    """Composite for /report: latest snapshot + MoM/YoY deltas + the reality
+    gap (approved-to-energize vs observed-energized) + notable by_status
+    movements, all computed server-side so the frontend does no math beyond
+    formatting. Month-over-month/year-over-year only compare against a prior
+    snapshot that's actually one/twelve calendar months back -- the
+    disclosed Oct 2024-Jan 2026 gap means the immediately-prior DB row isn't
+    always the immediately-prior calendar month."""
+    rows = await fetch(f"SELECT {_COLUMNS} FROM ercot_large_load_snapshots ORDER BY snapshot_month ASC")
+    if not rows:
+        return None
+
+    latest = rows[-1]
+    by_month = {r["snapshot_month"]: r for r in rows}
+
+    def _shift_months(d: date, n: int) -> date:
+        y, m = d.year, d.month - n
+        while m < 1:
+            m += 12
+            y -= 1
+        return date(y, m, 1)
+
+    mom_snap = by_month.get(_shift_months(latest["snapshot_month"], 1))
+    yoy_snap = by_month.get(_shift_months(latest["snapshot_month"], 12))
+
+    def _delta(cur: Optional[float], prior: Optional[float]) -> Optional[dict]:
+        if cur is None or prior is None:
+            return None
+        return {"mw": cur - prior, "pct": ((cur - prior) / prior * 100) if prior else None}
+
+    mom = (
+        {"snapshot_month": mom_snap["snapshot_month"], "total_mw": _delta(latest["total_mw"], mom_snap["total_mw"])}
+        if mom_snap
+        else None
+    )
+    yoy = (
+        {"snapshot_month": yoy_snap["snapshot_month"], "total_mw": _delta(latest["total_mw"], yoy_snap["total_mw"])}
+        if yoy_snap
+        else None
+    )
+
+    approved = latest["approved_to_energize_mw"]
+    observed = (latest["by_status"] or {}).get("observed_energized") if latest["by_status"] else None
+    reality_gap = (
+        {"approved_to_energize_mw": approved, "observed_energized_mw": observed,
+         "pct": (observed / approved * 100) if approved and observed is not None else None}
+        if approved is not None
+        else None
+    )
+
+    notable_movements = []
+    if mom_snap and latest["by_status"] and mom_snap["by_status"]:
+        for key, cur_mw in latest["by_status"].items():
+            prior_mw = mom_snap["by_status"].get(key)
+            if prior_mw is None:
+                continue
+            notable_movements.append({"category": key, "mw_delta": cur_mw - prior_mw})
+        notable_movements.sort(key=lambda m: abs(m["mw_delta"]), reverse=True)
+
+    return {
+        "latest": latest,
+        "mom": mom,
+        "yoy": yoy,
+        "reality_gap": reality_gap,
+        "notable_movements": notable_movements[:5],
+    }
