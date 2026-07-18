@@ -549,7 +549,7 @@ CREATE TABLE IF NOT EXISTS ercot_gis_timelines (
     median_days   DOUBLE PRECISION,
     mean_days     DOUBLE PRECISION,
     median_years  DOUBLE PRECISION,
-    total_mw      DOUBLE PRECISION,           -- only meaningful for pending-queue rows
+    total_mw      DOUBLE PRECISION,           -- pending-queue rows: total pending MW. annual_energized_mw rows: MW/yr throughput (median_years there is the observed window length, not a duration)
     computed_at   TIMESTAMPTZ      NOT NULL DEFAULT now(),
     CONSTRAINT ercot_gis_timelines_pk PRIMARY KEY (metric, group_type, group_value)
 );

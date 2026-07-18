@@ -9,7 +9,11 @@ fields only get filled in over time, never retracted) and compute:
   - Screening Study Started -> Energization (full process duration)
   - IA Signed -> Energization (post-agreement build duration)
   - Projected COD slippage: first-seen Projected COD vs actual Energization date
-Plus, for projects still in queue: years elapsed since screening started.
+Plus, for projects still in queue: years elapsed since screening started, and
+each zone's own historical annual energization throughput (total energized MW
+/ the full observed data window in years) -- added 2026-07-18 so a zone's
+pending backlog can be read as "years to clear at this zone's own pace"
+instead of raw MW, which otherwise just measures zone size.
 
 Grouped by zone and by fuel type. Ported 2026-07-17 from
 interconnection-queue-tracker/services/fetcher/analyze_gis_timelines.py
@@ -88,6 +92,15 @@ def compute_timelines(df: pd.DataFrame, now: pd.Timestamp | None = None) -> list
     energized = agg[agg["approved_for_energization"].notna()].copy()
     log.info("Projects ever reaching Approved for Energization: %d", len(energized))
 
+    # Full observed window across ALL snapshots (not per-zone energization
+    # dates, which would be noisy for small zones) -- a stable, shared
+    # denominator for every zone's throughput figure.
+    months = sorted(df["snapshot_month"].dropna().unique())
+    y0, m0 = (int(x) for x in months[0].split("-"))
+    y1, m1 = (int(x) for x in months[-1].split("-"))
+    observed_years = ((y1 - y0) * 12 + (m1 - m0)) / 12
+    observed_years = max(observed_years, 1 / 12)  # guard against a degenerate single-month backfill
+
     energized["full_process_days"] = (
         energized["approved_for_energization"] - energized["screening_study_started"]
     ).dt.days
@@ -131,6 +144,25 @@ def compute_timelines(df: pd.DataFrame, now: pd.Timestamp | None = None) -> list
             "mean_days": float(r["mean"]) if pd.notna(r["mean"]) else None,
             "median_years": round(float(r["median"]) / 365, 2) if pd.notna(r["median"]) else None,
             "total_mw": float(pending_mw.get(zone, 0)) if pd.notna(pending_mw.get(zone)) else None,
+        })
+
+    # Annual energization throughput per zone: total energized MW / the full
+    # observed window (years). total_mw carries the MW/yr figure itself;
+    # median_years carries the window length for transparency on the card.
+    energized_mw_by_zone = energized.groupby("zone")["capacity_mw"].sum()
+    energized_count_by_zone = energized.groupby("zone").size()
+    for zone, total_energized_mw in energized_mw_by_zone.items():
+        if pd.isna(total_energized_mw):
+            continue
+        rows.append({
+            "metric": "annual_energized_mw",
+            "group_type": "zone",
+            "group_value": str(zone),
+            "sample_count": int(energized_count_by_zone.get(zone, 0)),
+            "median_days": None,
+            "mean_days": None,
+            "median_years": round(observed_years, 2),
+            "total_mw": round(float(total_energized_mw) / observed_years, 1),
         })
 
     return rows
