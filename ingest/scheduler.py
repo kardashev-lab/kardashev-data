@@ -148,8 +148,10 @@ def run_spp_fuel_mix():
 
 
 def run_pjm_wind_solar():
-    from ingest.jobs import ingest_pjm_wind_solar
-    _run("pjm_wind_solar", ingest_pjm_wind_solar)
+    # get_wind_generation/get_solar_generation were never implemented for PJM in the
+    # kardashev package (only ERCOT has them) -- this job has never actually worked.
+    # Disabled until a real PJM wind/solar generation source is found and implemented.
+    pass
 
 
 def run_load_forecasts():
