@@ -90,7 +90,8 @@ using the MOST RECENT month shown in the "Large Load Queue - Past 12 Months" cha
     "other": <number MW>
   },
   "approved_to_energize_mw": <number, cumulative "Approved to Energize" MW from the ERCOT Approvals chart>,
-  "planning_studies_approved_mw": <number, cumulative "Planning Studies Approved" MW from the ERCOT Approvals chart>
+  "planning_studies_approved_mw": <number, cumulative "Planning Studies Approved" MW from the ERCOT Approvals chart>,
+  "trailing_12mo": {"YYYY-MM": <number total_mw>, ...up to 12 entries, one per month shown in the "Large Load Queue - Past 12 Months" chart, oldest to newest, keyed by month}
 }
 
 If a field genuinely isn't present in this particular deck, use null for it rather than guessing. \
@@ -132,13 +133,12 @@ def find_latest_llwg_meeting() -> tuple[str, date]:
     return latest_url, latest_date
 
 
-def find_report_attachment(meeting_url: str) -> str:
-    """Find the large-load status-update attachment (PDF or PPTX) on an LLWG
-    meeting page, matched by link title/text (see REPORT_TITLE_RE) since the
-    filename convention isn't consistent month to month.
-
-    Prefers the most recently-posted matching file if more than one is linked
-    (e.g. an "Updated" correction posted after the original)."""
+def find_all_report_attachments(meeting_url: str, title_re: re.Pattern = REPORT_TITLE_RE) -> list[str]:
+    """All large-load status-update attachments (PDF or PPTX) on a meeting
+    page, matched by link title/text against `title_re` since the filename
+    convention isn't consistent month to month. Returns URLs sorted
+    lexicographically (which sorts chronologically too, since file URLs embed
+    a docs/YYYY/MM/DD/ path)."""
     html = _fetch(meeting_url)
     matches: list[str] = []
     for link in BeautifulSoup(html, "html.parser").find_all("a", href=True):
@@ -146,16 +146,23 @@ def find_report_attachment(meeting_url: str) -> str:
         if not (href.lower().endswith(".pdf") or href.lower().endswith(".pptx")):
             continue
         title = link.get("title", "") or link.get_text(strip=True)
-        if REPORT_TITLE_RE.search(title):
+        if title_re.search(title):
             matches.append(urljoin(meeting_url, href))
+    matches.sort()
+    return matches
 
+
+def find_report_attachment(meeting_url: str) -> str:
+    """Find the large-load status-update attachment (PDF or PPTX) on an LLWG
+    meeting page. Prefers the most recently-posted matching file if more than
+    one is linked (e.g. an "Updated" correction posted after the original) --
+    for the live monthly job, one meeting means one current snapshot."""
+    matches = find_all_report_attachments(meeting_url)
     if not matches:
         raise RuntimeError(
             f"No large-load status-update attachment found on {meeting_url} -- "
             "ERCOT may have changed the report's title/naming convention"
         )
-    # file URLs embed a docs/YYYY/MM/DD/ path -- sort lexicographically to prefer the latest posting
-    matches.sort()
     chosen = matches[-1]
     if len(matches) > 1:
         log.info("Multiple status-update attachments found on %s, using latest: %s", meeting_url, chosen)

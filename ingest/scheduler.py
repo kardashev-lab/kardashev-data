@@ -190,6 +190,13 @@ def run_ercot_large_load():
     _run("ercot_large_load", ingest_ercot_large_load)
 
 
+def run_ercot_gis():
+    from ingest.ercot_gis import ingest_ercot_gis
+    from ingest.ercot_gis_timelines import refresh_ercot_gis_timelines
+    _run("ercot_gis", ingest_ercot_gis)
+    _run("ercot_gis_timelines", refresh_ercot_gis_timelines)
+
+
 def run_reserve_margins():
     from ingest.jobs import ingest_pjm_reserve_margins
     _run("pjm_reserve_margins", ingest_pjm_reserve_margins)
@@ -352,6 +359,7 @@ def start():
     last_commodities_week = -1
     last_lmp_purge_day   = -1
     last_ercot_large_load_ym = None  # (year, month) -- ERCOT LLWG posts roughly monthly
+    last_ercot_gis_ym = None         # (year, month) -- ERCOT GIS_Report posts roughly monthly
 
     def _startup(name: str, fn) -> None:
         try:
@@ -477,6 +485,11 @@ def start():
                 last_ercot_large_load_ym = (now.year, now.month)
                 log.info("tick: ERCOT large load queue (monthly, vision extraction)")
                 run_ercot_large_load()
+
+            if hour == 16 and (now.year, now.month) != last_ercot_gis_ym:
+                last_ercot_gis_ym = (now.year, now.month)
+                log.info("tick: ERCOT GIS interconnection queue milestones (monthly)")
+                run_ercot_gis()
 
             if hour == 3 and day != last_lmp_purge_day:
                 last_lmp_purge_day = day

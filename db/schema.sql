@@ -494,11 +494,88 @@ CREATE TABLE IF NOT EXISTS ercot_large_load_snapshots (
     by_zone                      JSONB,                      -- {"lz_west": mw, "lz_north": mw, "other": mw}
     approved_to_energize_mw      DOUBLE PRECISION,           -- cumulative
     planning_studies_approved_mw DOUBLE PRECISION,           -- cumulative
+    trailing_12mo                JSONB,                      -- {"2026-01": mw, "2026-02": mw, ...} from the deck's own "Past 12 Months" chart, used to cross-validate overlapping deck extractions during backfill
     source_url                   TEXT,
     extracted_at                 TIMESTAMPTZ      DEFAULT now(),
     CONSTRAINT ercot_large_load_snapshots_pk PRIMARY KEY (snapshot_month)
 );
 CREATE INDEX IF NOT EXISTS ells_month ON ercot_large_load_snapshots (snapshot_month DESC);
+-- Added 2026-07-16 for the backfill's cross-deck validation; table already exists in prod, so ALTER (not just the inline column above) is what actually lands it there.
+ALTER TABLE ercot_large_load_snapshots ADD COLUMN IF NOT EXISTS trailing_12mo JSONB;
+
+-- ---------------------------------------------------------------------------
+-- ERCOT GIS Report milestone history: monthly generation-interconnection-queue
+-- snapshots (reportTypeId 15933), one row per project per month, so a
+-- project's screening/IA/construction/energization dates can be tracked
+-- across time instead of only seeing its current state. Ported from
+-- interconnection-queue-tracker/services/fetcher/backfill_gis.py 2026-07-17;
+-- see ingest/ercot_gis.py.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ercot_gis_snapshots (
+    queue_id                     TEXT             NOT NULL,
+    snapshot_month                TEXT             NOT NULL,  -- "YYYY-MM", from the GIS_Report filename
+    project_name                  TEXT,
+    gim_study_phase                TEXT,
+    county                         TEXT,
+    zone                            TEXT,
+    projected_cod                   TEXT,                     -- free-text date as filed, parsed at query/analysis time
+    fuel                             TEXT,
+    technology                       TEXT,
+    capacity_mw                       NUMERIC,
+    screening_study_started            TEXT,
+    screening_study_complete            TEXT,
+    ia_signed                            TEXT,
+    construction_start                    TEXT,
+    construction_end                       TEXT,
+    approved_for_energization               TEXT,
+    approved_for_synchronization             TEXT,
+    fetched_at                                TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    CONSTRAINT ercot_gis_snapshots_pk PRIMARY KEY (queue_id, snapshot_month)
+);
+CREATE INDEX IF NOT EXISTS egs_month ON ercot_gis_snapshots (snapshot_month DESC);
+CREATE INDEX IF NOT EXISTS egs_zone  ON ercot_gis_snapshots (zone);
+
+-- ---------------------------------------------------------------------------
+-- Precomputed timeline aggregates from ercot_gis_snapshots (median/mean
+-- durations by zone and fuel type), refreshed after each monthly ingest --
+-- see ingest/ercot_gis_timelines.py. Small table (dozens of rows), safe to
+-- fully replace (DELETE+INSERT) on every refresh rather than upsert row by row.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ercot_gis_timelines (
+    metric        TEXT             NOT NULL,  -- 'full_process_days' | 'build_phase_days' | 'cod_slip_days' | 'pending_years_in_queue'
+    group_type    TEXT             NOT NULL,  -- 'zone' | 'fuel'
+    group_value   TEXT             NOT NULL,  -- e.g. 'LZ_WEST', 'Solar'
+    sample_count  INTEGER,
+    median_days   DOUBLE PRECISION,
+    mean_days     DOUBLE PRECISION,
+    median_years  DOUBLE PRECISION,
+    total_mw      DOUBLE PRECISION,           -- only meaningful for pending-queue rows
+    computed_at   TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    CONSTRAINT ercot_gis_timelines_pk PRIMARY KEY (metric, group_type, group_value)
+);
+
+-- ---------------------------------------------------------------------------
+-- ERCOT load-zone stress proxy: monthly LMP-derived congestion indicators per
+-- settlement-point load zone (LZ_WEST, LZ_NORTH, LZ_SOUTH, LZ_HOUSTON, etc.),
+-- computed offline from the full 2019-> local LMP research history (a
+-- separate database from this one -- see ingest/compute_ercot_zone_stats.py)
+-- and pushed here as a small monthly aggregate. Coarse but honest: a stress
+-- *proxy*, not a real congestion/OPF model -- disclose this on any page that
+-- surfaces it.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ercot_zone_stats (
+    zone                    TEXT             NOT NULL,
+    month                   DATE             NOT NULL,
+    mean_rt_da_spread       DOUBLE PRECISION,           -- mean(RT hourly - DA hourly), $/MWh
+    p95_rt_price            DOUBLE PRECISION,           -- 95th pct of 15-min RT price, $/MWh
+    pct_hours_rt_over_100   DOUBLE PRECISION,           -- fraction of RT intervals with price > $100
+    pct_hours_rt_negative   DOUBLE PRECISION,           -- fraction of RT intervals with price < $0
+    rt_price_volatility     DOUBLE PRECISION,           -- stdev of 15-min RT price within the month
+    sample_count            INTEGER,                    -- number of RT intervals behind this row
+    computed_at             TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    CONSTRAINT ercot_zone_stats_pk PRIMARY KEY (zone, month)
+);
+CREATE INDEX IF NOT EXISTS ezs_month ON ercot_zone_stats (month DESC);
 
 -- ---------------------------------------------------------------------------
 -- Live forward test: day-ahead RT-DA spread forecasts (issued daily by the

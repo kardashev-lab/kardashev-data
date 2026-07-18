@@ -12,7 +12,13 @@ services:
       - timescale_data:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
     ports:
-      - "5432:5432"
+      # Host port 5435, not 5432 -- a native Postgres.app instance already
+      # owns 5432 on dev machines and its more-specific localhost bind wins
+      # over this container's 0.0.0.0:5432 forward, silently routing
+      # connections to the wrong Postgres (discovered 2026-07-17). 5433/5434
+      # are also taken by other local containers (regdb-postgres,
+      # interconnection-queue-tracker-postgres-1).
+      - "5435:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kardashev -d energy"]
       interval: 10s

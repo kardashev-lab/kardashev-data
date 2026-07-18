@@ -23,6 +23,7 @@ class LargeLoadSnapshot(BaseModel):
     by_zone: Optional[dict]
     approved_to_energize_mw: Optional[float]
     planning_studies_approved_mw: Optional[float]
+    trailing_12mo: Optional[dict]
     source_url: Optional[str]
     extracted_at: Optional[datetime]
 
@@ -30,7 +31,7 @@ class LargeLoadSnapshot(BaseModel):
 _COLUMNS = """
     snapshot_month, report_date, total_mw, colocated_mw, standalone_mw,
     by_status, by_size_bucket, by_type, by_zone,
-    approved_to_energize_mw, planning_studies_approved_mw, source_url, extracted_at
+    approved_to_energize_mw, planning_studies_approved_mw, trailing_12mo, source_url, extracted_at
 """
 
 

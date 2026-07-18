@@ -18,4 +18,5 @@ build/
 .coverage
 htmlcov/
 .DS_Store
+scratch/
 *.log

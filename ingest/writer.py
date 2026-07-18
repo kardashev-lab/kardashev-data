@@ -683,8 +683,8 @@ def upsert_ercot_large_load_snapshot(row: dict) -> int:
             INSERT INTO ercot_large_load_snapshots
               (snapshot_month, report_date, total_mw, colocated_mw, standalone_mw,
                by_status, by_size_bucket, by_type, by_zone,
-               approved_to_energize_mw, planning_studies_approved_mw, source_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+               approved_to_energize_mw, planning_studies_approved_mw, trailing_12mo, source_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (snapshot_month) DO UPDATE SET
               report_date = EXCLUDED.report_date,
               total_mw = EXCLUDED.total_mw,
@@ -696,6 +696,7 @@ def upsert_ercot_large_load_snapshot(row: dict) -> int:
               by_zone = EXCLUDED.by_zone,
               approved_to_energize_mw = EXCLUDED.approved_to_energize_mw,
               planning_studies_approved_mw = EXCLUDED.planning_studies_approved_mw,
+              trailing_12mo = EXCLUDED.trailing_12mo,
               source_url = EXCLUDED.source_url,
               extracted_at = now()
             """,
@@ -707,7 +708,87 @@ def upsert_ercot_large_load_snapshot(row: dict) -> int:
                 psycopg2.extras.Json(row.get("by_type")) if row.get("by_type") else None,
                 psycopg2.extras.Json(row.get("by_zone")) if row.get("by_zone") else None,
                 row.get("approved_to_energize_mw"), row.get("planning_studies_approved_mw"),
+                psycopg2.extras.Json(row.get("trailing_12mo")) if row.get("trailing_12mo") else None,
                 row.get("source_url"),
             ),
         )
     return 1
+
+
+def upsert_ercot_gis_snapshots(rows: list[tuple]) -> int:
+    """rows: tuples in the column order of ercot_gis_snapshots (see
+    ingest/ercot_gis.py's COLS / to_rows()). ON CONFLICT DO NOTHING since
+    snapshots are dated historical filings, never revised in place."""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO ercot_gis_snapshots
+              (queue_id, snapshot_month, project_name, gim_study_phase, county,
+               zone, projected_cod, fuel, technology, capacity_mw,
+               screening_study_started, screening_study_complete, ia_signed,
+               construction_start, construction_end, approved_for_energization,
+               approved_for_synchronization)
+            VALUES %s
+            ON CONFLICT (queue_id, snapshot_month) DO NOTHING
+            """,
+            rows,
+        )
+    return len(rows)
+
+
+def replace_ercot_gis_timelines(rows: list[dict]) -> int:
+    """rows: [{metric, group_type, group_value, sample_count, median_days,
+    mean_days, median_years, total_mw}]. Full replace (small precomputed
+    aggregate table, not an append log) so a metric dropped from this run
+    doesn't linger as stale data."""
+    with cursor() as cur:
+        cur.execute("DELETE FROM ercot_gis_timelines")
+        if rows:
+            psycopg2.extras.execute_values(
+                cur,
+                """
+                INSERT INTO ercot_gis_timelines
+                  (metric, group_type, group_value, sample_count, median_days,
+                   mean_days, median_years, total_mw)
+                VALUES %s
+                """,
+                [(r["metric"], r["group_type"], r["group_value"], r.get("sample_count"),
+                  r.get("median_days"), r.get("mean_days"), r.get("median_years"), r.get("total_mw"))
+                 for r in rows],
+            )
+    return len(rows)
+
+
+def upsert_ercot_zone_stats(rows: list[dict]) -> int:
+    """rows: [{zone, month, mean_rt_da_spread, p95_rt_price,
+    pct_hours_rt_over_100, pct_hours_rt_negative, rt_price_volatility,
+    sample_count}]. See ingest/compute_ercot_zone_stats.py."""
+    if not rows:
+        return 0
+    with cursor() as cur:
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO ercot_zone_stats
+              (zone, month, mean_rt_da_spread, p95_rt_price,
+               pct_hours_rt_over_100, pct_hours_rt_negative,
+               rt_price_volatility, sample_count)
+            VALUES %s
+            ON CONFLICT (zone, month) DO UPDATE SET
+              mean_rt_da_spread = EXCLUDED.mean_rt_da_spread,
+              p95_rt_price = EXCLUDED.p95_rt_price,
+              pct_hours_rt_over_100 = EXCLUDED.pct_hours_rt_over_100,
+              pct_hours_rt_negative = EXCLUDED.pct_hours_rt_negative,
+              rt_price_volatility = EXCLUDED.rt_price_volatility,
+              sample_count = EXCLUDED.sample_count,
+              computed_at = now()
+            """,
+            [(r["zone"], r["month"], r.get("mean_rt_da_spread"), r.get("p95_rt_price"),
+              r.get("pct_hours_rt_over_100"), r.get("pct_hours_rt_negative"),
+              r.get("rt_price_volatility"), r.get("sample_count"))
+             for r in rows],
+        )
+    return len(rows)

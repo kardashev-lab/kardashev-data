@@ -19,7 +19,9 @@ from api.routes import (
     curtailment,
     eia_static,
     emissions,
+    ercot_gis,
     ercot_large_load,
+    ercot_zone_stats,
     forecast,
     fuel_mix,
     generation,
@@ -105,6 +107,8 @@ app.include_router(solar.router)
 app.include_router(outages.router)
 app.include_router(ancillary.router)
 app.include_router(ercot_large_load.router)
+app.include_router(ercot_gis.router)
+app.include_router(ercot_zone_stats.router)
 app.include_router(forecast.router)
 app.include_router(load_forecast.router)
 
