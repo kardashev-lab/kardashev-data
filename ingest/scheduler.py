@@ -301,6 +301,32 @@ def run_lmp_purge(days: int | None = None):
     _run("fuel_mix_purge", purge_fuel_mix_old_rows, 90)
 
 
+def run_other_retention_purge():
+    # Every table here is a plain time-series with no cumulative/all-time
+    # consumer. Retention matches the longest window any api/routes/*.py
+    # endpoint actually allows for that table, plus margin -- see the
+    # docstrings in ingest/jobs.py for the exact reasoning per table.
+    # spread_forecast, forecast_scores, load_forecast_scores, and
+    # ercot_gis_snapshots are deliberately NOT here: they back
+    # cumulative/all-time features and must never be purged.
+    from ingest.jobs import (
+        purge_ancillary_services_old_rows,
+        purge_battery_storage_old_rows,
+        purge_binding_constraints_old_rows,
+        purge_bpa_balancesheet_old_rows,
+        purge_generator_outages_old_rows,
+        purge_grid_temperature_old_rows,
+        purge_load_data_old_rows,
+    )
+    _run("ancillary_services_purge", purge_ancillary_services_old_rows)
+    _run("binding_constraints_purge", purge_binding_constraints_old_rows)
+    _run("bpa_balancesheet_purge", purge_bpa_balancesheet_old_rows)
+    _run("grid_temperature_purge", purge_grid_temperature_old_rows)
+    _run("load_data_purge", purge_load_data_old_rows)
+    _run("battery_storage_purge", purge_battery_storage_old_rows)
+    _run("generator_outages_purge", purge_generator_outages_old_rows)
+
+
 # ---------------------------------------------------------------------------
 # Backfill CLI
 # ---------------------------------------------------------------------------
@@ -495,6 +521,8 @@ def start():
                 last_lmp_purge_day = day
                 log.info("tick: LMP retention purge (>14 days)")
                 run_lmp_purge()
+                log.info("tick: other time-series retention purge")
+                run_other_retention_purge()
 
         except Exception as exc:
             log.error("Scheduler tick error (continuing): %s", exc, exc_info=True)

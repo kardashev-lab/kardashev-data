@@ -2232,3 +2232,68 @@ def purge_fuel_mix_old_rows(days: int = 90) -> None:
         )
         deleted = cur.rowcount
     log.info("fuel_mix purge: deleted %d rows older than %d days", deleted, days)
+
+
+# ---------------------------------------------------------------------------
+# Other time-series retention
+#
+# Every table here is a plain time-series with no cumulative/all-time
+# consumer (unlike spread_forecast, forecast_scores, load_forecast_scores --
+# those back "immutable, scored forever" track records and must never be
+# purged -- or ercot_gis_snapshots, whose milestone calc takes max() across
+# every snapshot ever taken). Retention below is set to the longest `hours`/
+# `days` window any api/routes/*.py endpoint actually allows for that table,
+# plus margin, so a purge can never truncate a query the API still promises.
+# ---------------------------------------------------------------------------
+
+def _purge_by_ts(table: str, days: int) -> None:
+    from ingest.writer import cursor
+    with cursor() as cur:
+        cur.execute(
+            f"DELETE FROM {table} WHERE ts < now() - %s * interval '1 day'",
+            (days,),
+        )
+        deleted = cur.rowcount
+    log.info("%s purge: deleted %d rows older than %d days", table, deleted, days)
+
+
+def purge_ancillary_services_old_rows(days: int = 400) -> None:
+    """API allows up to 8760h (1 year) of history; 400 days keeps margin."""
+    _purge_by_ts("ancillary_services", days)
+
+
+def purge_binding_constraints_old_rows(days: int = 400) -> None:
+    """API allows up to 8760h (1 year) of history; 400 days keeps margin."""
+    _purge_by_ts("binding_constraints", days)
+
+
+def purge_bpa_balancesheet_old_rows(days: int = 400) -> None:
+    """API allows up to 8760h (1 year) of history; 400 days keeps margin."""
+    _purge_by_ts("bpa_balancesheet", days)
+
+
+def purge_grid_temperature_old_rows(days: int = 400) -> None:
+    """API allows up to 8760h (1 year) of history; 400 days keeps margin."""
+    _purge_by_ts("grid_temperature", days)
+
+
+def purge_load_data_old_rows(days: int = 120) -> None:
+    """API allows up to 720h (30 days) of history; 120 days keeps margin."""
+    _purge_by_ts("load_data", days)
+
+
+def purge_battery_storage_old_rows(days: int = 120) -> None:
+    """API allows up to 720h (30 days) of history; 120 days keeps margin."""
+    _purge_by_ts("battery_storage", days)
+
+
+def purge_generator_outages_old_rows(days: int = 60) -> None:
+    """API filters on report_date, hard-capped at 30 days back; 60 days keeps margin."""
+    from ingest.writer import cursor
+    with cursor() as cur:
+        cur.execute(
+            "DELETE FROM generator_outages WHERE report_date < now()::date - %s * interval '1 day'",
+            (days,),
+        )
+        deleted = cur.rowcount
+    log.info("generator_outages purge: deleted %d rows older than %d days", deleted, days)
