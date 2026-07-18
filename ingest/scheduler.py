@@ -84,18 +84,21 @@ def run_curtailment(days: int = CURTAILMENT_LOOKBACK_DAYS):
 
 
 def run_lmp_rt():
+    # pjm_lmp_rt disabled: PJM decommissioned the legacy DataMiner2 CSV feed API
+    # (dataminer2.pjm.com/feed/*) this now returns a static cached SPA shell for
+    # any credentials, real or fake. Getting this back requires registering for
+    # PJM's modern API portal (apiportal.pjm.com), which is a paid subscription
+    # we don't have. Re-enable + rewrite against api.pjm.com if that changes.
     from ingest.jobs import (
         ingest_caiso_lmp_rt,
         ingest_ercot_lmp_rt,
         ingest_isone_lmp_rt,
         ingest_miso_lmp_rt,
         ingest_nyiso_lmp_rt,
-        ingest_pjm_lmp_rt,
         ingest_spp_lmp_rt,
     )
     _run("nyiso_lmp_rt",  ingest_nyiso_lmp_rt)
     _run("spp_lmp_rt",    ingest_spp_lmp_rt)
-    _run("pjm_lmp_rt",   ingest_pjm_lmp_rt)
     _run("caiso_lmp_rt", ingest_caiso_lmp_rt)
     _run("isone_lmp_rt", ingest_isone_lmp_rt)
     _run("miso_lmp_rt",  ingest_miso_lmp_rt)
@@ -111,16 +114,15 @@ def run_lmp_rt():
 
 
 def run_lmp_da():
+    # pjm_lmp_da disabled -- see comment in run_lmp_rt.
     from ingest.jobs import (
         ingest_caiso_lmp_da,
         ingest_ercot_lmp_da,
         ingest_isone_lmp_da,
         ingest_miso_lmp_da,
         ingest_nyiso_lmp_da,
-        ingest_pjm_lmp_da,
     )
     _run("nyiso_lmp_da",  ingest_nyiso_lmp_da)
-    _run("pjm_lmp_da",   ingest_pjm_lmp_da)
     _run("caiso_lmp_da", ingest_caiso_lmp_da)
     _run("isone_lmp_da", ingest_isone_lmp_da)
     _run("miso_lmp_da",  ingest_miso_lmp_da)
