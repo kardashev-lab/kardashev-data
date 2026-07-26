@@ -68,7 +68,8 @@ async def track_record():
         SELECT model, date_trunc('day', ts) AS day,
                sum(pnl) FILTER (WHERE side <> 0) AS pnl,
                count(*) FILTER (WHERE side <> 0) AS hours_traded,
-               avg(covered::int)                 AS coverage
+               avg(covered::int)                 AS coverage,
+               count(*) FILTER (WHERE cooldown)  AS hours_in_cooldown
         FROM forecast_scores
         GROUP BY model, 2 ORDER BY model, 2
         """
