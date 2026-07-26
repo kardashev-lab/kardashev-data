@@ -608,6 +608,7 @@ CREATE TABLE IF NOT EXISTS forecast_scores (
     side       SMALLINT,                   -- DART signal: +1 long RT, -1 short, 0 flat
     pnl        DOUBLE PRECISION,           -- side * spread - fee (0 if flat)
     model      TEXT             NOT NULL,  -- copied from spread_forecast at scoring time
+    cooldown   BOOLEAN          DEFAULT false, -- true if forced flat by the post-large-move cooldown rule (see pipeline/score_forecasts.py), regardless of what P10/P90 said
     scored_at  TIMESTAMPTZ      DEFAULT now(),
     CONSTRAINT forecast_scores_pk PRIMARY KEY (ts, iso, node_id, model)
 );
@@ -620,6 +621,9 @@ CREATE INDEX IF NOT EXISTS fs_ts ON forecast_scores (ts DESC);
 --   ALTER TABLE spread_forecast ADD CONSTRAINT spread_forecast_pk PRIMARY KEY (ts, iso, node_id, model);
 --   ALTER TABLE forecast_scores DROP CONSTRAINT forecast_scores_pk;
 --   ALTER TABLE forecast_scores ADD CONSTRAINT forecast_scores_pk PRIMARY KEY (ts, iso, node_id, model);
+-- 2026-07-25: added cooldown column (post-large-move trade suppression flag).
+-- ALTER for pre-existing tables:
+--   ALTER TABLE forecast_scores ADD COLUMN IF NOT EXISTS cooldown BOOLEAN DEFAULT false;
 CREATE INDEX IF NOT EXISTS fs_model ON forecast_scores (model, ts DESC);
 
 -- ---------------------------------------------------------------------------

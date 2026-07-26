@@ -30,7 +30,7 @@ async def spread_forecast_history(
     return await fetch(
         """
         SELECT f.ts, f.p10, f.p50, f.p90, f.da, f.issued_at, f.model,
-               s.rt, s.spread, s.covered, s.side, s.pnl
+               s.rt, s.spread, s.covered, s.side, s.pnl, s.cooldown
         FROM spread_forecast f
         LEFT JOIN forecast_scores s
           ON s.ts = f.ts AND s.iso = f.iso AND s.node_id = f.node_id
@@ -57,7 +57,8 @@ async def track_record():
                avg(covered::int)                          AS coverage,
                count(*) FILTER (WHERE side <> 0)          AS hours_traded,
                avg((pnl > 0)::int) FILTER (WHERE side <> 0) AS hit_rate,
-               sum(pnl) FILTER (WHERE side <> 0)          AS total_pnl
+               sum(pnl) FILTER (WHERE side <> 0)          AS total_pnl,
+               count(*) FILTER (WHERE cooldown)           AS hours_in_cooldown
         FROM forecast_scores
         GROUP BY model ORDER BY min(ts)
         """
@@ -88,7 +89,8 @@ async def track_record():
                avg(covered::int) AS coverage,
                count(*) FILTER (WHERE side <> 0) AS hours_traded,
                avg((pnl > 0)::int) FILTER (WHERE side <> 0) AS hit_rate,
-               sum(pnl) FILTER (WHERE side <> 0) AS total_pnl
+               sum(pnl) FILTER (WHERE side <> 0) AS total_pnl,
+               count(*) FILTER (WHERE cooldown) AS hours_in_cooldown
         FROM forecast_scores
         """
     )
