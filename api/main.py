@@ -79,9 +79,10 @@ _extra_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_extra_origins,
-    # Prod KL sites + local Next.js (any port on localhost / 127.0.0.1).
+    # Prod KL sites, Railway preview hosts, local Next.js.
     allow_origin_regex=(
         r"https://([a-z0-9-]+\.)*kardashevlabs\.org"
+        r"|https://([a-z0-9-]+\.)*up\.railway\.app"
         r"|http://(localhost|127\.0\.0\.1):\d+"
     ),
     allow_methods=["GET", "POST", "OPTIONS"],
