@@ -54,7 +54,7 @@ COLS = [
     "zone", "projected_cod", "fuel", "technology", "capacity_mw",
     "screening_study_started", "screening_study_complete", "ia_signed",
     "construction_start", "construction_end", "approved_for_energization",
-    "approved_for_synchronization",
+    "approved_for_synchronization", "poi_location",
 ]
 
 
@@ -130,6 +130,11 @@ def to_rows(df: pd.DataFrame, snapshot_month: str) -> list[tuple]:
             mw = float(mw) if pd.notna(mw) else None
         except (TypeError, ValueError):
             mw = None
+        poi = r.get("POI Location")
+        if poi is not None and str(poi).strip() in {"", "nan", "None"}:
+            poi = None
+        elif poi is not None:
+            poi = str(poi).strip()
         out.append((
             str(qid).strip(), snapshot_month,
             r.get("Project Name"), r.get("GIM Study Phase"), r.get("County"),
@@ -138,6 +143,7 @@ def to_rows(df: pd.DataFrame, snapshot_month: str) -> list[tuple]:
             r.get("Screening Study Started"), r.get("Screening Study Complete"),
             r.get("IA Signed"), r.get("Construction Start"), r.get("Construction End"),
             r.get("Approved for Energization"), r.get("Approved for Synchronization"),
+            poi,
         ))
     return out
 

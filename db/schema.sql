@@ -529,11 +529,17 @@ CREATE TABLE IF NOT EXISTS ercot_gis_snapshots (
     construction_end                       TEXT,
     approved_for_energization               TEXT,
     approved_for_synchronization             TEXT,
+    poi_location                            TEXT,            -- GIS "POI Location" text; for future geocoding (added 2026-08-02)
     fetched_at                                TIMESTAMPTZ      NOT NULL DEFAULT now(),
     CONSTRAINT ercot_gis_snapshots_pk PRIMARY KEY (queue_id, snapshot_month)
 );
 CREATE INDEX IF NOT EXISTS egs_month ON ercot_gis_snapshots (snapshot_month DESC);
 CREATE INDEX IF NOT EXISTS egs_zone  ON ercot_gis_snapshots (zone);
+CREATE INDEX IF NOT EXISTS egs_county ON ercot_gis_snapshots (county);
+
+-- Additive column for DBs created before 2026-08-02 (CREATE TABLE IF NOT EXISTS
+-- will not alter an existing table).
+ALTER TABLE ercot_gis_snapshots ADD COLUMN IF NOT EXISTS poi_location TEXT;
 
 -- ---------------------------------------------------------------------------
 -- Precomputed timeline aggregates from ercot_gis_snapshots (median/mean

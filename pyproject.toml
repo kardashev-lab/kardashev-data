@@ -27,6 +27,7 @@ api = [
     "asyncpg>=0.29",
     "pydantic>=2.7",
     "python-dotenv>=1.0",
+    "shapely>=2.0",
 ]
 ingest = [
     "psycopg2-binary>=2.9",

@@ -717,8 +717,12 @@ def upsert_ercot_large_load_snapshot(row: dict) -> int:
 
 def upsert_ercot_gis_snapshots(rows: list[tuple]) -> int:
     """rows: tuples in the column order of ercot_gis_snapshots (see
-    ingest/ercot_gis.py's COLS / to_rows()). ON CONFLICT DO NOTHING since
-    snapshots are dated historical filings, never revised in place."""
+    ingest/ercot_gis.py's COLS / to_rows()).
+
+    Historical filings are not rewritten for milestone fields, but
+    poi_location was added later (2026-08-02) so ON CONFLICT fills that
+    column when a re-ingest carries it.
+    """
     if not rows:
         return 0
     with cursor() as cur:
@@ -730,9 +734,10 @@ def upsert_ercot_gis_snapshots(rows: list[tuple]) -> int:
                zone, projected_cod, fuel, technology, capacity_mw,
                screening_study_started, screening_study_complete, ia_signed,
                construction_start, construction_end, approved_for_energization,
-               approved_for_synchronization)
+               approved_for_synchronization, poi_location)
             VALUES %s
-            ON CONFLICT (queue_id, snapshot_month) DO NOTHING
+            ON CONFLICT (queue_id, snapshot_month) DO UPDATE SET
+              poi_location = COALESCE(EXCLUDED.poi_location, ercot_gis_snapshots.poi_location)
             """,
             rows,
         )

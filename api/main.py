@@ -14,6 +14,7 @@ from api.routes import (
     bpa,
     carbon,
     carbon_markets,
+    clearance,
     commodities,
     constraints,
     curtailment,
@@ -78,8 +79,12 @@ _extra_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_extra_origins,
-    allow_origin_regex=r"https://([a-z0-9-]+\.)*kardashevlabs\.org",
-    allow_methods=["GET"],
+    # Prod KL sites + local Next.js (any port on localhost / 127.0.0.1).
+    allow_origin_regex=(
+        r"https://([a-z0-9-]+\.)*kardashevlabs\.org"
+        r"|http://(localhost|127\.0\.0\.1):\d+"
+    ),
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -109,6 +114,7 @@ app.include_router(ancillary.router)
 app.include_router(ercot_large_load.router)
 app.include_router(ercot_gis.router)
 app.include_router(ercot_zone_stats.router)
+app.include_router(clearance.router)
 app.include_router(forecast.router)
 app.include_router(load_forecast.router)
 
