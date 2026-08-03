@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from api.clearance_geo import ZONE_TO_LZ, counties_geojson, intersect_counties
+from api.clearance_wire import wire_stress_for_counties
 from api.db import fetch, fetch_one
 
 router = APIRouter(prefix="/clearance", tags=["clearance"])
@@ -375,10 +376,7 @@ async def post_score(req: ScoreRequest):
                 ),
             }
 
-    wire = {
-        "status": "not_ready",
-        "note": "Wire / power-flow stress is still Phase C. Not in this grade.",
-    }
+    wire = wire_stress_for_counties(score_hits, mode=req.mode, mw=req.mw)
     curtailment = {
         "status": "not_ready",
         "note": "Resource-level SCED curtailment is not ingested yet. Not in this grade.",
@@ -505,7 +503,8 @@ async def post_score(req: ScoreRequest):
             "inputs_excluded": ["wire_stress", "curtailment"],
             "disclaimer": (
                 "County-level public data, not an ERCOT interconnection study. GIS rows "
-                "have county, not lat/lon. "
+                "have county, not lat/lon. Wire block is a HIFLD density proxy only — "
+                "not in the grade. "
                 f"Queue stats use counties covering ≥{_MIN_SCORE_COVERAGE:.0%} of the search area"
                 + (f" (mostly {driver_county})" if driver_county else "")
                 + "."

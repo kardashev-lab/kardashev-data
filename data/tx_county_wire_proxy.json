@@ -1,0 +1,2560 @@
+{
+  "product": "site-clearance-wire-proxy-c0",
+  "as_of": "2026-08-02",
+  "source": {
+    "name": "HIFLD Electric Power Transmission Lines",
+    "url": "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/US_Electric_Power_Transmission_Lines/FeatureServer/0",
+    "note": "Public approximate line geometries. Not CEII. Lengths are haversine estimates; density is relative across Texas counties, not a capacity rating."
+  },
+  "method": {
+    "hv_kv_threshold": 230.0,
+    "length_unit": "km",
+    "density_unit": "km_line_per_km2_county",
+    "status_filter": "skip abandoned/proposed/retired when STATUS set"
+  },
+  "texas_median_line_km_per_km2": 0.134002,
+  "county_count": 254,
+  "line_features_used": 10422,
+  "counties": {
+    "MIDLAND": {
+      "name": "Midland",
+      "geoid": "48329",
+      "area_km2": 2341.59,
+      "line_km": 669.66,
+      "hv_line_km": 234.56,
+      "segment_hits": 55,
+      "line_km_per_km2": 0.285985,
+      "hv_share": 0.3503
+    },
+    "CRANE": {
+      "name": "Crane",
+      "geoid": "48103",
+      "area_km2": 2036.19,
+      "line_km": 277.75,
+      "hv_line_km": 1.3,
+      "segment_hits": 28,
+      "line_km_per_km2": 0.136407,
+      "hv_share": 0.0047
+    },
+    "CONCHO": {
+      "name": "Concho",
+      "geoid": "48095",
+      "area_km2": 2570.18,
+      "line_km": 186.66,
+      "hv_line_km": 136.69,
+      "segment_hits": 5,
+      "line_km_per_km2": 0.072625,
+      "hv_share": 0.7323
+    },
+    "MEDINA": {
+      "name": "Medina",
+      "geoid": "48325",
+      "area_km2": 3468.69,
+      "line_km": 392.62,
+      "hv_line_km": 40.89,
+      "segment_hits": 31,
+      "line_km_per_km2": 0.11319,
+      "hv_share": 0.1041
+    },
+    "HOWARD": {
+      "name": "Howard",
+      "geoid": "48227",
+      "area_km2": 2346.17,
+      "line_km": 634.32,
+      "hv_line_km": 232.28,
+      "segment_hits": 46,
+      "line_km_per_km2": 0.270364,
+      "hv_share": 0.3662
+    },
+    "MENARD": {
+      "name": "Menard",
+      "geoid": "48327",
+      "area_km2": 2343.79,
+      "line_km": 169.29,
+      "hv_line_km": 43.68,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.072229,
+      "hv_share": 0.258
+    },
+    "OCHILTREE": {
+      "name": "Ochiltree",
+      "geoid": "48357",
+      "area_km2": 2380.52,
+      "line_km": 272.92,
+      "hv_line_km": 0.0,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.114647,
+      "hv_share": 0.0
+    },
+    "CROSBY": {
+      "name": "Crosby",
+      "geoid": "48107",
+      "area_km2": 2339.33,
+      "line_km": 118.63,
+      "hv_line_km": 0.0,
+      "segment_hits": 12,
+      "line_km_per_km2": 0.050711,
+      "hv_share": 0.0
+    },
+    "LIBERTY": {
+      "name": "Liberty",
+      "geoid": "48291",
+      "area_km2": 3065.45,
+      "line_km": 492.66,
+      "hv_line_km": 59.95,
+      "segment_hits": 47,
+      "line_km_per_km2": 0.160714,
+      "hv_share": 0.1217
+    },
+    "LIPSCOMB": {
+      "name": "Lipscomb",
+      "geoid": "48295",
+      "area_km2": 2417.53,
+      "line_km": 141.83,
+      "hv_line_km": 0.0,
+      "segment_hits": 10,
+      "line_km_per_km2": 0.058667,
+      "hv_share": 0.0
+    },
+    "HANSFORD": {
+      "name": "Hansford",
+      "geoid": "48195",
+      "area_km2": 2385.69,
+      "line_km": 322.1,
+      "hv_line_km": 35.09,
+      "segment_hits": 31,
+      "line_km_per_km2": 0.135013,
+      "hv_share": 0.1089
+    },
+    "CHILDRESS": {
+      "name": "Childress",
+      "geoid": "48075",
+      "area_km2": 1851.65,
+      "line_km": 307.02,
+      "hv_line_km": 118.65,
+      "segment_hits": 21,
+      "line_km_per_km2": 0.165809,
+      "hv_share": 0.3865
+    },
+    "COTTLE": {
+      "name": "Cottle",
+      "geoid": "48101",
+      "area_km2": 2361.89,
+      "line_km": 255.31,
+      "hv_line_km": 146.56,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.108096,
+      "hv_share": 0.574
+    },
+    "DICKENS": {
+      "name": "Dickens",
+      "geoid": "48125",
+      "area_km2": 2352.19,
+      "line_km": 371.04,
+      "hv_line_km": 296.91,
+      "segment_hits": 16,
+      "line_km_per_km2": 0.157742,
+      "hv_share": 0.8002
+    },
+    "PANOLA": {
+      "name": "Panola",
+      "geoid": "48365",
+      "area_km2": 2128.32,
+      "line_km": 282.1,
+      "hv_line_km": 43.55,
+      "segment_hits": 18,
+      "line_km_per_km2": 0.132546,
+      "hv_share": 0.1544
+    },
+    "BEXAR": {
+      "name": "Bexar",
+      "geoid": "48029",
+      "area_km2": 3297.11,
+      "line_km": 1622.8,
+      "hv_line_km": 383.72,
+      "segment_hits": 178,
+      "line_km_per_km2": 0.492189,
+      "hv_share": 0.2365
+    },
+    "GRAY": {
+      "name": "Gray",
+      "geoid": "48179",
+      "area_km2": 2408.03,
+      "line_km": 424.12,
+      "hv_line_km": 229.1,
+      "segment_hits": 28,
+      "line_km_per_km2": 0.176127,
+      "hv_share": 0.5402
+    },
+    "HALL": {
+      "name": "Hall",
+      "geoid": "48191",
+      "area_km2": 2342.71,
+      "line_km": 259.01,
+      "hv_line_km": 60.47,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.11056,
+      "hv_share": 0.2335
+    },
+    "KING": {
+      "name": "King",
+      "geoid": "48269",
+      "area_km2": 2369.17,
+      "line_km": 88.58,
+      "hv_line_km": 52.12,
+      "segment_hits": 5,
+      "line_km_per_km2": 0.037389,
+      "hv_share": 0.5884
+    },
+    "MCMULLEN": {
+      "name": "McMullen",
+      "geoid": "48311",
+      "area_km2": 3005.53,
+      "line_km": 102.83,
+      "hv_line_km": 47.79,
+      "segment_hits": 4,
+      "line_km_per_km2": 0.034214,
+      "hv_share": 0.4647
+    },
+    "LIVE OAK": {
+      "name": "Live Oak",
+      "geoid": "48297",
+      "area_km2": 2806.29,
+      "line_km": 221.38,
+      "hv_line_km": 62.93,
+      "segment_hits": 12,
+      "line_km_per_km2": 0.078887,
+      "hv_share": 0.2843
+    },
+    "SCHLEICHER": {
+      "name": "Schleicher",
+      "geoid": "48413",
+      "area_km2": 3397.85,
+      "line_km": 287.57,
+      "hv_line_km": 156.97,
+      "segment_hits": 17,
+      "line_km_per_km2": 0.084633,
+      "hv_share": 0.5458
+    },
+    "SOMERVELL": {
+      "name": "Somervell",
+      "geoid": "48425",
+      "area_km2": 496.72,
+      "line_km": 112.0,
+      "hv_line_km": 67.28,
+      "segment_hits": 15,
+      "line_km_per_km2": 0.225479,
+      "hv_share": 0.6007
+    },
+    "KNOX": {
+      "name": "Knox",
+      "geoid": "48275",
+      "area_km2": 2209.17,
+      "line_km": 342.18,
+      "hv_line_km": 105.26,
+      "segment_hits": 21,
+      "line_km_per_km2": 0.154891,
+      "hv_share": 0.3076
+    },
+    "GAINES": {
+      "name": "Gaines",
+      "geoid": "48165",
+      "area_km2": 3902.57,
+      "line_km": 333.51,
+      "hv_line_km": 21.22,
+      "segment_hits": 44,
+      "line_km_per_km2": 0.085459,
+      "hv_share": 0.0636
+    },
+    "BLANCO": {
+      "name": "Blanco",
+      "geoid": "48031",
+      "area_km2": 1854.66,
+      "line_km": 126.97,
+      "hv_line_km": 0.0,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.06846,
+      "hv_share": 0.0
+    },
+    "LOVING": {
+      "name": "Loving",
+      "geoid": "48301",
+      "area_km2": 1758.69,
+      "line_km": 45.29,
+      "hv_line_km": 0.0,
+      "segment_hits": 3,
+      "line_km_per_km2": 0.025752,
+      "hv_share": 0.0
+    },
+    "JONES": {
+      "name": "Jones",
+      "geoid": "48253",
+      "area_km2": 2431.4,
+      "line_km": 586.99,
+      "hv_line_km": 356.24,
+      "segment_hits": 27,
+      "line_km_per_km2": 0.241421,
+      "hv_share": 0.6069
+    },
+    "GARZA": {
+      "name": "Garza",
+      "geoid": "48169",
+      "area_km2": 2323.5,
+      "line_km": 93.34,
+      "hv_line_km": 0.0,
+      "segment_hits": 8,
+      "line_km_per_km2": 0.040172,
+      "hv_share": 0.0
+    },
+    "CALLAHAN": {
+      "name": "Callahan",
+      "geoid": "48059",
+      "area_km2": 2338.81,
+      "line_km": 278.31,
+      "hv_line_km": 32.63,
+      "segment_hits": 14,
+      "line_km_per_km2": 0.118996,
+      "hv_share": 0.1172
+    },
+    "CAMP": {
+      "name": "Camp",
+      "geoid": "48063",
+      "area_km2": 513.41,
+      "line_km": 160.45,
+      "hv_line_km": 45.82,
+      "segment_hits": 16,
+      "line_km_per_km2": 0.312518,
+      "hv_share": 0.2856
+    },
+    "KENT": {
+      "name": "Kent",
+      "geoid": "48263",
+      "area_km2": 2336.43,
+      "line_km": 292.91,
+      "hv_line_km": 104.95,
+      "segment_hits": 15,
+      "line_km_per_km2": 0.125366,
+      "hv_share": 0.3583
+    },
+    "CULBERSON": {
+      "name": "Culberson",
+      "geoid": "48109",
+      "area_km2": 9944.88,
+      "line_km": 139.4,
+      "hv_line_km": 0.0,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.014017,
+      "hv_share": 0.0
+    },
+    "DALLAM": {
+      "name": "Dallam",
+      "geoid": "48111",
+      "area_km2": 3903.8,
+      "line_km": 200.23,
+      "hv_line_km": 0.0,
+      "segment_hits": 9,
+      "line_km_per_km2": 0.051291,
+      "hv_share": 0.0
+    },
+    "ARANSAS": {
+      "name": "Aransas",
+      "geoid": "48007",
+      "area_km2": 1197.3,
+      "line_km": 40.66,
+      "hv_line_km": 0.0,
+      "segment_hits": 5,
+      "line_km_per_km2": 0.03396,
+      "hv_share": 0.0
+    },
+    "WILSON": {
+      "name": "Wilson",
+      "geoid": "48493",
+      "area_km2": 2102.3,
+      "line_km": 326.56,
+      "hv_line_km": 208.16,
+      "segment_hits": 15,
+      "line_km_per_km2": 0.155335,
+      "hv_share": 0.6374
+    },
+    "BROOKS": {
+      "name": "Brooks",
+      "geoid": "48047",
+      "area_km2": 2447.05,
+      "line_km": 132.16,
+      "hv_line_km": 56.34,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.054008,
+      "hv_share": 0.4263
+    },
+    "KIMBLE": {
+      "name": "Kimble",
+      "geoid": "48267",
+      "area_km2": 3246.99,
+      "line_km": 311.92,
+      "hv_line_km": 228.31,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.096064,
+      "hv_share": 0.732
+    },
+    "MITCHELL": {
+      "name": "Mitchell",
+      "geoid": "48335",
+      "area_km2": 2376.6,
+      "line_km": 502.82,
+      "hv_line_km": 191.85,
+      "segment_hits": 35,
+      "line_km_per_km2": 0.211571,
+      "hv_share": 0.3815
+    },
+    "BRISCOE": {
+      "name": "Briscoe",
+      "geoid": "48045",
+      "area_km2": 2337.08,
+      "line_km": 319.94,
+      "hv_line_km": 263.39,
+      "segment_hits": 21,
+      "line_km_per_km2": 0.136897,
+      "hv_share": 0.8232
+    },
+    "GUADALUPE": {
+      "name": "Guadalupe",
+      "geoid": "48187",
+      "area_km2": 1840.99,
+      "line_km": 690.19,
+      "hv_line_km": 323.62,
+      "segment_hits": 79,
+      "line_km_per_km2": 0.374901,
+      "hv_share": 0.4689
+    },
+    "SHERMAN": {
+      "name": "Sherman",
+      "geoid": "48421",
+      "area_km2": 2391.73,
+      "line_km": 179.54,
+      "hv_line_km": 38.42,
+      "segment_hits": 12,
+      "line_km_per_km2": 0.075067,
+      "hv_share": 0.214
+    },
+    "ROCKWALL": {
+      "name": "Rockwall",
+      "geoid": "48397",
+      "area_km2": 386.49,
+      "line_km": 184.17,
+      "hv_line_km": 67.98,
+      "segment_hits": 28,
+      "line_km_per_km2": 0.476524,
+      "hv_share": 0.3691
+    },
+    "PALO PINTO": {
+      "name": "Palo Pinto",
+      "geoid": "48363",
+      "area_km2": 2558.09,
+      "line_km": 291.52,
+      "hv_line_km": 56.03,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.11396,
+      "hv_share": 0.1922
+    },
+    "MARTIN": {
+      "name": "Martin",
+      "geoid": "48317",
+      "area_km2": 2376.36,
+      "line_km": 276.36,
+      "hv_line_km": 85.2,
+      "segment_hits": 22,
+      "line_km_per_km2": 0.116296,
+      "hv_share": 0.3083
+    },
+    "MASON": {
+      "name": "Mason",
+      "geoid": "48319",
+      "area_km2": 2417.16,
+      "line_km": 216.62,
+      "hv_line_km": 0.0,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.089618,
+      "hv_share": 0.0
+    },
+    "STONEWALL": {
+      "name": "Stonewall",
+      "geoid": "48433",
+      "area_km2": 2390.82,
+      "line_km": 175.42,
+      "hv_line_km": 0.0,
+      "segment_hits": 10,
+      "line_km_per_km2": 0.073372,
+      "hv_share": 0.0
+    },
+    "GREGG": {
+      "name": "Gregg",
+      "geoid": "48183",
+      "area_km2": 727.78,
+      "line_km": 323.97,
+      "hv_line_km": 0.0,
+      "segment_hits": 57,
+      "line_km_per_km2": 0.445151,
+      "hv_share": 0.0
+    },
+    "BRAZOS": {
+      "name": "Brazos",
+      "geoid": "48041",
+      "area_km2": 1487.22,
+      "line_km": 490.66,
+      "hv_line_km": 41.64,
+      "segment_hits": 63,
+      "line_km_per_km2": 0.329917,
+      "hv_share": 0.0849
+    },
+    "SAN JACINTO": {
+      "name": "San Jacinto",
+      "geoid": "48407",
+      "area_km2": 1664.58,
+      "line_km": 122.88,
+      "hv_line_km": 20.1,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.07382,
+      "hv_share": 0.1636
+    },
+    "JIM HOGG": {
+      "name": "Jim Hogg",
+      "geoid": "48247",
+      "area_km2": 2962.76,
+      "line_km": 3.39,
+      "hv_line_km": 0.0,
+      "segment_hits": 2,
+      "line_km_per_km2": 0.001144,
+      "hv_share": 0.0
+    },
+    "TAYLOR": {
+      "name": "Taylor",
+      "geoid": "48441",
+      "area_km2": 2384.96,
+      "line_km": 731.85,
+      "hv_line_km": 194.37,
+      "segment_hits": 98,
+      "line_km_per_km2": 0.30686,
+      "hv_share": 0.2656
+    },
+    "ARMSTRONG": {
+      "name": "Armstrong",
+      "geoid": "48011",
+      "area_km2": 2372.07,
+      "line_km": 114.67,
+      "hv_line_km": 114.55,
+      "segment_hits": 3,
+      "line_km_per_km2": 0.048342,
+      "hv_share": 0.999
+    },
+    "HOCKLEY": {
+      "name": "Hockley",
+      "geoid": "48219",
+      "area_km2": 2356.61,
+      "line_km": 427.43,
+      "hv_line_km": 147.4,
+      "segment_hits": 55,
+      "line_km_per_km2": 0.181375,
+      "hv_share": 0.3449
+    },
+    "SUTTON": {
+      "name": "Sutton",
+      "geoid": "48435",
+      "area_km2": 3776.86,
+      "line_km": 195.26,
+      "hv_line_km": 23.38,
+      "segment_hits": 13,
+      "line_km_per_km2": 0.051699,
+      "hv_share": 0.1197
+    },
+    "KENDALL": {
+      "name": "Kendall",
+      "geoid": "48259",
+      "area_km2": 1709.34,
+      "line_km": 251.44,
+      "hv_line_km": 89.48,
+      "segment_hits": 24,
+      "line_km_per_km2": 0.147098,
+      "hv_share": 0.3559
+    },
+    "REAGAN": {
+      "name": "Reagan",
+      "geoid": "48383",
+      "area_km2": 3054.02,
+      "line_km": 230.76,
+      "hv_line_km": 0.0,
+      "segment_hits": 17,
+      "line_km_per_km2": 0.075559,
+      "hv_share": 0.0
+    },
+    "RUSK": {
+      "name": "Rusk",
+      "geoid": "48401",
+      "area_km2": 2430.2,
+      "line_km": 561.09,
+      "hv_line_km": 258.82,
+      "segment_hits": 56,
+      "line_km_per_km2": 0.230882,
+      "hv_share": 0.4613
+    },
+    "CARSON": {
+      "name": "Carson",
+      "geoid": "48065",
+      "area_km2": 2394.54,
+      "line_km": 529.56,
+      "hv_line_km": 257.41,
+      "segment_hits": 39,
+      "line_km_per_km2": 0.221153,
+      "hv_share": 0.4861
+    },
+    "YOAKUM": {
+      "name": "Yoakum",
+      "geoid": "48501",
+      "area_km2": 2071.88,
+      "line_km": 497.23,
+      "hv_line_km": 187.36,
+      "segment_hits": 59,
+      "line_km_per_km2": 0.23999,
+      "hv_share": 0.3768
+    },
+    "EDWARDS": {
+      "name": "Edwards",
+      "geoid": "48137",
+      "area_km2": 5559.28,
+      "line_km": 129.39,
+      "hv_line_km": 0.0,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.023275,
+      "hv_share": 0.0
+    },
+    "MOTLEY": {
+      "name": "Motley",
+      "geoid": "48345",
+      "area_km2": 2568.84,
+      "line_km": 249.81,
+      "hv_line_km": 127.53,
+      "segment_hits": 8,
+      "line_km_per_km2": 0.097246,
+      "hv_share": 0.5105
+    },
+    "FALLS": {
+      "name": "Falls",
+      "geoid": "48145",
+      "area_km2": 2010.8,
+      "line_km": 259.7,
+      "hv_line_km": 73.32,
+      "segment_hits": 14,
+      "line_km_per_km2": 0.129152,
+      "hv_share": 0.2823
+    },
+    "MONTAGUE": {
+      "name": "Montague",
+      "geoid": "48337",
+      "area_km2": 2431.01,
+      "line_km": 282.09,
+      "hv_line_km": 49.0,
+      "segment_hits": 27,
+      "line_km_per_km2": 0.116038,
+      "hv_share": 0.1737
+    },
+    "FOARD": {
+      "name": "Foard",
+      "geoid": "48155",
+      "area_km2": 1822.25,
+      "line_km": 394.62,
+      "hv_line_km": 263.16,
+      "segment_hits": 17,
+      "line_km_per_km2": 0.216557,
+      "hv_share": 0.6669
+    },
+    "GALVESTON": {
+      "name": "Galveston",
+      "geoid": "48167",
+      "area_km2": 1768.71,
+      "line_km": 645.19,
+      "hv_line_km": 83.55,
+      "segment_hits": 95,
+      "line_km_per_km2": 0.36478,
+      "hv_share": 0.1295
+    },
+    "MATAGORDA": {
+      "name": "Matagorda",
+      "geoid": "48321",
+      "area_km2": 3590.89,
+      "line_km": 625.74,
+      "hv_line_km": 283.86,
+      "segment_hits": 42,
+      "line_km_per_km2": 0.174258,
+      "hv_share": 0.4536
+    },
+    "GOLIAD": {
+      "name": "Goliad",
+      "geoid": "48175",
+      "area_km2": 2251.75,
+      "line_km": 248.38,
+      "hv_line_km": 129.13,
+      "segment_hits": 10,
+      "line_km_per_km2": 0.110305,
+      "hv_share": 0.5199
+    },
+    "REFUGIO": {
+      "name": "Refugio",
+      "geoid": "48391",
+      "area_km2": 2140.59,
+      "line_km": 256.12,
+      "hv_line_km": 102.37,
+      "segment_hits": 9,
+      "line_km_per_km2": 0.119649,
+      "hv_share": 0.3997
+    },
+    "POTTER": {
+      "name": "Potter",
+      "geoid": "48375",
+      "area_km2": 2391.17,
+      "line_km": 731.8,
+      "hv_line_km": 359.63,
+      "segment_hits": 64,
+      "line_km_per_km2": 0.306042,
+      "hv_share": 0.4914
+    },
+    "DALLAS": {
+      "name": "Dallas",
+      "geoid": "48113",
+      "area_km2": 2356.72,
+      "line_km": 1767.53,
+      "hv_line_km": 355.38,
+      "segment_hits": 468,
+      "line_km_per_km2": 0.749995,
+      "hv_share": 0.2011
+    },
+    "UPTON": {
+      "name": "Upton",
+      "geoid": "48461",
+      "area_km2": 3205.79,
+      "line_km": 392.92,
+      "hv_line_km": 80.99,
+      "segment_hits": 32,
+      "line_km_per_km2": 0.122566,
+      "hv_share": 0.2061
+    },
+    "FRANKLIN": {
+      "name": "Franklin",
+      "geoid": "48159",
+      "area_km2": 769.71,
+      "line_km": 264.82,
+      "hv_line_km": 110.8,
+      "segment_hits": 27,
+      "line_km_per_km2": 0.344053,
+      "hv_share": 0.4184
+    },
+    "HARDEMAN": {
+      "name": "Hardeman",
+      "geoid": "48197",
+      "area_km2": 1805.7,
+      "line_km": 396.43,
+      "hv_line_km": 155.93,
+      "segment_hits": 16,
+      "line_km_per_km2": 0.219544,
+      "hv_share": 0.3933
+    },
+    "HUTCHINSON": {
+      "name": "Hutchinson",
+      "geoid": "48233",
+      "area_km2": 2322.42,
+      "line_km": 310.4,
+      "hv_line_km": 54.76,
+      "segment_hits": 39,
+      "line_km_per_km2": 0.133654,
+      "hv_share": 0.1764
+    },
+    "DEWITT": {
+      "name": "DeWitt",
+      "geoid": "48123",
+      "area_km2": 2366.18,
+      "line_km": 268.67,
+      "hv_line_km": 124.4,
+      "segment_hits": 20,
+      "line_km_per_km2": 0.113546,
+      "hv_share": 0.463
+    },
+    "SABINE": {
+      "name": "Sabine",
+      "geoid": "48403",
+      "area_km2": 1504.77,
+      "line_km": 114.55,
+      "hv_line_km": 0.0,
+      "segment_hits": 9,
+      "line_km_per_km2": 0.076125,
+      "hv_share": 0.0
+    },
+    "FRIO": {
+      "name": "Frio",
+      "geoid": "48163",
+      "area_km2": 2948.69,
+      "line_km": 485.13,
+      "hv_line_km": 61.45,
+      "segment_hits": 32,
+      "line_km_per_km2": 0.164524,
+      "hv_share": 0.1267
+    },
+    "TITUS": {
+      "name": "Titus",
+      "geoid": "48449",
+      "area_km2": 1095.07,
+      "line_km": 299.33,
+      "hv_line_km": 68.59,
+      "segment_hits": 47,
+      "line_km_per_km2": 0.273344,
+      "hv_share": 0.2291
+    },
+    "LEON": {
+      "name": "Leon",
+      "geoid": "48289",
+      "area_km2": 2865.53,
+      "line_km": 425.5,
+      "hv_line_km": 153.33,
+      "segment_hits": 29,
+      "line_km_per_km2": 0.148489,
+      "hv_share": 0.3604
+    },
+    "MADISON": {
+      "name": "Madison",
+      "geoid": "48313",
+      "area_km2": 1201.16,
+      "line_km": 110.0,
+      "hv_line_km": 47.69,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.091579,
+      "hv_share": 0.4335
+    },
+    "ANDERSON": {
+      "name": "Anderson",
+      "geoid": "48001",
+      "area_km2": 2777.58,
+      "line_km": 278.33,
+      "hv_line_km": 17.95,
+      "segment_hits": 23,
+      "line_km_per_km2": 0.100206,
+      "hv_share": 0.0645
+    },
+    "GILLESPIE": {
+      "name": "Gillespie",
+      "geoid": "48171",
+      "area_km2": 2755.03,
+      "line_km": 313.11,
+      "hv_line_km": 63.95,
+      "segment_hits": 17,
+      "line_km_per_km2": 0.11365,
+      "hv_share": 0.2042
+    },
+    "LAVACA": {
+      "name": "Lavaca",
+      "geoid": "48285",
+      "area_km2": 2548.33,
+      "line_km": 134.08,
+      "hv_line_km": 14.81,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.052615,
+      "hv_share": 0.1105
+    },
+    "TOM GREEN": {
+      "name": "Tom Green",
+      "geoid": "48451",
+      "area_km2": 4012.15,
+      "line_km": 739.64,
+      "hv_line_km": 173.99,
+      "segment_hits": 65,
+      "line_km_per_km2": 0.18435,
+      "hv_share": 0.2352
+    },
+    "VICTORIA": {
+      "name": "Victoria",
+      "geoid": "48469",
+      "area_km2": 2280.98,
+      "line_km": 523.21,
+      "hv_line_km": 69.85,
+      "segment_hits": 46,
+      "line_km_per_km2": 0.22938,
+      "hv_share": 0.1335
+    },
+    "FORT BEND": {
+      "name": "Fort Bend",
+      "geoid": "48157",
+      "area_km2": 2318.48,
+      "line_km": 766.59,
+      "hv_line_km": 303.96,
+      "segment_hits": 80,
+      "line_km_per_km2": 0.330643,
+      "hv_share": 0.3965
+    },
+    "HARTLEY": {
+      "name": "Hartley",
+      "geoid": "48205",
+      "area_km2": 3792.75,
+      "line_km": 114.74,
+      "hv_line_km": 0.0,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.030252,
+      "hv_share": 0.0
+    },
+    "CORYELL": {
+      "name": "Coryell",
+      "geoid": "48099",
+      "area_km2": 2744.94,
+      "line_km": 153.48,
+      "hv_line_km": 0.0,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.055914,
+      "hv_share": 0.0
+    },
+    "MORRIS": {
+      "name": "Morris",
+      "geoid": "48343",
+      "area_km2": 681.53,
+      "line_km": 213.28,
+      "hv_line_km": 85.04,
+      "segment_hits": 29,
+      "line_km_per_km2": 0.312943,
+      "hv_share": 0.3987
+    },
+    "PARKER": {
+      "name": "Parker",
+      "geoid": "48367",
+      "area_km2": 2362.78,
+      "line_km": 715.62,
+      "hv_line_km": 344.86,
+      "segment_hits": 54,
+      "line_km_per_km2": 0.302872,
+      "hv_share": 0.4819
+    },
+    "ROBERTSON": {
+      "name": "Robertson",
+      "geoid": "48395",
+      "area_km2": 2230.58,
+      "line_km": 489.83,
+      "hv_line_km": 204.13,
+      "segment_hits": 37,
+      "line_km_per_km2": 0.219597,
+      "hv_share": 0.4167
+    },
+    "WILLIAMSON": {
+      "name": "Williamson",
+      "geoid": "48491",
+      "area_km2": 2932.9,
+      "line_km": 516.85,
+      "hv_line_km": 131.97,
+      "segment_hits": 62,
+      "line_km_per_km2": 0.176225,
+      "hv_share": 0.2553
+    },
+    "CASTRO": {
+      "name": "Castro",
+      "geoid": "48069",
+      "area_km2": 2335.25,
+      "line_km": 400.01,
+      "hv_line_km": 162.34,
+      "segment_hits": 30,
+      "line_km_per_km2": 0.171292,
+      "hv_share": 0.4058
+    },
+    "VAN ZANDT": {
+      "name": "Van Zandt",
+      "geoid": "48467",
+      "area_km2": 2234.64,
+      "line_km": 492.03,
+      "hv_line_km": 185.6,
+      "segment_hits": 36,
+      "line_km_per_km2": 0.220183,
+      "hv_share": 0.3772
+    },
+    "COCHRAN": {
+      "name": "Cochran",
+      "geoid": "48079",
+      "area_km2": 2010.74,
+      "line_km": 222.73,
+      "hv_line_km": 60.76,
+      "segment_hits": 24,
+      "line_km_per_km2": 0.11077,
+      "hv_share": 0.2728
+    },
+    "CAMERON": {
+      "name": "Cameron",
+      "geoid": "48061",
+      "area_km2": 3064.8,
+      "line_km": 615.45,
+      "hv_line_km": 48.54,
+      "segment_hits": 73,
+      "line_km_per_km2": 0.200812,
+      "hv_share": 0.0789
+    },
+    "HUDSPETH": {
+      "name": "Hudspeth",
+      "geoid": "48229",
+      "area_km2": 11876.46,
+      "line_km": 245.86,
+      "hv_line_km": 0.0,
+      "segment_hits": 9,
+      "line_km_per_km2": 0.020701,
+      "hv_share": 0.0
+    },
+    "WARD": {
+      "name": "Ward",
+      "geoid": "48475",
+      "area_km2": 2115.23,
+      "line_km": 324.33,
+      "hv_line_km": 0.0,
+      "segment_hits": 33,
+      "line_km_per_km2": 0.153331,
+      "hv_share": 0.0
+    },
+    "WINKLER": {
+      "name": "Winkler",
+      "geoid": "48495",
+      "area_km2": 2178.67,
+      "line_km": 297.65,
+      "hv_line_km": 0.0,
+      "segment_hits": 35,
+      "line_km_per_km2": 0.13662,
+      "hv_share": 0.0
+    },
+    "LEE": {
+      "name": "Lee",
+      "geoid": "48287",
+      "area_km2": 1654.01,
+      "line_km": 112.87,
+      "hv_line_km": 18.14,
+      "segment_hits": 12,
+      "line_km_per_km2": 0.06824,
+      "hv_share": 0.1607
+    },
+    "CALDWELL": {
+      "name": "Caldwell",
+      "geoid": "48055",
+      "area_km2": 1397.12,
+      "line_km": 355.04,
+      "hv_line_km": 145.68,
+      "segment_hits": 29,
+      "line_km_per_km2": 0.254123,
+      "hv_share": 0.4103
+    },
+    "COLORADO": {
+      "name": "Colorado",
+      "geoid": "48089",
+      "area_km2": 2532.7,
+      "line_km": 254.14,
+      "hv_line_km": 0.0,
+      "segment_hits": 29,
+      "line_km_per_km2": 0.100344,
+      "hv_share": 0.0
+    },
+    "WISE": {
+      "name": "Wise",
+      "geoid": "48497",
+      "area_km2": 2393.31,
+      "line_km": 747.04,
+      "hv_line_km": 301.16,
+      "segment_hits": 64,
+      "line_km_per_km2": 0.312136,
+      "hv_share": 0.4031
+    },
+    "ROBERTS": {
+      "name": "Roberts",
+      "geoid": "48393",
+      "area_km2": 2398.35,
+      "line_km": 82.2,
+      "hv_line_km": 0.22,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.034274,
+      "hv_share": 0.0027
+    },
+    "COLLIN": {
+      "name": "Collin",
+      "geoid": "48085",
+      "area_km2": 2297.79,
+      "line_km": 796.88,
+      "hv_line_km": 375.66,
+      "segment_hits": 119,
+      "line_km_per_km2": 0.346803,
+      "hv_share": 0.4714
+    },
+    "SWISHER": {
+      "name": "Swisher",
+      "geoid": "48437",
+      "area_km2": 2337.57,
+      "line_km": 438.0,
+      "hv_line_km": 157.8,
+      "segment_hits": 36,
+      "line_km_per_km2": 0.187374,
+      "hv_share": 0.3603
+    },
+    "RANDALL": {
+      "name": "Randall",
+      "geoid": "48381",
+      "area_km2": 2394.14,
+      "line_km": 404.62,
+      "hv_line_km": 137.52,
+      "segment_hits": 45,
+      "line_km_per_km2": 0.169004,
+      "hv_share": 0.3399
+    },
+    "HEMPHILL": {
+      "name": "Hemphill",
+      "geoid": "48211",
+      "area_km2": 2367.1,
+      "line_km": 120.49,
+      "hv_line_km": 0.0,
+      "segment_hits": 10,
+      "line_km_per_km2": 0.050902,
+      "hv_share": 0.0
+    },
+    "LA SALLE": {
+      "name": "La Salle",
+      "geoid": "48283",
+      "area_km2": 3871.81,
+      "line_km": 145.61,
+      "hv_line_km": 49.6,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.037608,
+      "hv_share": 0.3406
+    },
+    "COLEMAN": {
+      "name": "Coleman",
+      "geoid": "48083",
+      "area_km2": 3408.17,
+      "line_km": 403.33,
+      "hv_line_km": 270.41,
+      "segment_hits": 13,
+      "line_km_per_km2": 0.118342,
+      "hv_share": 0.6704
+    },
+    "ATASCOSA": {
+      "name": "Atascosa",
+      "geoid": "48013",
+      "area_km2": 3171.49,
+      "line_km": 636.55,
+      "hv_line_km": 219.9,
+      "segment_hits": 34,
+      "line_km_per_km2": 0.20071,
+      "hv_share": 0.3455
+    },
+    "BRAZORIA": {
+      "name": "Brazoria",
+      "geoid": "48039",
+      "area_km2": 3887.65,
+      "line_km": 888.63,
+      "hv_line_km": 218.23,
+      "segment_hits": 113,
+      "line_km_per_km2": 0.228578,
+      "hv_share": 0.2456
+    },
+    "RAINS": {
+      "name": "Rains",
+      "geoid": "48379",
+      "area_km2": 661.5,
+      "line_km": 38.19,
+      "hv_line_km": 7.29,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.057732,
+      "hv_share": 0.1909
+    },
+    "WOOD": {
+      "name": "Wood",
+      "geoid": "48499",
+      "area_km2": 1800.68,
+      "line_km": 337.73,
+      "hv_line_km": 0.0,
+      "segment_hits": 37,
+      "line_km_per_km2": 0.187557,
+      "hv_share": 0.0
+    },
+    "ARCHER": {
+      "name": "Archer",
+      "geoid": "48009",
+      "area_km2": 2400.44,
+      "line_km": 420.18,
+      "hv_line_km": 114.8,
+      "segment_hits": 31,
+      "line_km_per_km2": 0.175043,
+      "hv_share": 0.2732
+    },
+    "FAYETTE": {
+      "name": "Fayette",
+      "geoid": "48149",
+      "area_km2": 2482.93,
+      "line_km": 472.06,
+      "hv_line_km": 195.2,
+      "segment_hits": 40,
+      "line_km_per_km2": 0.190122,
+      "hv_share": 0.4135
+    },
+    "BROWN": {
+      "name": "Brown",
+      "geoid": "48049",
+      "area_km2": 2468.2,
+      "line_km": 316.97,
+      "hv_line_km": 143.74,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.128422,
+      "hv_share": 0.4535
+    },
+    "ECTOR": {
+      "name": "Ector",
+      "geoid": "48135",
+      "area_km2": 2340.41,
+      "line_km": 702.73,
+      "hv_line_km": 100.32,
+      "segment_hits": 73,
+      "line_km_per_km2": 0.300259,
+      "hv_share": 0.1428
+    },
+    "IRION": {
+      "name": "Irion",
+      "geoid": "48235",
+      "area_km2": 2724.71,
+      "line_km": 122.83,
+      "hv_line_km": 0.0,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.04508,
+      "hv_share": 0.0
+    },
+    "AUSTIN": {
+      "name": "Austin",
+      "geoid": "48015",
+      "area_km2": 1674.28,
+      "line_km": 234.08,
+      "hv_line_km": 16.62,
+      "segment_hits": 17,
+      "line_km_per_km2": 0.139809,
+      "hv_share": 0.071
+    },
+    "LAMAR": {
+      "name": "Lamar",
+      "geoid": "48277",
+      "area_km2": 2434.61,
+      "line_km": 284.1,
+      "hv_line_km": 88.25,
+      "segment_hits": 34,
+      "line_km_per_km2": 0.116692,
+      "hv_share": 0.3106
+    },
+    "HOOD": {
+      "name": "Hood",
+      "geoid": "48221",
+      "area_km2": 1133.67,
+      "line_km": 323.95,
+      "hv_line_km": 147.38,
+      "segment_hits": 33,
+      "line_km_per_km2": 0.285752,
+      "hv_share": 0.4549
+    },
+    "DENTON": {
+      "name": "Denton",
+      "geoid": "48121",
+      "area_km2": 2469.65,
+      "line_km": 654.87,
+      "hv_line_km": 270.6,
+      "segment_hits": 94,
+      "line_km_per_km2": 0.265167,
+      "hv_share": 0.4132
+    },
+    "DELTA": {
+      "name": "Delta",
+      "geoid": "48119",
+      "area_km2": 741.08,
+      "line_km": 61.5,
+      "hv_line_km": 0.0,
+      "segment_hits": 8,
+      "line_km_per_km2": 0.082987,
+      "hv_share": 0.0
+    },
+    "DUVAL": {
+      "name": "Duval",
+      "geoid": "48131",
+      "area_km2": 4655.79,
+      "line_km": 100.11,
+      "hv_line_km": 0.0,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.021502,
+      "hv_share": 0.0
+    },
+    "MCLENNAN": {
+      "name": "McLennan",
+      "geoid": "48309",
+      "area_km2": 2749.43,
+      "line_km": 574.7,
+      "hv_line_km": 167.76,
+      "segment_hits": 73,
+      "line_km_per_km2": 0.209025,
+      "hv_share": 0.2919
+    },
+    "BURNET": {
+      "name": "Burnet",
+      "geoid": "48053",
+      "area_km2": 2630.32,
+      "line_km": 314.5,
+      "hv_line_km": 0.0,
+      "segment_hits": 31,
+      "line_km_per_km2": 0.119567,
+      "hv_share": 0.0
+    },
+    "ORANGE": {
+      "name": "Orange",
+      "geoid": "48361",
+      "area_km2": 1027.83,
+      "line_km": 471.95,
+      "hv_line_km": 165.77,
+      "segment_hits": 84,
+      "line_km_per_km2": 0.45917,
+      "hv_share": 0.3512
+    },
+    "LYNN": {
+      "name": "Lynn",
+      "geoid": "48305",
+      "area_km2": 2319.0,
+      "line_km": 260.18,
+      "hv_line_km": 36.23,
+      "segment_hits": 23,
+      "line_km_per_km2": 0.112195,
+      "hv_share": 0.1392
+    },
+    "REEVES": {
+      "name": "Reeves",
+      "geoid": "48389",
+      "area_km2": 6915.63,
+      "line_km": 250.45,
+      "hv_line_km": 0.0,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.036215,
+      "hv_share": 0.0
+    },
+    "DEAF SMITH": {
+      "name": "Deaf Smith",
+      "geoid": "48117",
+      "area_km2": 3869.45,
+      "line_km": 258.16,
+      "hv_line_km": 84.94,
+      "segment_hits": 32,
+      "line_km_per_km2": 0.066717,
+      "hv_share": 0.329
+    },
+    "PECOS": {
+      "name": "Pecos",
+      "geoid": "48371",
+      "area_km2": 12378.29,
+      "line_km": 923.8,
+      "hv_line_km": 124.64,
+      "segment_hits": 62,
+      "line_km_per_km2": 0.074631,
+      "hv_share": 0.1349
+    },
+    "SCURRY": {
+      "name": "Scurry",
+      "geoid": "48415",
+      "area_km2": 2356.45,
+      "line_km": 748.48,
+      "hv_line_km": 368.86,
+      "segment_hits": 53,
+      "line_km_per_km2": 0.317631,
+      "hv_share": 0.4928
+    },
+    "FLOYD": {
+      "name": "Floyd",
+      "geoid": "48153",
+      "area_km2": 2575.98,
+      "line_km": 512.09,
+      "hv_line_km": 204.69,
+      "segment_hits": 34,
+      "line_km_per_km2": 0.198794,
+      "hv_share": 0.3997
+    },
+    "REAL": {
+      "name": "Real",
+      "geoid": "48385",
+      "area_km2": 1765.22,
+      "line_km": 45.56,
+      "hv_line_km": 0.0,
+      "segment_hits": 2,
+      "line_km_per_km2": 0.02581,
+      "hv_share": 0.0
+    },
+    "TERRELL": {
+      "name": "Terrell",
+      "geoid": "48443",
+      "area_km2": 6124.98,
+      "line_km": 17.9,
+      "hv_line_km": 17.63,
+      "segment_hits": 3,
+      "line_km_per_km2": 0.002922,
+      "hv_share": 0.9849
+    },
+    "SAN SABA": {
+      "name": "San Saba",
+      "geoid": "48411",
+      "area_km2": 2973.43,
+      "line_km": 30.16,
+      "hv_line_km": 0.0,
+      "segment_hits": 3,
+      "line_km_per_km2": 0.010143,
+      "hv_share": 0.0
+    },
+    "BAYLOR": {
+      "name": "Baylor",
+      "geoid": "48023",
+      "area_km2": 2337.49,
+      "line_km": 176.86,
+      "hv_line_km": 45.21,
+      "segment_hits": 10,
+      "line_km_per_km2": 0.075662,
+      "hv_share": 0.2556
+    },
+    "BANDERA": {
+      "name": "Bandera",
+      "geoid": "48019",
+      "area_km2": 2052.05,
+      "line_km": 137.09,
+      "hv_line_km": 0.0,
+      "segment_hits": 8,
+      "line_km_per_km2": 0.066806,
+      "hv_share": 0.0
+    },
+    "WHARTON": {
+      "name": "Wharton",
+      "geoid": "48481",
+      "area_km2": 2832.65,
+      "line_km": 601.6,
+      "hv_line_km": 209.7,
+      "segment_hits": 39,
+      "line_km_per_km2": 0.21238,
+      "hv_share": 0.3486
+    },
+    "SHACKELFORD": {
+      "name": "Shackelford",
+      "geoid": "48417",
+      "area_km2": 2375.83,
+      "line_km": 407.54,
+      "hv_line_km": 220.53,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.171536,
+      "hv_share": 0.5411
+    },
+    "MARION": {
+      "name": "Marion",
+      "geoid": "48315",
+      "area_km2": 1072.95,
+      "line_km": 276.94,
+      "hv_line_km": 51.59,
+      "segment_hits": 27,
+      "line_km_per_km2": 0.258111,
+      "hv_share": 0.1863
+    },
+    "HARRISON": {
+      "name": "Harrison",
+      "geoid": "48203",
+      "area_km2": 2373.88,
+      "line_km": 626.03,
+      "hv_line_km": 145.44,
+      "segment_hits": 73,
+      "line_km_per_km2": 0.263716,
+      "hv_share": 0.2323
+    },
+    "JOHNSON": {
+      "name": "Johnson",
+      "geoid": "48251",
+      "area_km2": 1907.13,
+      "line_km": 524.22,
+      "hv_line_km": 162.85,
+      "segment_hits": 59,
+      "line_km_per_km2": 0.274874,
+      "hv_share": 0.3107
+    },
+    "ZAVALA": {
+      "name": "Zavala",
+      "geoid": "48507",
+      "area_km2": 3380.57,
+      "line_km": 208.63,
+      "hv_line_km": 0.0,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.061715,
+      "hv_share": 0.0
+    },
+    "JIM WELLS": {
+      "name": "Jim Wells",
+      "geoid": "48249",
+      "area_km2": 2256.29,
+      "line_km": 177.4,
+      "hv_line_km": 16.3,
+      "segment_hits": 10,
+      "line_km_per_km2": 0.078625,
+      "hv_share": 0.0919
+    },
+    "SMITH": {
+      "name": "Smith",
+      "geoid": "48423",
+      "area_km2": 2511.77,
+      "line_km": 514.47,
+      "hv_line_km": 207.09,
+      "segment_hits": 51,
+      "line_km_per_km2": 0.204824,
+      "hv_share": 0.4025
+    },
+    "WALKER": {
+      "name": "Walker",
+      "geoid": "48471",
+      "area_km2": 2088.02,
+      "line_km": 250.54,
+      "hv_line_km": 50.67,
+      "segment_hits": 17,
+      "line_km_per_km2": 0.119989,
+      "hv_share": 0.2022
+    },
+    "WALLER": {
+      "name": "Waller",
+      "geoid": "48473",
+      "area_km2": 1356.3,
+      "line_km": 138.28,
+      "hv_line_km": 31.86,
+      "segment_hits": 18,
+      "line_km_per_km2": 0.101954,
+      "hv_share": 0.2304
+    },
+    "HOUSTON": {
+      "name": "Houston",
+      "geoid": "48225",
+      "area_km2": 3195.2,
+      "line_km": 204.46,
+      "hv_line_km": 73.97,
+      "segment_hits": 9,
+      "line_km_per_km2": 0.06399,
+      "hv_share": 0.3618
+    },
+    "COOKE": {
+      "name": "Cooke",
+      "geoid": "48097",
+      "area_km2": 2347.6,
+      "line_km": 386.04,
+      "hv_line_km": 90.45,
+      "segment_hits": 33,
+      "line_km_per_km2": 0.16444,
+      "hv_share": 0.2343
+    },
+    "STEPHENS": {
+      "name": "Stephens",
+      "geoid": "48429",
+      "area_km2": 2389.08,
+      "line_km": 217.67,
+      "hv_line_km": 31.22,
+      "segment_hits": 17,
+      "line_km_per_km2": 0.09111,
+      "hv_share": 0.1434
+    },
+    "OLDHAM": {
+      "name": "Oldham",
+      "geoid": "48359",
+      "area_km2": 3910.3,
+      "line_km": 211.91,
+      "hv_line_km": 129.87,
+      "segment_hits": 15,
+      "line_km_per_km2": 0.054193,
+      "hv_share": 0.6129
+    },
+    "CHEROKEE": {
+      "name": "Cherokee",
+      "geoid": "48073",
+      "area_km2": 2746.17,
+      "line_km": 418.84,
+      "hv_line_km": 83.37,
+      "segment_hits": 34,
+      "line_km_per_km2": 0.152518,
+      "hv_share": 0.199
+    },
+    "MAVERICK": {
+      "name": "Maverick",
+      "geoid": "48323",
+      "area_km2": 3371.2,
+      "line_km": 137.15,
+      "hv_line_km": 0.0,
+      "segment_hits": 12,
+      "line_km_per_km2": 0.040683,
+      "hv_share": 0.0
+    },
+    "YOUNG": {
+      "name": "Young",
+      "geoid": "48503",
+      "area_km2": 2419.76,
+      "line_km": 676.69,
+      "hv_line_km": 342.71,
+      "segment_hits": 42,
+      "line_km_per_km2": 0.279652,
+      "hv_share": 0.5065
+    },
+    "MOORE": {
+      "name": "Moore",
+      "geoid": "48341",
+      "area_km2": 2357.93,
+      "line_km": 292.07,
+      "hv_line_km": 95.7,
+      "segment_hits": 22,
+      "line_km_per_km2": 0.123867,
+      "hv_share": 0.3277
+    },
+    "BASTROP": {
+      "name": "Bastrop",
+      "geoid": "48021",
+      "area_km2": 2308.48,
+      "line_km": 579.7,
+      "hv_line_km": 273.33,
+      "segment_hits": 45,
+      "line_km_per_km2": 0.251118,
+      "hv_share": 0.4715
+    },
+    "BEE": {
+      "name": "Bee",
+      "geoid": "48025",
+      "area_km2": 2284.68,
+      "line_km": 243.48,
+      "hv_line_km": 55.08,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.106571,
+      "hv_share": 0.2262
+    },
+    "CHAMBERS": {
+      "name": "Chambers",
+      "geoid": "48071",
+      "area_km2": 2242.12,
+      "line_km": 238.77,
+      "hv_line_km": 48.55,
+      "segment_hits": 63,
+      "line_km_per_km2": 0.106493,
+      "hv_share": 0.2033
+    },
+    "COMANCHE": {
+      "name": "Comanche",
+      "geoid": "48093",
+      "area_km2": 2468.51,
+      "line_km": 326.24,
+      "hv_line_km": 42.75,
+      "segment_hits": 21,
+      "line_km_per_km2": 0.132161,
+      "hv_share": 0.131
+    },
+    "CASS": {
+      "name": "Cass",
+      "geoid": "48067",
+      "area_km2": 2484.79,
+      "line_km": 398.28,
+      "hv_line_km": 111.0,
+      "segment_hits": 34,
+      "line_km_per_km2": 0.160287,
+      "hv_share": 0.2787
+    },
+    "COKE": {
+      "name": "Coke",
+      "geoid": "48081",
+      "area_km2": 2407.66,
+      "line_km": 267.89,
+      "hv_line_km": 11.92,
+      "segment_hits": 26,
+      "line_km_per_km2": 0.111266,
+      "hv_share": 0.0445
+    },
+    "EASTLAND": {
+      "name": "Eastland",
+      "geoid": "48133",
+      "area_km2": 2411.0,
+      "line_km": 345.41,
+      "hv_line_km": 52.01,
+      "segment_hits": 22,
+      "line_km_per_km2": 0.143264,
+      "hv_share": 0.1506
+    },
+    "NOLAN": {
+      "name": "Nolan",
+      "geoid": "48353",
+      "area_km2": 2370.66,
+      "line_km": 596.41,
+      "hv_line_km": 277.61,
+      "segment_hits": 47,
+      "line_km_per_km2": 0.25158,
+      "hv_share": 0.4655
+    },
+    "DIMMIT": {
+      "name": "Dimmit",
+      "geoid": "48127",
+      "area_km2": 3469.14,
+      "line_km": 139.77,
+      "hv_line_km": 0.0,
+      "segment_hits": 5,
+      "line_km_per_km2": 0.04029,
+      "hv_share": 0.0
+    },
+    "UPSHUR": {
+      "name": "Upshur",
+      "geoid": "48459",
+      "area_km2": 1529.06,
+      "line_km": 368.75,
+      "hv_line_km": 51.43,
+      "segment_hits": 30,
+      "line_km_per_km2": 0.241161,
+      "hv_share": 0.1395
+    },
+    "HOPKINS": {
+      "name": "Hopkins",
+      "geoid": "48223",
+      "area_km2": 2044.81,
+      "line_km": 354.8,
+      "hv_line_km": 210.01,
+      "segment_hits": 25,
+      "line_km_per_km2": 0.173512,
+      "hv_share": 0.5919
+    },
+    "DONLEY": {
+      "name": "Donley",
+      "geoid": "48129",
+      "area_km2": 2419.36,
+      "line_km": 73.52,
+      "hv_line_km": 2.19,
+      "segment_hits": 4,
+      "line_km_per_km2": 0.030388,
+      "hv_share": 0.0298
+    },
+    "ANDREWS": {
+      "name": "Andrews",
+      "geoid": "48003",
+      "area_km2": 3894.86,
+      "line_km": 300.55,
+      "hv_line_km": 89.77,
+      "segment_hits": 23,
+      "line_km_per_km2": 0.077166,
+      "hv_share": 0.2987
+    },
+    "TERRY": {
+      "name": "Terry",
+      "geoid": "48445",
+      "area_km2": 2312.38,
+      "line_km": 348.38,
+      "hv_line_km": 69.42,
+      "segment_hits": 25,
+      "line_km_per_km2": 0.150658,
+      "hv_share": 0.1993
+    },
+    "BAILEY": {
+      "name": "Bailey",
+      "geoid": "48017",
+      "area_km2": 2148.37,
+      "line_km": 377.5,
+      "hv_line_km": 156.26,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.175715,
+      "hv_share": 0.4139
+    },
+    "KARNES": {
+      "name": "Karnes",
+      "geoid": "48255",
+      "area_km2": 1946.93,
+      "line_km": 252.26,
+      "hv_line_km": 156.56,
+      "segment_hits": 18,
+      "line_km_per_km2": 0.129568,
+      "hv_share": 0.6206
+    },
+    "KERR": {
+      "name": "Kerr",
+      "geoid": "48265",
+      "area_km2": 2895.91,
+      "line_km": 343.61,
+      "hv_line_km": 143.9,
+      "segment_hits": 23,
+      "line_km_per_km2": 0.118654,
+      "hv_share": 0.4188
+    },
+    "PARMER": {
+      "name": "Parmer",
+      "geoid": "48369",
+      "area_km2": 2294.71,
+      "line_km": 174.48,
+      "hv_line_km": 0.0,
+      "segment_hits": 26,
+      "line_km_per_km2": 0.076036,
+      "hv_share": 0.0
+    },
+    "BORDEN": {
+      "name": "Borden",
+      "geoid": "48033",
+      "area_km2": 2350.71,
+      "line_km": 336.86,
+      "hv_line_km": 197.27,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.143301,
+      "hv_share": 0.5856
+    },
+    "WILLACY": {
+      "name": "Willacy",
+      "geoid": "48489",
+      "area_km2": 1891.07,
+      "line_km": 109.61,
+      "hv_line_km": 47.76,
+      "segment_hits": 8,
+      "line_km_per_km2": 0.057962,
+      "hv_share": 0.4357
+    },
+    "TYLER": {
+      "name": "Tyler",
+      "geoid": "48457",
+      "area_km2": 2437.22,
+      "line_km": 121.7,
+      "hv_line_km": 0.0,
+      "segment_hits": 10,
+      "line_km_per_km2": 0.049934,
+      "hv_share": 0.0
+    },
+    "FREESTONE": {
+      "name": "Freestone",
+      "geoid": "48161",
+      "area_km2": 2314.85,
+      "line_km": 520.57,
+      "hv_line_km": 278.8,
+      "segment_hits": 38,
+      "line_km_per_km2": 0.224883,
+      "hv_share": 0.5356
+    },
+    "KAUFMAN": {
+      "name": "Kaufman",
+      "geoid": "48257",
+      "area_km2": 2093.28,
+      "line_km": 468.19,
+      "hv_line_km": 208.26,
+      "segment_hits": 50,
+      "line_km_per_km2": 0.223663,
+      "hv_share": 0.4448
+    },
+    "LAMPASAS": {
+      "name": "Lampasas",
+      "geoid": "48281",
+      "area_km2": 1856.99,
+      "line_km": 250.26,
+      "hv_line_km": 140.89,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.134766,
+      "hv_share": 0.563
+    },
+    "LUBBOCK": {
+      "name": "Lubbock",
+      "geoid": "48303",
+      "area_km2": 2337.76,
+      "line_km": 709.45,
+      "hv_line_km": 179.83,
+      "segment_hits": 107,
+      "line_km_per_km2": 0.303475,
+      "hv_share": 0.2535
+    },
+    "NAVARRO": {
+      "name": "Navarro",
+      "geoid": "48349",
+      "area_km2": 2804.91,
+      "line_km": 678.34,
+      "hv_line_km": 209.78,
+      "segment_hits": 43,
+      "line_km_per_km2": 0.24184,
+      "hv_share": 0.3093
+    },
+    "WILBARGER": {
+      "name": "Wilbarger",
+      "geoid": "48487",
+      "area_km2": 2525.46,
+      "line_km": 622.57,
+      "hv_line_km": 272.32,
+      "segment_hits": 40,
+      "line_km_per_km2": 0.246517,
+      "hv_share": 0.4374
+    },
+    "COLLINGSWORTH": {
+      "name": "Collingsworth",
+      "geoid": "48087",
+      "area_km2": 2385.6,
+      "line_km": 187.79,
+      "hv_line_km": 55.92,
+      "segment_hits": 3,
+      "line_km_per_km2": 0.078718,
+      "hv_share": 0.2978
+    },
+    "CROCKETT": {
+      "name": "Crockett",
+      "geoid": "48105",
+      "area_km2": 7305.76,
+      "line_km": 470.19,
+      "hv_line_km": 112.62,
+      "segment_hits": 27,
+      "line_km_per_km2": 0.064359,
+      "hv_share": 0.2395
+    },
+    "JACK": {
+      "name": "Jack",
+      "geoid": "48237",
+      "area_km2": 2390.3,
+      "line_km": 380.3,
+      "hv_line_km": 294.67,
+      "segment_hits": 30,
+      "line_km_per_km2": 0.159102,
+      "hv_share": 0.7748
+    },
+    "KINNEY": {
+      "name": "Kinney",
+      "geoid": "48271",
+      "area_km2": 3555.77,
+      "line_km": 93.72,
+      "hv_line_km": 0.0,
+      "segment_hits": 8,
+      "line_km_per_km2": 0.026357,
+      "hv_share": 0.0
+    },
+    "KLEBERG": {
+      "name": "Kleberg",
+      "geoid": "48273",
+      "area_km2": 2634.22,
+      "line_km": 125.85,
+      "hv_line_km": 77.68,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.047775,
+      "hv_share": 0.6172
+    },
+    "WHEELER": {
+      "name": "Wheeler",
+      "geoid": "48483",
+      "area_km2": 2374.1,
+      "line_km": 256.97,
+      "hv_line_km": 89.65,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.108239,
+      "hv_share": 0.3489
+    },
+    "HAMILTON": {
+      "name": "Hamilton",
+      "geoid": "48193",
+      "area_km2": 2171.18,
+      "line_km": 122.29,
+      "hv_line_km": 0.0,
+      "segment_hits": 9,
+      "line_km_per_km2": 0.056324,
+      "hv_share": 0.0
+    },
+    "STARR": {
+      "name": "Starr",
+      "geoid": "48427",
+      "area_km2": 3199.59,
+      "line_km": 279.5,
+      "hv_line_km": 109.99,
+      "segment_hits": 20,
+      "line_km_per_km2": 0.087355,
+      "hv_share": 0.3935
+    },
+    "UVALDE": {
+      "name": "Uvalde",
+      "geoid": "48463",
+      "area_km2": 4048.56,
+      "line_km": 327.37,
+      "hv_line_km": 28.77,
+      "segment_hits": 20,
+      "line_km_per_km2": 0.080861,
+      "hv_share": 0.0879
+    },
+    "MILAM": {
+      "name": "Milam",
+      "geoid": "48331",
+      "area_km2": 2657.62,
+      "line_km": 393.88,
+      "hv_line_km": 136.52,
+      "segment_hits": 28,
+      "line_km_per_km2": 0.148208,
+      "hv_share": 0.3466
+    },
+    "KENEDY": {
+      "name": "Kenedy",
+      "geoid": "48261",
+      "area_km2": 4623.77,
+      "line_km": 124.17,
+      "hv_line_km": 78.98,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.026855,
+      "hv_share": 0.6361
+    },
+    "FISHER": {
+      "name": "Fisher",
+      "geoid": "48151",
+      "area_km2": 2338.8,
+      "line_km": 467.82,
+      "hv_line_km": 255.15,
+      "segment_hits": 20,
+      "line_km_per_km2": 0.200026,
+      "hv_share": 0.5454
+    },
+    "JEFF DAVIS": {
+      "name": "Jeff Davis",
+      "geoid": "48243",
+      "area_km2": 5874.26,
+      "line_km": 42.77,
+      "hv_line_km": 0.0,
+      "segment_hits": 2,
+      "line_km_per_km2": 0.007281,
+      "hv_share": 0.0
+    },
+    "SAN PATRICIO": {
+      "name": "San Patricio",
+      "geoid": "48409",
+      "area_km2": 1819.31,
+      "line_km": 460.53,
+      "hv_line_km": 78.69,
+      "segment_hits": 33,
+      "line_km_per_km2": 0.253134,
+      "hv_share": 0.1709
+    },
+    "LAMB": {
+      "name": "Lamb",
+      "geoid": "48279",
+      "area_km2": 2639.75,
+      "line_km": 614.58,
+      "hv_line_km": 265.03,
+      "segment_hits": 46,
+      "line_km_per_km2": 0.232818,
+      "hv_share": 0.4312
+    },
+    "HIDALGO": {
+      "name": "Hidalgo",
+      "geoid": "48215",
+      "area_km2": 4164.41,
+      "line_km": 731.99,
+      "hv_line_km": 135.87,
+      "segment_hits": 80,
+      "line_km_per_km2": 0.175773,
+      "hv_share": 0.1856
+    },
+    "RED RIVER": {
+      "name": "Red River",
+      "geoid": "48387",
+      "area_km2": 2754.97,
+      "line_km": 121.38,
+      "hv_line_km": 30.35,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.044059,
+      "hv_share": 0.25
+    },
+    "STERLING": {
+      "name": "Sterling",
+      "geoid": "48431",
+      "area_km2": 2396.69,
+      "line_km": 183.83,
+      "hv_line_km": 0.0,
+      "segment_hits": 14,
+      "line_km_per_km2": 0.076702,
+      "hv_share": 0.0
+    },
+    "GRIMES": {
+      "name": "Grimes",
+      "geoid": "48185",
+      "area_km2": 2095.48,
+      "line_km": 563.02,
+      "hv_line_km": 291.4,
+      "segment_hits": 43,
+      "line_km_per_km2": 0.268684,
+      "hv_share": 0.5176
+    },
+    "LLANO": {
+      "name": "Llano",
+      "geoid": "48299",
+      "area_km2": 2505.6,
+      "line_km": 246.9,
+      "hv_line_km": 0.0,
+      "segment_hits": 29,
+      "line_km_per_km2": 0.098539,
+      "hv_share": 0.0
+    },
+    "HENDERSON": {
+      "name": "Henderson",
+      "geoid": "48213",
+      "area_km2": 2449.57,
+      "line_km": 540.56,
+      "hv_line_km": 158.65,
+      "segment_hits": 43,
+      "line_km_per_km2": 0.220675,
+      "hv_share": 0.2935
+    },
+    "GONZALES": {
+      "name": "Gonzales",
+      "geoid": "48177",
+      "area_km2": 2766.57,
+      "line_km": 320.88,
+      "hv_line_km": 31.59,
+      "segment_hits": 21,
+      "line_km_per_km2": 0.115985,
+      "hv_share": 0.0984
+    },
+    "SAN AUGUSTINE": {
+      "name": "San Augustine",
+      "geoid": "48405",
+      "area_km2": 1514.25,
+      "line_km": 91.31,
+      "hv_line_km": 0.0,
+      "segment_hits": 5,
+      "line_km_per_km2": 0.0603,
+      "hv_share": 0.0
+    },
+    "ZAPATA": {
+      "name": "Zapata",
+      "geoid": "48505",
+      "area_km2": 2760.88,
+      "line_km": 203.94,
+      "hv_line_km": 84.72,
+      "segment_hits": 5,
+      "line_km_per_km2": 0.073868,
+      "hv_share": 0.4154
+    },
+    "EL PASO": {
+      "name": "El Paso",
+      "geoid": "48141",
+      "area_km2": 2627.13,
+      "line_km": 722.34,
+      "hv_line_km": 66.73,
+      "segment_hits": 101,
+      "line_km_per_km2": 0.274954,
+      "hv_share": 0.0924
+    },
+    "NACOGDOCHES": {
+      "name": "Nacogdoches",
+      "geoid": "48347",
+      "area_km2": 2556.64,
+      "line_km": 368.89,
+      "hv_line_km": 93.25,
+      "segment_hits": 25,
+      "line_km_per_km2": 0.144287,
+      "hv_share": 0.2528
+    },
+    "LIMESTONE": {
+      "name": "Limestone",
+      "geoid": "48293",
+      "area_km2": 2420.62,
+      "line_km": 287.51,
+      "hv_line_km": 93.16,
+      "segment_hits": 26,
+      "line_km_per_km2": 0.118776,
+      "hv_share": 0.324
+    },
+    "JEFFERSON": {
+      "name": "Jefferson",
+      "geoid": "48245",
+      "area_km2": 2561.31,
+      "line_km": 801.11,
+      "hv_line_km": 162.57,
+      "segment_hits": 184,
+      "line_km_per_km2": 0.312774,
+      "hv_share": 0.2029
+    },
+    "MILLS": {
+      "name": "Mills",
+      "geoid": "48333",
+      "area_km2": 1940.39,
+      "line_km": 190.54,
+      "hv_line_km": 119.7,
+      "segment_hits": 5,
+      "line_km_per_km2": 0.098197,
+      "hv_share": 0.6282
+    },
+    "HARDIN": {
+      "name": "Hardin",
+      "geoid": "48199",
+      "area_km2": 2321.85,
+      "line_km": 328.45,
+      "hv_line_km": 53.25,
+      "segment_hits": 32,
+      "line_km_per_km2": 0.14146,
+      "hv_share": 0.1621
+    },
+    "BOWIE": {
+      "name": "Bowie",
+      "geoid": "48037",
+      "area_km2": 2431.21,
+      "line_km": 561.28,
+      "hv_line_km": 203.1,
+      "segment_hits": 45,
+      "line_km_per_km2": 0.230864,
+      "hv_share": 0.3619
+    },
+    "MONTGOMERY": {
+      "name": "Montgomery",
+      "geoid": "48339",
+      "area_km2": 2773.57,
+      "line_km": 544.87,
+      "hv_line_km": 109.33,
+      "segment_hits": 70,
+      "line_km_per_km2": 0.19645,
+      "hv_share": 0.2007
+    },
+    "HAYS": {
+      "name": "Hays",
+      "geoid": "48209",
+      "area_km2": 1777.42,
+      "line_km": 249.45,
+      "hv_line_km": 12.67,
+      "segment_hits": 48,
+      "line_km_per_km2": 0.140344,
+      "hv_share": 0.0508
+    },
+    "FANNIN": {
+      "name": "Fannin",
+      "geoid": "48147",
+      "area_km2": 2356.75,
+      "line_km": 370.18,
+      "hv_line_km": 179.1,
+      "segment_hits": 40,
+      "line_km_per_km2": 0.157072,
+      "hv_share": 0.4838
+    },
+    "THROCKMORTON": {
+      "name": "Throckmorton",
+      "geoid": "48447",
+      "area_km2": 2375.34,
+      "line_km": 268.3,
+      "hv_line_km": 149.0,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.112952,
+      "hv_share": 0.5553
+    },
+    "TRAVIS": {
+      "name": "Travis",
+      "geoid": "48453",
+      "area_km2": 2679.92,
+      "line_km": 1146.9,
+      "hv_line_km": 164.29,
+      "segment_hits": 182,
+      "line_km_per_km2": 0.42796,
+      "hv_share": 0.1432
+    },
+    "HALE": {
+      "name": "Hale",
+      "geoid": "48189",
+      "area_km2": 2607.3,
+      "line_km": 601.1,
+      "hv_line_km": 158.85,
+      "segment_hits": 56,
+      "line_km_per_km2": 0.230545,
+      "hv_share": 0.2643
+    },
+    "TRINITY": {
+      "name": "Trinity",
+      "geoid": "48455",
+      "area_km2": 1882.49,
+      "line_km": 53.0,
+      "hv_line_km": 0.0,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.028154,
+      "hv_share": 0.0
+    },
+    "RUNNELS": {
+      "name": "Runnels",
+      "geoid": "48399",
+      "area_km2": 2739.33,
+      "line_km": 418.44,
+      "hv_line_km": 176.68,
+      "segment_hits": 18,
+      "line_km_per_km2": 0.152753,
+      "hv_share": 0.4222
+    },
+    "BELL": {
+      "name": "Bell",
+      "geoid": "48027",
+      "area_km2": 2830.81,
+      "line_km": 750.18,
+      "hv_line_km": 246.6,
+      "segment_hits": 67,
+      "line_km_per_km2": 0.265005,
+      "hv_share": 0.3287
+    },
+    "ELLIS": {
+      "name": "Ellis",
+      "geoid": "48139",
+      "area_km2": 2474.75,
+      "line_km": 738.15,
+      "hv_line_km": 322.72,
+      "segment_hits": 62,
+      "line_km_per_km2": 0.298273,
+      "hv_share": 0.4372
+    },
+    "WASHINGTON": {
+      "name": "Washington",
+      "geoid": "48477",
+      "area_km2": 1644.07,
+      "line_km": 218.71,
+      "hv_line_km": 25.18,
+      "segment_hits": 18,
+      "line_km_per_km2": 0.13303,
+      "hv_share": 0.1151
+    },
+    "PRESIDIO": {
+      "name": "Presidio",
+      "geoid": "48377",
+      "area_km2": 10024.68,
+      "line_km": 172.97,
+      "hv_line_km": 0.0,
+      "segment_hits": 9,
+      "line_km_per_km2": 0.017254,
+      "hv_share": 0.0
+    },
+    "HARRIS": {
+      "name": "Harris",
+      "geoid": "48201",
+      "area_km2": 4634.95,
+      "line_km": 3137.03,
+      "hv_line_km": 593.34,
+      "segment_hits": 577,
+      "line_km_per_km2": 0.676821,
+      "hv_share": 0.1891
+    },
+    "MCCULLOCH": {
+      "name": "McCulloch",
+      "geoid": "48307",
+      "area_km2": 2724.01,
+      "line_km": 51.18,
+      "hv_line_km": 23.38,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.018788,
+      "hv_share": 0.4568
+    },
+    "BOSQUE": {
+      "name": "Bosque",
+      "geoid": "48035",
+      "area_km2": 2581.92,
+      "line_km": 550.22,
+      "hv_line_km": 217.84,
+      "segment_hits": 36,
+      "line_km_per_km2": 0.213105,
+      "hv_share": 0.3959
+    },
+    "TARRANT": {
+      "name": "Tarrant",
+      "geoid": "48439",
+      "area_km2": 2345.02,
+      "line_km": 1202.98,
+      "hv_line_km": 394.35,
+      "segment_hits": 239,
+      "line_km_per_km2": 0.512993,
+      "hv_share": 0.3278
+    },
+    "CLAY": {
+      "name": "Clay",
+      "geoid": "48077",
+      "area_km2": 2912.01,
+      "line_km": 413.66,
+      "hv_line_km": 196.02,
+      "segment_hits": 16,
+      "line_km_per_km2": 0.142053,
+      "hv_share": 0.4739
+    },
+    "WICHITA": {
+      "name": "Wichita",
+      "geoid": "48485",
+      "area_km2": 1643.9,
+      "line_km": 575.17,
+      "hv_line_km": 274.84,
+      "segment_hits": 71,
+      "line_km_per_km2": 0.349882,
+      "hv_share": 0.4778
+    },
+    "COMAL": {
+      "name": "Comal",
+      "geoid": "48091",
+      "area_km2": 1484.93,
+      "line_km": 369.53,
+      "hv_line_km": 101.13,
+      "segment_hits": 49,
+      "line_km_per_km2": 0.248853,
+      "hv_share": 0.2737
+    },
+    "HILL": {
+      "name": "Hill",
+      "geoid": "48217",
+      "area_km2": 2577.37,
+      "line_km": 498.09,
+      "hv_line_km": 185.79,
+      "segment_hits": 28,
+      "line_km_per_km2": 0.193255,
+      "hv_share": 0.373
+    },
+    "GLASSCOCK": {
+      "name": "Glasscock",
+      "geoid": "48173",
+      "area_km2": 2340.65,
+      "line_km": 363.99,
+      "hv_line_km": 70.77,
+      "segment_hits": 29,
+      "line_km_per_km2": 0.155508,
+      "hv_share": 0.1944
+    },
+    "ANGELINA": {
+      "name": "Angelina",
+      "geoid": "48005",
+      "area_km2": 2251.83,
+      "line_km": 194.57,
+      "hv_line_km": 11.53,
+      "segment_hits": 25,
+      "line_km_per_km2": 0.086405,
+      "hv_share": 0.0593
+    },
+    "GRAYSON": {
+      "name": "Grayson",
+      "geoid": "48181",
+      "area_km2": 2548.46,
+      "line_km": 469.43,
+      "hv_line_km": 132.42,
+      "segment_hits": 44,
+      "line_km_per_km2": 0.184201,
+      "hv_share": 0.2821
+    },
+    "SHELBY": {
+      "name": "Shelby",
+      "geoid": "48419",
+      "area_km2": 2165.71,
+      "line_km": 157.71,
+      "hv_line_km": 0.0,
+      "segment_hits": 16,
+      "line_km_per_km2": 0.072821,
+      "hv_share": 0.0
+    },
+    "JASPER": {
+      "name": "Jasper",
+      "geoid": "48241",
+      "area_km2": 2487.46,
+      "line_km": 334.19,
+      "hv_line_km": 19.46,
+      "segment_hits": 29,
+      "line_km_per_km2": 0.13435,
+      "hv_share": 0.0582
+    },
+    "CALHOUN": {
+      "name": "Calhoun",
+      "geoid": "48057",
+      "area_km2": 2374.65,
+      "line_km": 269.08,
+      "hv_line_km": 14.3,
+      "segment_hits": 38,
+      "line_km_per_km2": 0.113314,
+      "hv_share": 0.0531
+    },
+    "VAL VERDE": {
+      "name": "Val Verde",
+      "geoid": "48465",
+      "area_km2": 8438.82,
+      "line_km": 277.15,
+      "hv_line_km": 0.0,
+      "segment_hits": 13,
+      "line_km_per_km2": 0.032842,
+      "hv_share": 0.0
+    },
+    "WEBB": {
+      "name": "Webb",
+      "geoid": "48479",
+      "area_km2": 8789.27,
+      "line_km": 477.0,
+      "hv_line_km": 155.88,
+      "segment_hits": 39,
+      "line_km_per_km2": 0.054271,
+      "hv_share": 0.3268
+    },
+    "NUECES": {
+      "name": "Nueces",
+      "geoid": "48355",
+      "area_km2": 2884.88,
+      "line_km": 482.82,
+      "hv_line_km": 90.75,
+      "segment_hits": 62,
+      "line_km_per_km2": 0.167362,
+      "hv_share": 0.188
+    },
+    "HASKELL": {
+      "name": "Haskell",
+      "geoid": "48207",
+      "area_km2": 2362.68,
+      "line_km": 566.7,
+      "hv_line_km": 251.08,
+      "segment_hits": 26,
+      "line_km_per_km2": 0.239855,
+      "hv_share": 0.4431
+    },
+    "JACKSON": {
+      "name": "Jackson",
+      "geoid": "48239",
+      "area_km2": 2217.26,
+      "line_km": 392.52,
+      "hv_line_km": 125.84,
+      "segment_hits": 22,
+      "line_km_per_km2": 0.177029,
+      "hv_share": 0.3206
+    },
+    "NEWTON": {
+      "name": "Newton",
+      "geoid": "48351",
+      "area_km2": 2498.6,
+      "line_km": 472.29,
+      "hv_line_km": 238.67,
+      "segment_hits": 27,
+      "line_km_per_km2": 0.189022,
+      "hv_share": 0.5053
+    },
+    "HUNT": {
+      "name": "Hunt",
+      "geoid": "48231",
+      "area_km2": 2293.27,
+      "line_km": 458.85,
+      "hv_line_km": 184.3,
+      "segment_hits": 52,
+      "line_km_per_km2": 0.200085,
+      "hv_share": 0.4017
+    },
+    "BURLESON": {
+      "name": "Burleson",
+      "geoid": "48051",
+      "area_km2": 1752.43,
+      "line_km": 93.12,
+      "hv_line_km": 0.0,
+      "segment_hits": 6,
+      "line_km_per_km2": 0.053138,
+      "hv_share": 0.0
+    },
+    "ERATH": {
+      "name": "Erath",
+      "geoid": "48143",
+      "area_km2": 2827.63,
+      "line_km": 390.05,
+      "hv_line_km": 50.04,
+      "segment_hits": 19,
+      "line_km_per_km2": 0.137942,
+      "hv_share": 0.1283
+    },
+    "POLK": {
+      "name": "Polk",
+      "geoid": "48373",
+      "area_km2": 2834.73,
+      "line_km": 218.22,
+      "hv_line_km": 0.0,
+      "segment_hits": 18,
+      "line_km_per_km2": 0.076981,
+      "hv_share": 0.0
+    },
+    "DAWSON": {
+      "name": "Dawson",
+      "geoid": "48115",
+      "area_km2": 2342.09,
+      "line_km": 203.6,
+      "hv_line_km": 0.0,
+      "segment_hits": 11,
+      "line_km_per_km2": 0.086931,
+      "hv_share": 0.0
+    },
+    "BREWSTER": {
+      "name": "Brewster",
+      "geoid": "48043",
+      "area_km2": 16099.6,
+      "line_km": 239.63,
+      "hv_line_km": 0.0,
+      "segment_hits": 7,
+      "line_km_per_km2": 0.014884,
+      "hv_share": 0.0
+    }
+  }
+}
