@@ -52,6 +52,8 @@ def _verdict_gen(
     peer_years: Optional[float],
     peer_n: int,
     peer_baseline: Optional[float],
+    peer_scope: Optional[str],
+    peer_scope_label: Optional[str],
     neg_share: Optional[float],
     neg_baseline: Optional[float],
     volatility: Optional[float],
@@ -67,7 +69,18 @@ def _verdict_gen(
     density: Optional[float] = None
 
     # Queue density vs zone pending (if known)
-    if zone_pending_mw and zone_pending_mw > 0:
+    if pending_mw <= 0:
+        score += 1
+        drivers.append("No pending GIS projects in scored counties (0 MW)")
+        actions.append("No pending generation queue in footprint counties")
+        if zone_pending_mw and zone_pending_mw > 0:
+            comparisons["queue_share_of_zone"] = {
+                "value": 0.0,
+                "baseline": 0.08,
+                "baseline_label": "soft guide (~8% of zone pending)",
+                "unit": "share",
+            }
+    elif zone_pending_mw and zone_pending_mw > 0:
         density = pending_mw / zone_pending_mw
         comparisons["queue_share_of_zone"] = {
             "value": density,
@@ -108,12 +121,15 @@ def _verdict_gen(
             drivers.append(f"Pending capacity in scored counties: {pending_mw:,.0f} MW")
 
     if peer_years is not None and peer_n >= 20:
+        scope_bit = f" ({peer_scope_label})" if peer_scope_label else ""
         comparisons["peer_years"] = {
             "value": peer_years,
             "baseline": peer_baseline,
             "baseline_label": "median across ERCOT CDR zones",
             "unit": "years",
             "sample_n": peer_n,
+            "scope": peer_scope,
+            "scope_label": peer_scope_label,
         }
         vs = ""
         if peer_baseline is not None:
@@ -121,14 +137,20 @@ def _verdict_gen(
             vs = f" vs {peer_baseline:.1f} yr ERCOT-zone median ({delta:+.1f} yr)"
         if peer_years >= 3.7:
             score -= 2
-            drivers.append(f"Slow peer timelines ({peer_years:.1f} yr median{vs}, n={peer_n})")
+            drivers.append(
+                f"Slow peer timelines{scope_bit}: {peer_years:.1f} yr median{vs}, n={peer_n}"
+            )
             actions.append("Expect long interconnection study time")
         elif peer_years <= 3.0:
             score += 1
-            drivers.append(f"Faster peer timelines ({peer_years:.1f} yr median{vs}, n={peer_n})")
+            drivers.append(
+                f"Faster peer timelines{scope_bit}: {peer_years:.1f} yr median{vs}, n={peer_n}"
+            )
             actions.append("Peer timelines look relatively fast for this fuel/zone")
         else:
-            drivers.append(f"Typical peer timelines ({peer_years:.1f} yr median{vs}, n={peer_n})")
+            drivers.append(
+                f"Typical peer timelines{scope_bit}: {peer_years:.1f} yr median{vs}, n={peer_n}"
+            )
     elif peer_years is not None:
         drivers.append(f"Peer timelines thin sample ({peer_years:.1f} yr, n={peer_n})")
     else:
@@ -285,6 +307,28 @@ async def post_score(req: ScoreRequest):
         dominant_zone = Counter(
             (p.get("zone") or "UNK").strip().upper() for p in projects
         ).most_common(1)[0][0]
+    else:
+        # No projects in latest month — infer CDR zone from historical GIS in
+        # these counties so timelines/market still have a local scope.
+        from collections import Counter
+
+        zone_counts: Counter[str] = Counter()
+        for cname in score_names:
+            hist = await fetch(
+                """
+                SELECT UPPER(TRIM(zone)) AS zone, COUNT(*)::int AS n
+                FROM ercot_gis_snapshots
+                WHERE UPPER(TRIM(county)) = :county
+                  AND zone IS NOT NULL AND TRIM(zone) <> ''
+                GROUP BY 1
+                """,
+                county=cname.upper(),
+            )
+            for r in hist:
+                if r.get("zone"):
+                    zone_counts[str(r["zone"])] += int(r["n"] or 0)
+        if zone_counts:
+            dominant_zone = zone_counts.most_common(1)[0][0]
 
     fuel_key = (req.fuel or "").strip().upper()
 
@@ -406,12 +450,20 @@ async def post_score(req: ScoreRequest):
 
     peer_years = None
     peer_n = 0
-    if req.mode == "gen" and timeline_fuel and timeline_fuel.get("median_years") is not None:
-        peer_years = float(timeline_fuel["median_years"])
-        peer_n = int(timeline_fuel.get("sample_count") or 0)
-    elif timeline_zone and timeline_zone.get("median_years") is not None:
+    peer_scope: Optional[str] = None
+    peer_scope_label: Optional[str] = None
+    # Prefer zone peers when we know the CDR zone (incl. historical inference).
+    # Fuel-wide medians are ERCOT-wide and only a fallback — label them clearly.
+    if timeline_zone and timeline_zone.get("median_years") is not None:
         peer_years = float(timeline_zone["median_years"])
         peer_n = int(timeline_zone.get("sample_count") or 0)
+        peer_scope = "zone"
+        peer_scope_label = f"{dominant_zone} zone peers"
+    elif req.mode == "gen" and timeline_fuel and timeline_fuel.get("median_years") is not None:
+        peer_years = float(timeline_fuel["median_years"])
+        peer_n = int(timeline_fuel.get("sample_count") or 0)
+        peer_scope = "fuel"
+        peer_scope_label = f"ERCOT-wide {fuel_key} peers"
 
     actions: list[str] = []
     comparisons: dict[str, Any] = {}
@@ -421,6 +473,8 @@ async def post_score(req: ScoreRequest):
             peer_years=peer_years,
             peer_n=peer_n,
             peer_baseline=peer_baseline,
+            peer_scope=peer_scope,
+            peer_scope_label=peer_scope_label,
             neg_share=market["mean_pct_hours_rt_negative"] if market else None,
             neg_baseline=neg_baseline,
             volatility=market["mean_rt_price_volatility"] if market else None,
@@ -541,6 +595,8 @@ async def post_score(req: ScoreRequest):
             "fuel": timeline_fuel,
             "zone_pending": pending_zone,
             "peer_baseline_years": peer_baseline,
+            "peer_scope": peer_scope,
+            "peer_scope_label": peer_scope_label,
         },
         "market_stress": (
             {**market, "ercot_avg_pct_hours_rt_negative": neg_baseline} if market else None
