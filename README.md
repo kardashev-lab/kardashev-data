@@ -156,9 +156,13 @@ python -m ingest.backfill_lmp caiso --start 2024-01-01 --end 2026-07-06
 | `ISONE_USERNAME` / `ISONE_PASSWORD` | ISONE LMP/load/queue jobs | Free at [iso-ne.com](https://www.iso-ne.com/) |
 | `ANTHROPIC_API_KEY` | ERCOT large-load ingest only | Vision extraction of ERCOT's chart-only large-load PDF |
 | `ANOMALY_ENABLED` | no | Default `1`. Set `0` to disable the anomaly watcher on the ingest service |
-| `ANOMALY_WEBHOOK_URL` / `SLACK_WEBHOOK_URL` | no | Slack-compatible incoming webhook for load/LMP/curtailment/silent alerts (`ingest/anomaly.py` v1) |
-| `ANOMALY_NOTIFY_EMAIL` | no | Optional alert email; requires `RESEND_API_KEY` |
-| `RESEND_API_KEY` | no | Used when `ANOMALY_NOTIFY_EMAIL` is set |
+| `ANOMALY_NOTIFY_EMAIL` | no | Where to send anomaly emails (e.g. your Gmail) |
+| `ANOMALY_SMTP_HOST` | with email | SMTP host (Gmail: `smtp.gmail.com`) |
+| `ANOMALY_SMTP_PORT` | no | Default `587` (STARTTLS) |
+| `ANOMALY_SMTP_USER` | with email | SMTP username (usually your full email) |
+| `ANOMALY_SMTP_PASSWORD` | with email | SMTP password / Gmail App Password |
+| `ANOMALY_EMAIL_FROM` | no | From header; defaults to `ANOMALY_SMTP_USER` |
+| `ANOMALY_WEBHOOK_URL` / `SLACK_WEBHOOK_URL` | no | Optional Slack-compatible webhook in addition to email |
 | `CORS_ORIGINS` | no | Comma-separated extra CORS origins (`*.kardashevlabs.org` is always allowed) |
 | `ENVIRONMENT` | no | Present in `.env.example`; not currently read by the app (`/docs` and `/redoc` are always on) |
 | `RATE_LIMIT_RPM` | no | API rate limit per IP, requests per minute (default in `.env.example` is 120) |

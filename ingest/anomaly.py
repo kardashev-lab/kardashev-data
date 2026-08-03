@@ -726,6 +726,29 @@ def _notify_email() -> str | None:
     return os.environ.get("ANOMALY_NOTIFY_EMAIL") or None
 
 
+def _smtp_config() -> dict[str, Any] | None:
+    """SMTP settings for anomaly email. No Resend / third-party mail API."""
+    host = os.environ.get("ANOMALY_SMTP_HOST", "").strip()
+    user = os.environ.get("ANOMALY_SMTP_USER", "").strip()
+    password = os.environ.get("ANOMALY_SMTP_PASSWORD", "").strip()
+    if not host or not user or not password:
+        return None
+    port = int(os.environ.get("ANOMALY_SMTP_PORT", "587"))
+    from_addr = (
+        os.environ.get("ANOMALY_EMAIL_FROM", "").strip()
+        or os.environ.get("ANOMALY_SMTP_FROM", "").strip()
+        or user
+    )
+    return {
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+        "from_addr": from_addr,
+        "use_tls": os.environ.get("ANOMALY_SMTP_TLS", "1").strip() not in ("0", "false", "False"),
+    }
+
+
 def format_message(event: AnomalyEvent) -> str:
     packaged = package_event(event)
     dash = packaged.get("dashboard", "")
@@ -747,13 +770,36 @@ def format_message(event: AnomalyEvent) -> str:
     return "\n".join(lines)
 
 
+def _send_smtp_email(*, to: str, subject: str, body: str, cfg: dict[str, Any]) -> bool:
+    import smtplib
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = cfg["from_addr"]
+    msg["To"] = to
+    msg.set_content(body)
+
+    with smtplib.SMTP(cfg["host"], cfg["port"], timeout=30) as smtp:
+        if cfg["use_tls"]:
+            smtp.starttls()
+        smtp.login(cfg["user"], cfg["password"])
+        smtp.send_message(msg)
+    return True
+
+
 def notify(event: AnomalyEvent) -> bool:
     """Send webhook and/or email. Returns True if at least one channel succeeded
     or if no channels are configured (log-only counts as success so we don't
-    retry forever)."""
+    retry forever).
+
+    Email uses SMTP only (ANOMALY_SMTP_HOST / USER / PASSWORD). No Resend.
+    """
     text = format_message(event)
+    plain = text.replace("*", "")
     webhook = _webhook_url()
     email_to = _notify_email()
+    smtp_cfg = _smtp_config()
     if not webhook and not email_to:
         log.info("anomaly (no notify channel): %s", event.summary)
         return True
@@ -777,32 +823,23 @@ def notify(event: AnomalyEvent) -> bool:
             log.warning("webhook failed for %s: %s", event.event_key, exc)
 
     if email_to:
-        api_key = os.environ.get("RESEND_API_KEY")
-        if not api_key:
-            log.warning("ANOMALY_NOTIFY_EMAIL set but RESEND_API_KEY missing")
+        if not smtp_cfg:
+            log.warning(
+                "ANOMALY_NOTIFY_EMAIL set but SMTP missing "
+                "(need ANOMALY_SMTP_HOST, ANOMALY_SMTP_USER, ANOMALY_SMTP_PASSWORD)"
+            )
         else:
             try:
-                payload = {
-                    "from": os.environ.get("ANOMALY_EMAIL_FROM", "Kardashev Labs <alerts@kardashevlabs.org>"),
-                    "to": [email_to],
-                    "subject": f"[KL] {event.kind} · {event.iso}",
-                    "text": text.replace("*", ""),
-                }
-                req = urllib.request.Request(
-                    "https://api.resend.com/emails",
-                    data=json.dumps(payload).encode(),
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {api_key}",
-                        "User-Agent": "kardashev-anomaly/1",
-                    },
-                    method="POST",
+                _send_smtp_email(
+                    to=email_to,
+                    subject=f"[KL] {event.kind} · {event.iso}",
+                    body=plain,
+                    cfg=smtp_cfg,
                 )
-                with urllib.request.urlopen(req, timeout=15) as resp:
-                    if 200 <= resp.status < 300:
-                        ok = True
-            except urllib.error.URLError as exc:
-                log.warning("email notify failed for %s: %s", event.event_key, exc)
+                ok = True
+                log.info("smtp email sent to %s for %s", email_to, event.event_key)
+            except Exception as exc:
+                log.warning("smtp email failed for %s: %s", event.event_key, exc)
 
     return ok
 
