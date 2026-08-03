@@ -151,14 +151,19 @@ python -m ingest.backfill_lmp caiso --start 2024-01-01 --end 2026-07-06
 |----------|----------|---------|
 | `DATABASE_URL` | yes | Postgres connection string |
 | `EIA_API_KEY` | most EIA-sourced jobs | Free at [eia.gov/opendata](https://www.eia.gov/opendata/) |
-| `PJM_API_KEY` | PJM LMP/load/queue jobs | Free at [dataminer2.pjm.com](https://dataminer2.pjm.com/) |
+| `PJM_API_KEY` | no | Optional override for api.pjm.com; default is the public DataMiner2 `subscriptionKey` from settings.json (used for 5-min `inst_load` + RT LMP) |
+| `PJM_USERNAME` / `PJM_PASSWORD` | legacy only | Old DataMiner2 CSV feeds — dead as of 2026-07 |
 | `ISONE_USERNAME` / `ISONE_PASSWORD` | ISONE LMP/load/queue jobs | Free at [iso-ne.com](https://www.iso-ne.com/) |
-| `ANTHROPIC_API_KEY` | ERCOT large-load ingest only | Vision extraction of ERCOT's chart-only large-load PDF; get one at [console.anthropic.com](https://console.anthropic.com/) |
+| `ANTHROPIC_API_KEY` | ERCOT large-load ingest only | Vision extraction of ERCOT's chart-only large-load PDF |
+| `ANOMALY_ENABLED` | no | Default `1`. Set `0` to disable the anomaly watcher on the ingest service |
+| `ANOMALY_WEBHOOK_URL` / `SLACK_WEBHOOK_URL` | no | Slack-compatible incoming webhook for load/LMP/curtailment/silent alerts (`ingest/anomaly.py` v1) |
+| `ANOMALY_NOTIFY_EMAIL` | no | Optional alert email; requires `RESEND_API_KEY` |
+| `RESEND_API_KEY` | no | Used when `ANOMALY_NOTIFY_EMAIL` is set |
 | `CORS_ORIGINS` | no | Comma-separated extra CORS origins (`*.kardashevlabs.org` is always allowed) |
 | `ENVIRONMENT` | no | Present in `.env.example`; not currently read by the app (`/docs` and `/redoc` are always on) |
 | `RATE_LIMIT_RPM` | no | API rate limit per IP, requests per minute (default in `.env.example` is 120) |
 
-`.env.example` in this repo covers the API-service variables above; `EIA_API_KEY`, `PJM_API_KEY`, and `ISONE_USERNAME`/`ISONE_PASSWORD` are consumed by the ingest jobs and should be set on the ingest service.
+`.env.example` in this repo covers the API-service variables above; ISO keys and anomaly webhook/email vars belong on the **ingest** service.
 
 ---
 

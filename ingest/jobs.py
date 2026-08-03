@@ -297,7 +297,7 @@ _EIA_LOAD_TZ: dict[str, str] = {
 
 def ingest_realtime_load_all():
     """
-    5-minute native demand for CAISO, ERCOT, MISO, NYISO.
+    5-minute native demand for CAISO, ERCOT, MISO, NYISO, PJM.
     Runs every 5 min. ISONE/SPP/others stay on hourly EIA.
     """
     from ingest.writer import upsert_load
@@ -371,6 +371,17 @@ def ingest_realtime_load_all():
             log.info("realtime NYISO: %d rows", len(totals))
     except Exception as exc:
         log.warning("realtime NYISO failed: %s", exc)
+
+    # PJM: api.pjm.com inst_load (5-min), public DataMiner2 subscription key
+    try:
+        from iso_data.pjm_api import get_inst_load
+        points = get_inst_load(area="PJM RTO", datetime_beginning_ept="LastHour", row_count=100)
+        for p in points:
+            rows.append({"ts": p["ts"], "iso": "PJM", "zone": "PJM",
+                         "mw_actual": p["mw"], "mw_forecast": None})
+        log.info("realtime PJM: %d rows", len(points))
+    except Exception as exc:
+        log.warning("realtime PJM failed: %s", exc)
 
     if rows:
         n = upsert_load(rows)
@@ -1557,41 +1568,28 @@ _PJM_HUBS: list[tuple[str, str]] = [
 
 
 def ingest_pjm_lmp_rt():
-    """PJM RT hourly LMP for all hub + zone nodes via DataMiner2 (settled, posted ~11am ET)."""
+    """PJM unverified 5-min RT LMP for hubs + zones via api.pjm.com."""
     from ingest.writer import upsert_lmp
-    from kardashev import _pjm as pjm
-    yesterday = date.today() - timedelta(days=1)
+    from iso_data.pjm_api import get_lmp_rt_5min
     rows: list[dict] = []
-    for node_type in ("HUB", "ZONE"):
-        try:
-            df = pjm.get_lmp_rt_hourly(yesterday, node_type=node_type)
-            if df.empty:
-                continue
-            for _, row in df.iterrows():
-                try:
-                    ts = pd.to_datetime(
-                        row.get("datetime_beginning_utc") or row.get("datetime_beginning_ept"),
-                        utc=True,
-                    )
-                    if pd.isnull(ts):
-                        continue
-                    rows.append({
-                        "ts": ts,
-                        "iso": "PJM",
-                        "node_id":    str(row.get("pnode_id", "")),
-                        "node_name":  str(row.get("pnode_name", "")),
-                        "market":     "RT",
-                        "lmp":        float(row.get("total_lmp_rt",           0) or 0),
-                        "energy":     float(row.get("system_energy_price_rt", 0) or 0),
-                        "congestion": float(row.get("congestion_price_rt",    0) or 0),
-                        "loss":       float(row.get("marginal_loss_price_rt", 0) or 0),
-                    })
-                except Exception:
-                    continue
-        except Exception as exc:
-            log.warning("PJM RT LMP %s: %s", node_type, exc)
+    try:
+        points = get_lmp_rt_5min(datetime_beginning_ept="LastHour")
+        for p in points:
+            rows.append({
+                "ts": p["ts"],
+                "iso": "PJM",
+                "node_id": p["node_id"],
+                "node_name": p.get("node_name"),
+                "market": "RT",
+                "lmp": p["lmp"],
+                "energy": p.get("energy"),
+                "congestion": p.get("congestion"),
+                "loss": p.get("loss"),
+            })
+    except Exception as exc:
+        log.warning("PJM RT LMP 5-min failed: %s", exc)
     n = upsert_lmp(rows)
-    log.info("PJM RT LMP: %d rows", n)
+    log.info("PJM RT LMP 5-min: %d rows", n)
 
 
 def ingest_pjm_lmp_da():

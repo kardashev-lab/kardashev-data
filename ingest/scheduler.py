@@ -6,10 +6,12 @@ Usage:
     python -m ingest.scheduler backfill CAISO 90
 
 Rough schedule (UTC):
-    5 min:  fuel mix (CAISO/NYISO/MISO/ISONE/SPP), RT load, LMP, BPA, MISO constraints
+    5 min:  fuel mix (CAISO/NYISO/MISO/ISONE/SPP), RT load, LMP, BPA, MISO constraints,
+            anomaly scan (load step + LMP shock)
     15 min: ERCOT fuel mix
     1 hr:   EIA load, DA LMP, forecasts, temperatures
-    daily:  curtailment, nat gas prices, storage, interconnection queues, LMP purge
+    daily:  curtailment, nat gas prices, storage, interconnection queues, LMP purge,
+            curtailment-day anomaly scan (after 10:00 / 14:00 curtailment ticks)
     weekly: EIA-923/860/861 static datasets
 """
 from __future__ import annotations
@@ -60,6 +62,24 @@ def run_realtime_load():
     _run("realtime_load", ingest_realtime_load_all)
 
 
+def run_anomaly_realtime():
+    """Load-step + LMP-shock scan after 5-min ingest. No-op if ANOMALY_ENABLED=0."""
+    import os
+    if os.environ.get("ANOMALY_ENABLED", "1").strip() in ("0", "false", "False", "no"):
+        return
+    from ingest.anomaly import run_realtime_scan
+    _run("anomaly_realtime", run_realtime_scan)
+
+
+def run_anomaly_daily():
+    """Curtailment-day outlier scan. Runs after curtailment ingest."""
+    import os
+    if os.environ.get("ANOMALY_ENABLED", "1").strip() in ("0", "false", "False", "no"):
+        return
+    from ingest.anomaly import run_daily_scan
+    _run("anomaly_daily", run_daily_scan)
+
+
 def run_ercot_fuel_mix():
     from ingest.jobs import ingest_ercot_fuel_mix
     _run("ercot_fuel_mix", ingest_ercot_fuel_mix)
@@ -84,17 +104,15 @@ def run_curtailment(days: int = CURTAILMENT_LOOKBACK_DAYS):
 
 
 def run_lmp_rt():
-    # pjm_lmp_rt disabled: PJM decommissioned the legacy DataMiner2 CSV feed API
-    # (dataminer2.pjm.com/feed/*) this now returns a static cached SPA shell for
-    # any credentials, real or fake. Getting this back requires registering for
-    # PJM's modern API portal (apiportal.pjm.com), which is a paid subscription
-    # we don't have. Re-enable + rewrite against api.pjm.com if that changes.
+    # PJM RT re-enabled 2026-08-03 via api.pjm.com rt_unverified_fivemin_lmps
+    # (public DataMiner2 subscription key). Legacy DataMiner2 CSV feeds stay dead.
     from ingest.jobs import (
         ingest_caiso_lmp_rt,
         ingest_ercot_lmp_rt,
         ingest_isone_lmp_rt,
         ingest_miso_lmp_rt,
         ingest_nyiso_lmp_rt,
+        ingest_pjm_lmp_rt,
         ingest_spp_lmp_rt,
     )
     _run("nyiso_lmp_rt",  ingest_nyiso_lmp_rt)
@@ -103,6 +121,7 @@ def run_lmp_rt():
     _run("isone_lmp_rt", ingest_isone_lmp_rt)
     _run("miso_lmp_rt",  ingest_miso_lmp_rt)
     _run("ercot_lmp_rt", ingest_ercot_lmp_rt)
+    _run("pjm_lmp_rt",   ingest_pjm_lmp_rt)
     # auto-seed coordinates for any new nodes that appeared
     try:
         import asyncio
@@ -445,6 +464,7 @@ def start():
                 run_spp_fuel_mix()
                 run_realtime_load()
                 run_lmp_rt()
+                run_anomaly_realtime()
                 run_wind_solar()
                 run_pjm_wind_solar()
                 run_battery()
@@ -473,6 +493,7 @@ def start():
                 last_curtailment_10_day = day
                 log.info("tick: daily curtailment backfill + nat gas prices + gas storage")
                 run_curtailment()
+                run_anomaly_daily()
                 run_nat_gas()
                 run_gas_storage()
 
@@ -491,6 +512,7 @@ def start():
                 last_curtailment_14_day = day
                 log.info("tick: curtailment retry (last %d days)", CURTAILMENT_LOOKBACK_DAYS)
                 run_curtailment()
+                run_anomaly_daily()
 
             if hour == 7 and day != last_queue_day:
                 last_queue_day = day

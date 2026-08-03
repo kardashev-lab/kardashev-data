@@ -650,3 +650,24 @@ CREATE TABLE IF NOT EXISTS load_forecast_scores (
     CONSTRAINT load_forecast_scores_pk PRIMARY KEY (ts, iso)
 );
 CREATE INDEX IF NOT EXISTS lfs_ts ON load_forecast_scores (ts DESC);
+
+-- ---------------------------------------------------------------------------
+-- Grid anomaly events (v0 watcher — load steps, LMP shocks, curtailment days)
+-- event_key is the dedupe key (ISO + kind + time bucket). Insert is idempotent.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS anomaly_events (
+    id           BIGSERIAL PRIMARY KEY,
+    event_key    TEXT             NOT NULL,
+    kind         TEXT             NOT NULL,  -- load_step | lmp_shock | curtailment_day
+    iso          TEXT             NOT NULL,
+    ts           TIMESTAMPTZ      NOT NULL,  -- event time (UTC)
+    magnitude    DOUBLE PRECISION,
+    unit         TEXT,
+    summary      TEXT             NOT NULL,
+    payload      JSONB            NOT NULL DEFAULT '{}'::jsonb,
+    notified_at  TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    CONSTRAINT anomaly_events_key_unique UNIQUE (event_key)
+);
+CREATE INDEX IF NOT EXISTS anomaly_events_ts ON anomaly_events (ts DESC);
+CREATE INDEX IF NOT EXISTS anomaly_events_iso_kind ON anomaly_events (iso, kind, ts DESC);
