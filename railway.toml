@@ -2,13 +2,11 @@
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
-# This file configures the BUILD only. Services are configured in the Railway dashboard.
-# Create two services from this repo:
-#
-#   api:    start command = python /app/run.py          health check = GET /health
-#   ingest: start command = python /app/start_ingest.py health check = none (daemon)
-#
-# Both share the same Dockerfile and get DATABASE_URL from the Railway Postgres addon.
+# BUILD only — per-service overrides live in the Railway dashboard:
+#   api:    Dockerfile + start = python /app/run.py, healthcheck = /health
+#   ingest: Dockerfile.ingest + start = python /app/start_ingest.py (no healthcheck)
+# Both share DATABASE_URL from the Railway Postgres addon.
+# Ingest needs LibreOffice (monthly ERCOT LLWG PPTX); api uses the slim Dockerfile.
 
 [deploy]
 # healthcheckPath is intentionally omitted here (ingest is a daemon, no HTTP).

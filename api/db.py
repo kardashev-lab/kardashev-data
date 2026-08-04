@@ -22,7 +22,14 @@ def _dsn() -> str:
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
-        _engine = create_async_engine(_dsn(), pool_size=10, max_overflow=20, echo=False)
+        # Small pool: public tools are low-QPS; oversized pools inflate Postgres RAM.
+        _engine = create_async_engine(
+            _dsn(),
+            pool_size=int(os.environ.get("DB_POOL_SIZE", "3")),
+            max_overflow=int(os.environ.get("DB_POOL_OVERFLOW", "7")),
+            pool_pre_ping=True,
+            echo=False,
+        )
     return _engine
 
 

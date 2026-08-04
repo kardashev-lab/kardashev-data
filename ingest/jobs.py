@@ -1817,27 +1817,34 @@ def ingest_miso_lmp_da(target: date | None = None):
 
 
 
+def _filter_ercot_hub_lmp(rows: list[dict]) -> list[dict]:
+    """Keep HB_*/LZ_* only — matches daily purge and public LMP tools."""
+    return [
+        r for r in rows
+        if str(r.get("node_id", "")).startswith(_ERCOT_HUB_PREFIXES)
+    ]
+
+
 def ingest_ercot_lmp_rt():
-    """ERCOT RT 5-min settlement point prices via CDR HTML."""
+    """ERCOT RT 5-min settlement point prices via CDR HTML (hubs/zones only)."""
     from ingest.writer import upsert_lmp
-    from kardashev import _ercot as ercot_lmp
-    rows = ercot_lmp.get_rt_lmp()
+    from kardashev import _ercot_lmp as ercot_lmp
+    rows = _filter_ercot_hub_lmp(ercot_lmp.get_rt_lmp())
     n = upsert_lmp(rows)
     log.info("ERCOT RT LMP: %d rows", n)
 
 
 def ingest_ercot_lmp_da(target: date | None = None):
-    """ERCOT DAM settlement point prices via CDR archive."""
+    """ERCOT DAM settlement point prices via CDR archive (hubs/zones only)."""
     from ingest.writer import upsert_lmp
+    from kardashev import _ercot_lmp as ercot_lmp
     try:
-        from kardashev import _ercot as ercot_lmp
-        rows = ercot_lmp.get_da_lmp(target)
+        rows = _filter_ercot_hub_lmp(ercot_lmp.get_da_lmp(target))
         n = upsert_lmp(rows)
         log.info("ERCOT DA LMP: %d rows", n)
     except Exception as exc:
         log.warning("ERCOT DA LMP failed: %s", exc)
-        from kardashev import _ercot as ercot_lmp
-        rows = ercot_lmp.get_da_lmp(target)
+        rows = _filter_ercot_hub_lmp(ercot_lmp.get_da_lmp(target))
         n = upsert_lmp(rows)
         log.info("ERCOT DA LMP (CDR fallback): %d rows", n)
 
@@ -2048,7 +2055,13 @@ def ingest_caiso_as_prices():
 
 
 def ingest_ercot_as_monitor():
-    """ERCOT real-time AS capacity monitor. Deployed/available MW for RegUp/Down, RRS, NSRS, ECRS."""
+    """ERCOT real-time AS capacity monitor. Deployed/available MW for RegUp/Down, RRS, NSRS, ECRS.
+
+    Source feed is ~10-second resolution. We floor timestamps to 5-minute buckets
+    before upsert so the table stays dashboard-scale (~288 intervals/day × 5
+    services) instead of accumulating ~8.6k intervals/day. Last write in each
+    bucket wins via ON CONFLICT — fine for RegUp/RRS capacity charts.
+    """
     from ingest.writer import upsert_ancillary_services
     from kardashev import _ercot as ercot
     try:
@@ -2064,21 +2077,28 @@ def ingest_ercot_as_monitor():
         ("NSRS",     "nsrs_mw",               None),
         ("ECRS",     "ecrs_mw",               None),
     ]
-    rows = []
+    # Collapse 10s samples → one row per (bucket, service). Last sample wins.
+    # Must dedupe in-process: Postgres rejects ON CONFLICT affecting a row twice
+    # in a single INSERT batch.
+    by_key: dict[tuple, dict] = {}
     for p in points:
+        ts = p["ts"]
+        if hasattr(ts, "replace"):
+            ts = ts.replace(minute=(ts.minute // 5) * 5, second=0, microsecond=0)
         for service, awarded_field, avail_field in service_fields:
-            rows.append({
-                "ts":           p["ts"],
-                "iso":          "ERCOT",
-                "market":       "RTM",
-                "region":       "ERCOT",
-                "service_type": service,
+            by_key[(ts, "ERCOT", "RTM", service)] = {
+                "ts":            ts,
+                "iso":           "ERCOT",
+                "market":        "RTM",
+                "region":        "ERCOT",
+                "service_type":  service,
                 "clearing_price": None,
-                "mw_awarded":   p.get(awarded_field),
-                "mw_available": p.get(avail_field) if avail_field else None,
-            })
+                "mw_awarded":    p.get(awarded_field),
+                "mw_available":  p.get(avail_field) if avail_field else None,
+            }
+    rows = list(by_key.values())
     n = upsert_ancillary_services(rows)
-    log.info("ERCOT AS monitor: %d rows", n)
+    log.info("ERCOT AS monitor: %d rows (5-min buckets)", n)
 
 
 # ---------------------------------------------------------------------------
@@ -2256,7 +2276,24 @@ def _purge_by_ts(table: str, days: int) -> None:
 
 
 def purge_ancillary_services_old_rows(days: int = 400) -> None:
-    """API allows up to 8760h (1 year) of history; 400 days keeps margin."""
+    """API allows up to 8760h (1 year) of history; 400 days keeps margin.
+
+    Also collapses legacy ERCOT 10-second AS monitor rows down to 5-minute
+    buckets (ingest now floors at write time; this cleans historical bloat).
+    """
+    from ingest.writer import cursor
+    with cursor() as cur:
+        # Drop off-bucket ERCOT RTM rows (keep only :00/:05/:10/... timestamps).
+        cur.execute(
+            """
+            DELETE FROM ancillary_services
+            WHERE iso = 'ERCOT' AND market = 'RTM'
+              AND (EXTRACT(EPOCH FROM ts)::bigint % 300) <> 0
+            """
+        )
+        collapsed = cur.rowcount
+    if collapsed:
+        log.info("ancillary_services: removed %d ERCOT sub-5min rows", collapsed)
     _purge_by_ts("ancillary_services", days)
 
 
