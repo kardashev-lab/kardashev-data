@@ -94,9 +94,83 @@ using the MOST RECENT month shown in the "Large Load Queue - Past 12 Months" cha
   "trailing_12mo": {"YYYY-MM": <number total_mw>, ...up to 12 entries, one per month shown in the "Large Load Queue - Past 12 Months" chart, oldest to newest, keyed by month}
 }
 
+Type pie charts often label MW only on the data-center slice and leave the other wedges as \
+percentages only (legend: Not Specified / None, Crypto, Industrial, Hydrogen, Data Center/Crypto). \
+When MW is not printed for a wedge, set mw = round(pct / 100 * total_mw). Always fill both pct and mw \
+for every type present in the legend. Use key "none" for "Not Specified" / "None" / unidentified.
+
 If a field genuinely isn't present in this particular deck, use null for it rather than guessing. \
 Return ONLY the JSON object, nothing else.
 """
+
+
+_TYPE_KEY_ALIASES = {
+    "not_specified": "none",
+    "unidentified": "none",
+    "n/a": "none",
+    "na": "none",
+    "datacenter": "data_center",
+    "dc": "data_center",
+    "datacenter_crypto": "data_center_crypto",
+    "dc_crypto": "data_center_crypto",
+}
+
+
+def _normalize_by_type(by_type: object, total_mw: object) -> dict | None:
+    """Coerce vision output / legacy shapes into {type: {mw, pct}}.
+
+    Older extracts stored plain MW numbers. Some decks only label MW on the
+    data-center pie slice — fill missing mw from pct * total_mw (and pct from
+    mw when only MW is present).
+    """
+    if not isinstance(by_type, dict) or not by_type:
+        return None
+
+    try:
+        total = float(total_mw) if total_mw is not None else None
+    except (TypeError, ValueError):
+        total = None
+    if total is not None and total <= 0:
+        total = None
+
+    merged: dict[str, dict[str, float | None]] = {}
+    for raw_key, raw_val in by_type.items():
+        key = str(raw_key).strip().lower().replace(" ", "_").replace("-", "_")
+        key = _TYPE_KEY_ALIASES.get(key, key)
+
+        mw: float | None = None
+        pct: float | None = None
+        if isinstance(raw_val, (int, float)):
+            mw = float(raw_val)
+        elif isinstance(raw_val, dict):
+            if raw_val.get("mw") is not None:
+                try:
+                    mw = float(raw_val["mw"])
+                except (TypeError, ValueError):
+                    mw = None
+            if raw_val.get("pct") is not None:
+                try:
+                    pct = float(raw_val["pct"])
+                except (TypeError, ValueError):
+                    pct = None
+        else:
+            continue
+
+        if mw is None and pct is not None and total is not None:
+            mw = round(pct / 100.0 * total)
+        if pct is None and mw is not None and total is not None:
+            pct = round(mw / total * 100.0, 1)
+
+        prev = merged.get(key)
+        if prev:
+            merged[key] = {
+                "mw": mw if mw is not None else prev.get("mw"),
+                "pct": pct if pct is not None else prev.get("pct"),
+            }
+        else:
+            merged[key] = {"mw": mw, "pct": pct}
+
+    return merged or None
 
 
 def _fetch(url: str) -> str:
@@ -247,6 +321,10 @@ def extract_snapshot(images: list[bytes], source_url: str) -> dict:
     if sm:
         parsed = datetime.strptime(sm[:7], "%Y-%m").date().replace(day=1)
         data["snapshot_month"] = parsed
+
+    normalized_types = _normalize_by_type(data.get("by_type"), data.get("total_mw"))
+    if normalized_types is not None:
+        data["by_type"] = normalized_types
     return data
 
 
