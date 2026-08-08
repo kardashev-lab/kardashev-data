@@ -1,16 +1,16 @@
 """
-Grid anomaly watcher v1.
+Grid anomaly watcher v1 — breaking-news bar.
 
-v0: load steps, LMP shocks, curtailment-day outliers + Slack/email.
-v1 adds:
-  - PJM 5-min load + RT LMP (api.pjm.com)
-  - ISO-silent staleness monitor
-  - Event packaging (Emily / LinkedIn draft + dashboard deep link)
-  - Optional co-signal note when load drop coincides with LMP move
-  - Replay / backtest CLI over stored history
+Pages Slack/email only for rare, story-scale events:
+  - Multi-GW sudden system-load *drops* (Ting / data-center class)
+  - Scarcity-level RT LMP (|LMP| or hub spread)
+  - Near-record curtailment days (p99)
 
-Notify: Slack-compatible webhook (ANOMALY_WEBHOOK_URL or SLACK_WEBHOOK_URL).
-Optional email via Resend (ANOMALY_NOTIFY_EMAIL + RESEND_API_KEY).
+ISO-silent is ops: detected + stored, not paged unless ANOMALY_NOTIFY_OPS=1.
+
+Also: Emily / LinkedIn drafts in email body; Slack stays a clean alert.
+Notify: Slack webhook (ANOMALY_WEBHOOK_URL or SLACK_WEBHOOK_URL).
+Email on Railway: ANOMALY_EMAIL_WEBHOOK_URL → Apps Script (see anomaly_gmail_bridge.gs).
 
 CLI:
     python -m ingest.anomaly
@@ -18,6 +18,7 @@ CLI:
     python -m ingest.anomaly --mode realtime|daily|silent|all
     python -m ingest.anomaly --replay --hours 48
     python -m ingest.anomaly --replay-pjm-july22   # July 22 2026 Ting-class check
+    python -m ingest.anomaly --notify-test         # send one test email/webhook
 """
 from __future__ import annotations
 
@@ -40,61 +41,69 @@ log = logging.getLogger("anomaly")
 # System-total zones written by ingest_realtime_load_all (incl. PJM as of v1).
 LOAD_ISOS = ("ERCOT", "CAISO", "NYISO", "MISO", "PJM")
 
-# Absolute |ΔMW| floors — must clear these AND a z-score gate.
-# PJM floor 2000 catches the 2026-07-22 ~2.5 GW 5-min drop in public inst_load.
+# Breaking-news bar: rare enough to email Emily / post LinkedIn — not ops noise.
+# Load: multi-GW sudden *drops* only (Ting / data-center class). PJM 2026-07-22
+# public inst_load ~2.5 GW still clears; routine ramps and small steps do not.
 LOAD_FLOOR_MW = {
-    "ERCOT": 2500.0,
-    "CAISO": 2500.0,
-    "NYISO": 1500.0,
-    "MISO": 2500.0,
-    "PJM": 2000.0,
+    "ERCOT": 3000.0,
+    "CAISO": 3000.0,
+    "NYISO": 2000.0,
+    "MISO": 3000.0,
+    "PJM": 2500.0,
 }
-LOAD_Z = 3.5
+LOAD_Z = 5.0
+LOAD_DROPS_ONLY = True
 LOAD_LOOKBACK_HOURS = 6
 LOAD_MIN_DT_SEC = 180
 LOAD_MAX_DT_SEC = 720
 LOAD_MAX_WINDOW_STEPS = 2
 
+# LMP: scarcity / emergency territory, not everyday congestion.
 LMP_ISOS = ("ERCOT", "CAISO", "NYISO", "MISO", "SPP", "ISONE", "PJM")
 LMP_ABS_FLOOR = {
-    "ERCOT": 500.0,
-    "CAISO": 400.0,
-    "NYISO": 400.0,
-    "MISO": 400.0,
-    "SPP": 400.0,
-    "ISONE": 400.0,
-    "PJM": 400.0,
+    "ERCOT": 2000.0,
+    "CAISO": 1500.0,
+    "NYISO": 1500.0,
+    "MISO": 1500.0,
+    "SPP": 1500.0,
+    "ISONE": 1500.0,
+    "PJM": 1500.0,
 }
 LMP_SPREAD_FLOOR = {
-    "ERCOT": 200.0,
-    "CAISO": 150.0,
-    "NYISO": 150.0,
-    "MISO": 150.0,
-    "SPP": 150.0,
-    "ISONE": 150.0,
-    "PJM": 150.0,
+    "ERCOT": 800.0,
+    "CAISO": 600.0,
+    "NYISO": 600.0,
+    "MISO": 600.0,
+    "SPP": 600.0,
+    "ISONE": 600.0,
+    "PJM": 600.0,
 }
 LMP_SANITY_ABS = 5000.0
 
+# Curtailment: near-record days only (p99 + high absolute floor).
 CURTAILMENT_ISOS = ("CAISO", "SPP")
 CURTAILMENT_LOOKBACK_DAYS = 90
 CURTAILMENT_ABS_FLOOR_MWH = {
-    "CAISO": 15000.0,
-    "SPP": 8000.0,
+    "CAISO": 45000.0,
+    "SPP": 25000.0,
 }
-CURTAILMENT_PERCENTILE = 0.95
+CURTAILMENT_PERCENTILE = 0.99
 
-# ISO silent: max age of freshest row before we page.
+# ISO silent = ingest ops, not news. Detect + store; Slack/email only if
+# ANOMALY_NOTIFY_OPS=1 (default off).
 SILENT_LOAD_ISOS = LOAD_ISOS
 SILENT_LMP_ISOS = ("ERCOT", "CAISO", "NYISO", "MISO", "SPP", "PJM")
 SILENT_LOAD_MAX_AGE_MIN = {
-    "ERCOT": 20,
-    "CAISO": 20,
-    "NYISO": 20,
-    "MISO": 30,   # often single-snapshot updates
-    "PJM": 20,
+    "ERCOT": 90,
+    "CAISO": 90,
+    "NYISO": 90,
+    "MISO": 120,
+    "PJM": 90,
 }
-SILENT_LMP_MAX_AGE_MIN = 20
+SILENT_LMP_MAX_AGE_MIN = 90
+
+# Kinds that page Slack/email by default.
+NEWS_KINDS = frozenset({"load_step", "lmp_shock", "curtailment_day", "notify_test"})
 
 DASHBOARD = {
     "load_step": "https://grid-demand.kardashevlabs.org",
@@ -135,11 +144,17 @@ def detect_load_steps(
     floor_mw: float | None = None,
     z: float = LOAD_Z,
     max_window_steps: int = LOAD_MAX_WINDOW_STEPS,
+    drops_only: bool | None = None,
 ) -> list[AnomalyEvent]:
-    """series: ascending (ts, mw) for one ISO system zone."""
+    """series: ascending (ts, mw) for one ISO system zone.
+
+    Default bar is breaking-news (multi-GW drop + high z). Pass floor_mw/z/
+    drops_only to relax for unit tests or backtests.
+    """
     if len(series) < 4:
         return []
-    floor = floor_mw if floor_mw is not None else LOAD_FLOOR_MW.get(iso, 1500.0)
+    floor = floor_mw if floor_mw is not None else LOAD_FLOOR_MW.get(iso, 3000.0)
+    require_drop = LOAD_DROPS_ONLY if drops_only is None else drops_only
 
     # Valid consecutive pairs only (reject gap cliffs).
     deltas: list[tuple[datetime, datetime, float, float, float]] = []
@@ -176,6 +191,8 @@ def detect_load_steps(
             ts_before, _, mw_start, _, _ = window[0]
             _, ts_after, _, mw_end, _ = window[-1]
             delta = mw_end - mw_start
+            if require_drop and delta >= 0:
+                continue
             abs_delta = abs(delta)
             if abs_delta < floor:
                 continue
@@ -727,7 +744,7 @@ def _notify_email() -> str | None:
 
 
 def _smtp_config() -> dict[str, Any] | None:
-    """SMTP settings for anomaly email. No Resend / third-party mail API."""
+    """Optional SMTP fallback (works locally; blocked on Railway → Gmail)."""
     host = os.environ.get("ANOMALY_SMTP_HOST", "").strip()
     user = os.environ.get("ANOMALY_SMTP_USER", "").strip()
     password = os.environ.get("ANOMALY_SMTP_PASSWORD", "").strip()
@@ -749,25 +766,135 @@ def _smtp_config() -> dict[str, Any] | None:
     }
 
 
+def _email_webhook_url() -> str | None:
+    """HTTPS bridge that turns a POST into a real email (Google Apps Script)."""
+    return os.environ.get("ANOMALY_EMAIL_WEBHOOK_URL", "").strip() or None
+
+
+KIND_LABELS = {
+    "load_step": "Load step",
+    "lmp_shock": "Price shock",
+    "curtailment_day": "Curtailment day",
+    "iso_silent": "Feed silent",
+    "notify_test": "Notify test",
+}
+
+
+def _kind_label(kind: str) -> str:
+    return KIND_LABELS.get(kind, kind.replace("_", " ").title())
+
+
+def _headline(event: AnomalyEvent) -> str:
+    """One-line human title for Slack/email headers."""
+    label = _kind_label(event.kind)
+    if event.kind == "load_step":
+        direction = "drop" if float(event.payload.get("delta_mw", 0)) < 0 else "jump"
+        return f"{event.iso} load {direction}: {event.magnitude:,.0f} {event.unit}"
+    if event.kind == "lmp_shock":
+        mode = event.payload.get("mode")
+        if mode == "spread":
+            return f"{event.iso} LMP spread: {event.magnitude:,.0f} {event.unit}"
+        return f"{event.iso} LMP extreme: {event.magnitude:,.0f} {event.unit}"
+    if event.kind == "curtailment_day":
+        day = event.payload.get("date") or event.ts.date().isoformat()
+        return f"{event.iso} curtailment {day}: {event.magnitude:,.0f} {event.unit}"
+    if event.kind == "iso_silent":
+        feed = event.payload.get("feed") or "data"
+        age = event.payload.get("age_min")
+        if age is None:
+            return f"{event.iso} {feed} feed: no data"
+        return f"{event.iso} {feed} feed silent: {age:.0f} min"
+    return f"{event.iso} · {label}"
+
+
 def format_message(event: AnomalyEvent) -> str:
+    """Short Slack/plain alert. No Emily/LinkedIn draft spam."""
     packaged = package_event(event)
     dash = packaged.get("dashboard", "")
+    ts_str = event.ts.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
-        f"*KL anomaly · {event.kind} · {event.iso}*",
+        f"*{_headline(event)}*",
+        ts_str,
+    ]
+    if event.payload.get("cosignal"):
+        lines.append("Also: " + "; ".join(event.payload["cosignal"]))
+    if dash:
+        lines.append(dash)
+    return "\n".join(lines)
+
+
+def format_email_body(event: AnomalyEvent) -> str:
+    """Email: short alert first; Emily/LinkedIn drafts only for news kinds."""
+    packaged = package_event(event)
+    dash = packaged.get("dashboard", "")
+    ts_str = event.ts.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        _headline(event),
+        ts_str,
+        "",
         event.summary,
     ]
     if event.payload.get("cosignal"):
-        lines.append("Co-signal: " + "; ".join(event.payload["cosignal"]))
+        lines.append("")
+        lines.append("Also: " + "; ".join(event.payload["cosignal"]))
     if dash:
+        lines.append("")
         lines.append(dash)
+    if event.kind in NEWS_KINDS and event.kind != "notify_test":
+        lines.extend(
+            [
+                "",
+                "---",
+                "LinkedIn (optional)",
+                packaged["linkedin_teaser"],
+                "",
+                "Emily (optional)",
+                packaged["emily_email"],
+            ]
+        )
     lines.append("")
-    lines.append("*LinkedIn teaser*")
-    lines.append(packaged["linkedin_teaser"])
-    lines.append("")
-    lines.append("*Emily draft*")
-    lines.append(packaged["emily_email"])
-    lines.append(f"`{event.event_key}`")
+    lines.append(f"id: {event.event_key}")
     return "\n".join(lines)
+
+
+def slack_payload(event: AnomalyEvent) -> dict[str, Any]:
+    """Incoming-webhook JSON: plain fallback + minimal Block Kit."""
+    text = format_message(event)
+    packaged = package_event(event)
+    dash = packaged.get("dashboard", "")
+    ts_str = event.ts.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    blocks: list[dict[str, Any]] = [
+        {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": f"*{_headline(event)}*\n{ts_str}"},
+        },
+    ]
+    if event.payload.get("cosignal"):
+        blocks.append(
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "Also: " + "; ".join(event.payload["cosignal"]),
+                    }
+                ],
+            }
+        )
+    if dash:
+        blocks.append(
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "Dashboard", "emoji": False},
+                        "url": dash,
+                    }
+                ],
+            }
+        )
+    return {"text": text, "blocks": blocks}
 
 
 def _send_smtp_email(*, to: str, subject: str, body: str, cfg: dict[str, Any]) -> bool:
@@ -788,26 +915,84 @@ def _send_smtp_email(*, to: str, subject: str, body: str, cfg: dict[str, Any]) -
     return True
 
 
+def _send_email_webhook(
+    *,
+    url: str,
+    to: str,
+    subject: str,
+    body: str,
+    event_key: str,
+) -> bool:
+    """POST JSON to an HTTPS email bridge (Google Apps Script template in-repo)."""
+    payload = {
+        "to": to,
+        "subject": subject,
+        "text": body,
+        "event_key": event_key,
+    }
+    # Optional shared secret — Apps Script checks the same env-configured token.
+    token = os.environ.get("ANOMALY_EMAIL_WEBHOOK_TOKEN", "").strip()
+    if token:
+        payload["token"] = token
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "kardashev-anomaly/1",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        if not (200 <= resp.status < 300):
+            raise urllib.error.HTTPError(
+                resp.url, resp.status, f"email webhook status {resp.status}", resp.headers, None
+            )
+    return True
+
+
+def _notify_ops() -> bool:
+    """When true, also page on iso_silent (ingest ops). Default off."""
+    return os.environ.get("ANOMALY_NOTIFY_OPS", "").strip() in ("1", "true", "True", "yes")
+
+
+def _should_page(event: AnomalyEvent) -> bool:
+    if event.kind in NEWS_KINDS:
+        return True
+    if event.kind == "iso_silent" and _notify_ops():
+        return True
+    return False
+
+
 def notify(event: AnomalyEvent) -> bool:
     """Send webhook and/or email. Returns True if at least one channel succeeded
     or if no channels are configured (log-only counts as success so we don't
     retry forever).
 
-    Email uses SMTP only (ANOMALY_SMTP_HOST / USER / PASSWORD). No Resend.
+    Only NEWS_KINDS page by default. iso_silent is stored but not paged unless
+    ANOMALY_NOTIFY_OPS=1.
+
+    Email on Railway: ANOMALY_EMAIL_WEBHOOK_URL (HTTPS → Gmail via Apps Script).
+    SMTP is local/dev only — Railway blocks outbound SMTP to Gmail.
     """
-    text = format_message(event)
-    plain = text.replace("*", "")
+    if not _should_page(event):
+        log.info("anomaly stored, no page (%s): %s", event.kind, event.summary)
+        return True
+
+    slack_body = slack_payload(event)
+    email_plain = format_email_body(event)
     webhook = _webhook_url()
     email_to = _notify_email()
+    email_hook = _email_webhook_url()
     smtp_cfg = _smtp_config()
-    if not webhook and not email_to:
+    if not webhook and not email_to and not email_hook:
         log.info("anomaly (no notify channel): %s", event.summary)
         return True
 
     ok = False
     if webhook:
         try:
-            body = json.dumps({"text": text}).encode()
+            body = json.dumps(slack_body).encode()
             req = urllib.request.Request(
                 webhook,
                 data=body,
@@ -822,24 +1007,52 @@ def notify(event: AnomalyEvent) -> bool:
         except urllib.error.URLError as exc:
             log.warning("webhook failed for %s: %s", event.event_key, exc)
 
-    if email_to:
-        if not smtp_cfg:
-            log.warning(
-                "ANOMALY_NOTIFY_EMAIL set but SMTP missing "
-                "(need ANOMALY_SMTP_HOST, ANOMALY_SMTP_USER, ANOMALY_SMTP_PASSWORD)"
-            )
-        else:
+    if email_to or email_hook:
+        subject = f"[KL] {_headline(event)}"
+        to = email_to or ""
+        sent = False
+
+        if email_hook:
+            if not to:
+                log.warning(
+                    "ANOMALY_EMAIL_WEBHOOK_URL set but ANOMALY_NOTIFY_EMAIL missing"
+                )
+            else:
+                try:
+                    _send_email_webhook(
+                        url=email_hook,
+                        to=to,
+                        subject=subject,
+                        body=email_plain,
+                        event_key=event.event_key,
+                    )
+                    ok = True
+                    sent = True
+                    log.info("email webhook sent to %s for %s", to, event.event_key)
+                except Exception as exc:
+                    log.warning("email webhook failed for %s: %s", event.event_key, exc)
+
+        # SMTP only if nothing else delivered yet. Railway blocks Gmail SMTP
+        # (ENETUNREACH / timeout) — don't burn 30s after a successful Slack send.
+        if not sent and not ok and smtp_cfg and to:
             try:
                 _send_smtp_email(
-                    to=email_to,
-                    subject=f"[KL] {event.kind} · {event.iso}",
-                    body=plain,
+                    to=to,
+                    subject=subject,
+                    body=email_plain,
                     cfg=smtp_cfg,
                 )
                 ok = True
-                log.info("smtp email sent to %s for %s", email_to, event.event_key)
+                sent = True
+                log.info("smtp email sent to %s for %s", to, event.event_key)
             except Exception as exc:
                 log.warning("smtp email failed for %s: %s", event.event_key, exc)
+
+        if not sent and not ok and to and not email_hook and not smtp_cfg:
+            log.warning(
+                "ANOMALY_NOTIFY_EMAIL set but no mail transport "
+                "(need ANOMALY_EMAIL_WEBHOOK_URL for Railway, or ANOMALY_SMTP_* locally)"
+            )
 
     return ok
 
@@ -1068,7 +1281,7 @@ def replay_pjm_july22() -> dict[str, Any]:
                 t += timedelta(minutes=5)
             series = seed + series
 
-    events = detect_load_steps(series, iso="PJM", floor_mw=2000.0, z=3.0)
+    events = detect_load_steps(series, iso="PJM", floor_mw=2500.0, z=5.0, drops_only=True)
     return {
         "n_points": len(series),
         "series_tail": [
@@ -1112,8 +1325,27 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Replay the 2026-07-22 PJM ~3 GW data-center drop from public inst_load",
     )
+    p.add_argument(
+        "--notify-test",
+        action="store_true",
+        help="Send one synthetic test alert via configured email/webhook channels",
+    )
     args = p.parse_args(argv)
 
+    if args.notify_test:
+        test = AnomalyEvent(
+            event_key=f"notify_test:{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
+            kind="notify_test",
+            iso="TEST",
+            ts=datetime.now(timezone.utc),
+            magnitude=0.0,
+            unit="n/a",
+            summary="KL anomaly notify test — if you got this, email/webhook delivery works",
+            payload={"dashboard": DASHBOARD["lmp_shock"]},
+        )
+        ok = notify(test)
+        print(json.dumps({"ok": ok, "event_key": test.event_key}, indent=2))
+        return 0 if ok else 1
     if args.replay_pjm_july22:
         print(json.dumps(replay_pjm_july22(), indent=2, default=str))
         return 0

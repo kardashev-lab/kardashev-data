@@ -156,12 +156,13 @@ python -m ingest.backfill_lmp caiso --start 2024-01-01 --end 2026-07-06
 | `ISONE_USERNAME` / `ISONE_PASSWORD` | ISONE LMP/load/queue jobs | Free at [iso-ne.com](https://www.iso-ne.com/) |
 | `ANTHROPIC_API_KEY` | ERCOT large-load ingest only | Vision extraction of ERCOT's chart-only large-load PDF |
 | `ANOMALY_ENABLED` | no | Default `1`. Set `0` to disable the anomaly watcher on the ingest service |
-| `ANOMALY_NOTIFY_EMAIL` | no | Where to send anomaly emails (e.g. your Gmail) |
-| `ANOMALY_SMTP_HOST` | with email | SMTP host (Gmail: `smtp.gmail.com`) |
+| `ANOMALY_NOTIFY_OPS` | no | Default off. Set `1` to also Slack/email `iso_silent` ingest-ops alerts |
+| `ANOMALY_NOTIFY_EMAIL` | no | Inbox for anomaly emails (e.g. your Gmail) |
+| `ANOMALY_EMAIL_WEBHOOK_URL` | with email on Railway | HTTPS Google Apps Script web app URL (`ingest/anomaly_gmail_bridge.gs`) — Railway blocks SMTP to Gmail |
+| `ANOMALY_EMAIL_WEBHOOK_TOKEN` | no | Shared secret; must match Script property `WEBHOOK_TOKEN` |
+| `ANOMALY_SMTP_HOST` / `USER` / `PASSWORD` | optional | Local/dev SMTP only; `smtp.gmail.com` times out from Railway |
 | `ANOMALY_SMTP_PORT` | no | Default `587` (STARTTLS) |
-| `ANOMALY_SMTP_USER` | with email | SMTP username (usually your full email) |
-| `ANOMALY_SMTP_PASSWORD` | with email | SMTP password / Gmail App Password |
-| `ANOMALY_EMAIL_FROM` | no | From header; defaults to `ANOMALY_SMTP_USER` |
+| `ANOMALY_EMAIL_FROM` | no | SMTP From header; defaults to `ANOMALY_SMTP_USER` |
 | `ANOMALY_WEBHOOK_URL` / `SLACK_WEBHOOK_URL` | no | Optional Slack-compatible webhook in addition to email |
 | `CORS_ORIGINS` | no | Comma-separated extra CORS origins (`*.kardashevlabs.org` is always allowed) |
 | `ENVIRONMENT` | no | Present in `.env.example`; not currently read by the app (`/docs` and `/redoc` are always on) |

@@ -2,11 +2,15 @@
 from datetime import date, datetime, timedelta, timezone
 
 from ingest.anomaly import (
+    AnomalyEvent,
     detect_curtailment_day,
     detect_iso_silent,
     detect_lmp_shocks,
     detect_load_steps,
+    format_email_body,
+    format_message,
     package_event,
+    slack_payload,
 )
 
 
@@ -62,23 +66,23 @@ def test_lmp_abs_shock():
     rows = [
         {"ts": ts, "node_id": "HB_NORTH", "node_name": "HB_NORTH", "lmp": 45.0},
         {"ts": ts, "node_id": "HB_WEST", "node_name": "HB_WEST", "lmp": 52.0},
-        {"ts": ts, "node_id": "HB_HOUSTON", "node_name": "HB_HOUSTON", "lmp": 980.0},
+        {"ts": ts, "node_id": "HB_HOUSTON", "node_name": "HB_HOUSTON", "lmp": 2500.0},
     ]
-    events = detect_lmp_shocks(rows, iso="ERCOT", abs_floor=500, spread_floor=200)
+    events = detect_lmp_shocks(rows, iso="ERCOT", abs_floor=2000, spread_floor=800)
     kinds = {e.payload.get("mode") for e in events}
     assert "abs" in kinds
-    assert any(e.magnitude >= 980 for e in events)
+    assert any(e.magnitude >= 2500 for e in events)
 
 
 def test_lmp_spread_shock():
     ts = datetime(2026, 8, 2, 9, 10, tzinfo=timezone.utc)
     rows = [
-        {"ts": ts, "node_id": "TH_NP15", "node_name": "NP15", "lmp": -80.0},
-        {"ts": ts, "node_id": "TH_SP15", "node_name": "SP15", "lmp": 120.0},
+        {"ts": ts, "node_id": "TH_NP15", "node_name": "NP15", "lmp": -200.0},
+        {"ts": ts, "node_id": "TH_SP15", "node_name": "SP15", "lmp": 500.0},
         {"ts": ts, "node_id": "TH_ZP26", "node_name": "ZP26", "lmp": 40.0},
     ]
-    events = detect_lmp_shocks(rows, iso="CAISO", abs_floor=500, spread_floor=150)
-    assert any(e.payload.get("mode") == "spread" and e.magnitude >= 200 for e in events)
+    events = detect_lmp_shocks(rows, iso="CAISO", abs_floor=1500, spread_floor=600)
+    assert any(e.payload.get("mode") == "spread" and e.magnitude >= 700 for e in events)
 
 
 def test_lmp_filters_pathological_outlier():
@@ -95,10 +99,39 @@ def test_lmp_filters_pathological_outlier():
 def test_curtailment_day_outlier():
     hist = [(date(2026, 6, 1) + timedelta(days=i), 3000.0 + (i % 7) * 200) for i in range(40)]
     spike = date(2026, 7, 11)
-    hist.append((spike, 24_000.0))
+    hist.append((spike, 55_000.0))  # clears 45 GWh floor + p99
     events = detect_curtailment_day(hist, iso="CAISO", target=spike)
     assert len(events) == 1
-    assert events[0].magnitude == 24_000.0
+    assert events[0].magnitude == 55_000.0
+
+
+def test_curtailment_day_high_but_not_record_no_fire():
+    """Summer-busy CAISO day (~24 GWh) is not breaking news under p99/45 GWh bar."""
+    hist = [(date(2026, 6, 1) + timedelta(days=i), 3000.0 + (i % 7) * 200) for i in range(40)]
+    spike = date(2026, 7, 11)
+    hist.append((spike, 24_000.0))
+    events = detect_curtailment_day(hist, iso="CAISO", target=spike)
+    assert events == []
+
+
+def test_default_lmp_ignores_routine_congestion():
+    ts = datetime(2026, 8, 2, 9, 10, tzinfo=timezone.utc)
+    rows = [
+        {"ts": ts, "node_id": "HB_NORTH", "node_name": "HB_NORTH", "lmp": 45.0},
+        {"ts": ts, "node_id": "HB_WEST", "node_name": "HB_WEST", "lmp": 120.0},
+        {"ts": ts, "node_id": "HB_HOUSTON", "node_name": "HB_HOUSTON", "lmp": 780.0},
+    ]
+    # Defaults are scarcity-class; ~$780 / ~$735 spread is not news.
+    assert detect_lmp_shocks(rows, iso="ERCOT") == []
+
+
+def test_default_pjm_ting_class_drop_fires():
+    start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
+    baseline = [99_000 + (i % 3) * 30 for i in range(20)]
+    values = baseline + [99_050, 96_500]  # -2550 MW clears PJM 2500 floor
+    events = detect_load_steps(_series(start, values), iso="PJM")
+    assert len(events) >= 1
+    assert events[0].magnitude >= 2500
 
 
 def test_curtailment_day_normal_no_fire():
@@ -106,6 +139,45 @@ def test_curtailment_day_normal_no_fire():
     day = hist[-1][0]
     events = detect_curtailment_day(hist, iso="CAISO", target=day)
     assert events == []
+
+
+def test_default_load_ignores_sub_floor_drop():
+    start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
+    baseline = [99_000 + (i % 3) * 30 for i in range(20)]
+    values = baseline + [99_050, 97_050]  # -2000 MW — under PJM 2500 floor
+    assert detect_load_steps(_series(start, values), iso="PJM") == []
+
+
+def test_default_load_ignores_jump_even_if_large():
+    start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
+    baseline = [90_000 + (i % 3) * 30 for i in range(20)]
+    values = baseline + [90_050, 94_050]  # +4000 MW jump
+    assert detect_load_steps(_series(start, values), iso="ERCOT") == []
+
+
+def test_should_page_skips_iso_silent_by_default():
+    from ingest.anomaly import _should_page
+
+    silent = AnomalyEvent(
+        event_key="iso_silent:load:PJM:x",
+        kind="iso_silent",
+        iso="PJM",
+        ts=datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
+        magnitude=90.0,
+        unit="min",
+        summary="PJM load silent",
+    )
+    news = AnomalyEvent(
+        event_key="load_step:PJM:x",
+        kind="load_step",
+        iso="PJM",
+        ts=datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
+        magnitude=3000.0,
+        unit="MW",
+        summary="drop",
+    )
+    assert _should_page(silent) is False
+    assert _should_page(news) is True
 
 
 def test_iso_silent_fires_when_stale():
@@ -134,3 +206,58 @@ def test_package_event_has_emily_and_linkedin():
     assert "Hi Emily" in drafts["emily_email"]
     assert "grid-demand" in drafts["dashboard"]
     assert len(drafts["linkedin_teaser"]) > 20
+
+
+def test_slack_message_is_readable_not_draft_dump():
+    event = AnomalyEvent(
+        event_key="load_step:PJM:20260722T1200Z",
+        kind="load_step",
+        iso="PJM",
+        ts=datetime(2026, 7, 22, 12, 0, tzinfo=timezone.utc),
+        magnitude=2500.0,
+        unit="MW",
+        summary=(
+            "PJM system load drop of 2,500 MW in ~5 min "
+            "(95,000 → 92,500 MW) at 2026-07-22 12:00 UTC"
+        ),
+        payload={
+            "delta_mw": -2500.0,
+            "dashboard": "https://grid-demand.kardashevlabs.org",
+            "cosignal": ["RT LMP spread ~180 $/MWh in the same window"],
+        },
+    )
+    slack = format_message(event)
+    assert "PJM load drop: 2,500 MW" in slack
+    assert "2026-07-22 12:00 UTC" in slack
+    assert "grid-demand" in slack
+    assert "Hi Emily" not in slack
+    assert "LinkedIn" not in slack
+    assert "Subject:" not in slack
+    assert "KL anomaly" not in slack
+
+    payload = slack_payload(event)
+    assert "blocks" in payload
+    assert payload["text"] == slack
+    # Minimal: headline + optional button — no draft sections.
+    assert len(payload["blocks"]) <= 3
+
+    email = format_email_body(event)
+    assert "Hi Emily" in email
+    assert "LinkedIn" in email
+
+
+def test_iso_silent_email_has_no_emily_drafts():
+    event = AnomalyEvent(
+        event_key="iso_silent:lmp:MISO:x",
+        kind="iso_silent",
+        iso="MISO",
+        ts=datetime(2026, 8, 8, 11, 0, tzinfo=timezone.utc),
+        magnitude=120.0,
+        unit="min",
+        summary="MISO lmp feed has no rows in the lookback window",
+        payload={"feed": "lmp", "dashboard": "https://grid-demand.kardashevlabs.org"},
+    )
+    body = format_email_body(event)
+    assert "Hi Emily" not in body
+    assert "LinkedIn" not in body
+    assert "MISO" in body
