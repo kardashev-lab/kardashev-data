@@ -17,9 +17,38 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def ingest_caiso_fuel_mix(target: date | None = None):
+    """CAISO fuelsource fuel mix. Stamps live current with Pacific today.
+
+    Same UTC-date trap as battery: after 17:00 PT, time-only stamps on a UTC
+    host would land evening rows on the next Pacific day. Prefer the fixed
+    kardashev.get_fuel_mix; fall back to explicit Pacific dating if needed.
+    """
+    import pytz
+    from datetime import datetime
+
     from ingest.writer import upsert_fuel_mix
     from kardashev import _caiso as caiso
-    df = caiso.get_fuel_mix(target)
+    from kardashev import _http
+
+    _PT = pytz.timezone("US/Pacific")
+
+    if target is not None:
+        df = caiso.get_fuel_mix(target)
+    else:
+        # Defensive: stamp current file with Pacific today even if installed
+        # kardashev package still uses bare HH:MM → machine/UTC date.
+        url = "https://www.caiso.com/outlook/current/fuelsource.csv"
+        pacific_day = datetime.now(_PT).date()
+        df = _http.get_csv(url)
+        df.columns = [c.strip().replace(" ", "_") for c in df.columns]
+        df = df.rename(columns={"Time": "timestamp"})
+        raw_ts = pacific_day.isoformat() + " " + df["timestamp"].astype(str)
+        df["timestamp"] = (
+            pd.to_datetime(raw_ts, errors="coerce")
+            .dt.tz_localize(_PT, ambiguous="infer", nonexistent="shift_forward")
+            .dt.tz_convert("UTC")
+        )
+
     if df.empty:
         return
     ts_col = "timestamp"
@@ -1105,46 +1134,93 @@ def ingest_eia_nat_gas_prices():
 # Battery storage  (#5)
 # ---------------------------------------------------------------------------
 
-def ingest_caiso_battery():
+def ingest_caiso_battery(target: date | None = None, backfill_days: int = 7):
     """
-    CAISO 5-min battery storage data from the public outlook CSV.
-    The demand.csv 'Batteries' column is negative when charging, positive when discharging.
-    We split into mw_charging / mw_discharging for clarity.
+    CAISO 5-min battery storage from fuelsource.csv Batteries column.
+    Negative MW = charging, positive = discharging. Split into mw_charging /
+    mw_discharging for clarity.
+
+    Stamps the live current file with Pacific today (not UTC today), then
+    re-pulls the last ``backfill_days`` Pacific days from the historical
+    archive to heal rows previously mis-dated on UTC ingest hosts.
     """
+    import pytz
+    from datetime import datetime, timedelta
+
     from ingest.writer import upsert_battery_storage
-    from kardashev import _caiso as caiso
+    from kardashev import _http
 
-    df = caiso.get_fuel_mix()
-    if df.empty:
-        return
+    _PT = pytz.timezone("US/Pacific")
+    pacific_today = datetime.now(_PT).date()
 
-    batt_col = next(
-        (c for c in df.columns if "batter" in c.lower() or "storage" in c.lower()),
-        None
-    )
-    if not batt_col:
-        log.warning("CAISO fuel mix has no battery column; columns=%s", list(df.columns))
-        return
+    def _load_fuelsource(day: date | None) -> pd.DataFrame:
+        # Inline fetch+stamp so we do not depend on a published kardashev
+        # package bump for the Pacific-date fix on current/fuelsource.csv.
+        if day is None:
+            url = "https://www.caiso.com/outlook/current/fuelsource.csv"
+            pacific_day = pacific_today
+        else:
+            url = f"https://www.caiso.com/outlook/history/{day.strftime('%Y%m%d')}/fuelsource.csv"
+            pacific_day = day
+        df = _http.get_csv(url)
+        df.columns = [c.strip().replace(" ", "_") for c in df.columns]
+        df = df.rename(columns={"Time": "timestamp"})
+        raw_ts = pacific_day.isoformat() + " " + df["timestamp"].astype(str)
+        df["timestamp"] = (
+            pd.to_datetime(raw_ts, errors="coerce")
+            .dt.tz_localize(_PT, ambiguous="infer", nonexistent="shift_forward")
+            .dt.tz_convert("UTC")
+        )
+        return df
 
-    ts_col = "timestamp"
-    rows: list[dict] = []
-    for _, row in df.iterrows():
-        try:
-            mw = float(row[batt_col]) if pd.notna(row.get(batt_col)) else None
-            if mw is None:
+    def _upsert_from_df(df) -> int:
+        if df is None or df.empty:
+            return 0
+        batt_col = next(
+            (c for c in df.columns if "batter" in c.lower() or "storage" in c.lower()),
+            None,
+        )
+        if not batt_col:
+            log.warning("CAISO fuel mix has no battery column; columns=%s", list(df.columns))
+            return 0
+        rows: list[dict] = []
+        for _, row in df.iterrows():
+            try:
+                mw = float(row[batt_col]) if pd.notna(row.get(batt_col)) else None
+                if mw is None:
+                    continue
+                rows.append({
+                    "ts": row["timestamp"],
+                    "iso": "CAISO",
+                    "mw_charging": abs(mw) if mw < 0 else 0.0,
+                    "mw_discharging": mw if mw > 0 else 0.0,
+                    "mwh_state": None,
+                })
+            except Exception:
                 continue
-            rows.append({
-                "ts": row[ts_col],
-                "iso": "CAISO",
-                "mw_charging":    abs(mw) if mw < 0 else 0.0,
-                "mw_discharging": mw if mw > 0 else 0.0,
-                "mwh_state": None,
-            })
-        except Exception:
-            continue
+        return upsert_battery_storage(rows)
 
-    n = upsert_battery_storage(rows)
-    log.info("CAISO battery: %d rows", n)
+    total = 0
+    if target is not None:
+        total += _upsert_from_df(_load_fuelsource(target))
+        log.info("CAISO battery: %d rows (target=%s)", total, target)
+        return
+
+    try:
+        total += _upsert_from_df(_load_fuelsource(None))
+    except Exception as exc:
+        log.warning("CAISO battery current pull failed: %s", exc)
+
+    for i in range(1, max(backfill_days, 0) + 1):
+        day = pacific_today - timedelta(days=i)
+        try:
+            n = _upsert_from_df(_load_fuelsource(day))
+            total += n
+            log.info("CAISO battery backfill %s: %d rows", day, n)
+        except Exception as exc:
+            log.warning("CAISO battery backfill %s failed: %s", day, exc)
+
+    log.info("CAISO battery: %d rows total", total)
 
 
 # ---------------------------------------------------------------------------
