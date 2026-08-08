@@ -26,7 +26,8 @@ def _series(start: datetime, values: list[float], step_min: int = 5):
 def test_load_step_detects_sudden_drop():
     start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
     baseline = [100_000 + (i % 3) * 50 for i in range(20)]
-    values = baseline + [100_050, 97_050]
+    # Confirming sample after trough (stays down).
+    values = baseline + [100_050, 97_050, 97_100]
     events = detect_load_steps(_series(start, values), iso="ERCOT", floor_mw=1500, z=3.0)
     assert len(events) >= 1
     e = events[0]
@@ -34,6 +35,30 @@ def test_load_step_detects_sudden_drop():
     assert e.iso == "ERCOT"
     assert e.magnitude >= 2900
     assert "drop" in e.summary
+
+
+def test_load_step_ignores_interim_glitch_that_rebounds():
+    """MISO/PJM-style bad :00 stamp that snaps back next interval."""
+    start = datetime(2026, 8, 8, 12, 0, tzinfo=timezone.utc)
+    baseline = [98_000 + (i % 3) * 40 for i in range(20)]
+    values = baseline + [98_893, 74_366, 99_419]  # -24 GW then full rebound
+    assert detect_load_steps(_series(start, values), iso="MISO") == []
+
+
+def test_load_step_defers_without_confirming_sample():
+    start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
+    baseline = [100_000 + (i % 3) * 50 for i in range(20)]
+    values = baseline + [100_050, 97_050]  # drop at end of series — wait for next point
+    assert detect_load_steps(_series(start, values), iso="ERCOT", floor_mw=1500, z=3.0) == []
+
+
+def test_load_step_pjm_one_second_correction_is_glitch():
+    start = datetime(2026, 8, 8, 13, 0, tzinfo=timezone.utc)
+    series = _series(start, [106_000 + (i % 3) * 20 for i in range(20)], step_min=5)
+    t_bad = series[-1][0] + timedelta(minutes=5)
+    t_fix = t_bad + timedelta(seconds=1)
+    series = series + [(t_bad, 94_082.0), (t_fix, 107_548.0)]
+    assert detect_load_steps(series, iso="PJM") == []
 
 
 def test_load_step_ignores_gap_cliff():
@@ -55,7 +80,7 @@ def test_load_step_ignores_normal_ramp():
 def test_pjm_style_drop_at_floor_2000():
     start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
     baseline = [99_000 + (i % 3) * 30 for i in range(20)]
-    values = baseline + [99_050, 96_500]  # -2550 MW
+    values = baseline + [99_050, 96_500, 96_480]  # -2550 MW, stays down
     events = detect_load_steps(_series(start, values), iso="PJM", floor_mw=2000, z=3.0)
     assert len(events) >= 1
     assert events[0].magnitude >= 2500
@@ -78,11 +103,21 @@ def test_lmp_spread_shock():
     ts = datetime(2026, 8, 2, 9, 10, tzinfo=timezone.utc)
     rows = [
         {"ts": ts, "node_id": "TH_NP15", "node_name": "NP15", "lmp": -200.0},
-        {"ts": ts, "node_id": "TH_SP15", "node_name": "SP15", "lmp": 500.0},
+        {"ts": ts, "node_id": "TH_SP15", "node_name": "SP15", "lmp": 1600.0},
         {"ts": ts, "node_id": "TH_ZP26", "node_name": "ZP26", "lmp": 40.0},
     ]
-    events = detect_lmp_shocks(rows, iso="CAISO", abs_floor=1500, spread_floor=600)
-    assert any(e.payload.get("mode") == "spread" and e.magnitude >= 700 for e in events)
+    events = detect_lmp_shocks(rows, iso="CAISO", abs_floor=2000, spread_floor=1500)
+    assert any(e.payload.get("mode") == "spread" and e.magnitude >= 1500 for e in events)
+
+
+def test_default_lmp_ignores_moderate_nyiso_spread():
+    ts = datetime(2026, 8, 8, 21, 45, tzinfo=timezone.utc)
+    rows = [
+        {"ts": ts, "node_id": "WEST", "node_name": "WEST", "lmp": 30.0},
+        {"ts": ts, "node_id": "N.Y.C.", "node_name": "N.Y.C.", "lmp": 660.0},
+        {"ts": ts, "node_id": "LONGIL", "node_name": "LONGIL", "lmp": 200.0},
+    ]
+    assert detect_lmp_shocks(rows, iso="NYISO") == []
 
 
 def test_lmp_filters_pathological_outlier():
@@ -128,7 +163,7 @@ def test_default_lmp_ignores_routine_congestion():
 def test_default_pjm_ting_class_drop_fires():
     start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
     baseline = [99_000 + (i % 3) * 30 for i in range(20)]
-    values = baseline + [99_050, 96_500]  # -2550 MW clears PJM 2500 floor
+    values = baseline + [99_050, 96_500, 96_450]  # -2550 MW, confirmed
     events = detect_load_steps(_series(start, values), iso="PJM")
     assert len(events) >= 1
     assert events[0].magnitude >= 2500
@@ -199,7 +234,7 @@ def test_iso_silent_ok_when_fresh():
 def test_package_event_has_emily_and_linkedin():
     start = datetime(2026, 7, 22, 11, 0, tzinfo=timezone.utc)
     baseline = [100_000 + (i % 3) * 50 for i in range(20)]
-    values = baseline + [100_050, 97_050]
+    values = baseline + [100_050, 97_050, 97_000]
     events = detect_load_steps(_series(start, values), iso="PJM", floor_mw=1500, z=3.0)
     assert events
     drafts = package_event(events[0])

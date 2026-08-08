@@ -57,6 +57,11 @@ LOAD_LOOKBACK_HOURS = 6
 LOAD_MIN_DT_SEC = 180
 LOAD_MAX_DT_SEC = 720
 LOAD_MAX_WINDOW_STEPS = 2
+# ISO feeds often publish a bad interim MW then correct on the next stamp
+# (MISO/PJM top-of-hour glitches). Require a confirming sample after the
+# candidate drop; reject if load rebounds most of the way back.
+LOAD_REBOUND_FRAC = 0.50
+LOAD_REBOUND_LOOKAHEAD_SEC = 900
 
 # LMP: scarcity / emergency territory, not everyday congestion.
 LMP_ISOS = ("ERCOT", "CAISO", "NYISO", "MISO", "SPP", "ISONE", "PJM")
@@ -70,13 +75,23 @@ LMP_ABS_FLOOR = {
     "PJM": 1500.0,
 }
 LMP_SPREAD_FLOOR = {
-    "ERCOT": 800.0,
-    "CAISO": 600.0,
-    "NYISO": 600.0,
-    "MISO": 600.0,
-    "SPP": 600.0,
-    "ISONE": 600.0,
-    "PJM": 600.0,
+    "ERCOT": 2000.0,
+    "CAISO": 1500.0,
+    "NYISO": 1500.0,
+    "MISO": 1500.0,
+    "SPP": 1500.0,
+    "ISONE": 1500.0,
+    "PJM": 1500.0,
+}
+# Spread alone can be noisy; also require the high node to look scarce.
+LMP_SPREAD_MAX_FLOOR = {
+    "ERCOT": 1000.0,
+    "CAISO": 800.0,
+    "NYISO": 800.0,
+    "MISO": 800.0,
+    "SPP": 800.0,
+    "ISONE": 800.0,
+    "PJM": 800.0,
 }
 LMP_SANITY_ABS = 5000.0
 
@@ -137,6 +152,45 @@ def _floor_bucket(ts: datetime, minutes: int) -> datetime:
     return ts.replace(minute=ts.minute - discard, second=0, microsecond=0)
 
 
+def _load_drop_confirmation(
+    series: Sequence[tuple[datetime, float]],
+    *,
+    ts_after: datetime,
+    mw_end: float,
+    abs_delta: float,
+    rebound_frac: float = LOAD_REBOUND_FRAC,
+    lookahead_sec: float = LOAD_REBOUND_LOOKAHEAD_SEC,
+) -> bool | None:
+    """Confirm a load drop against the next raw sample(s).
+
+    Returns:
+      True  — confirmed real (stayed down)
+      False — glitch (rebounded)
+      None  — no confirming sample yet; defer paging
+    """
+    idx = None
+    for i, (ts, _mw) in enumerate(series):
+        if ts == ts_after:
+            idx = i
+            break
+    if idx is None:
+        return None
+
+    for j in range(idx + 1, min(idx + 4, len(series))):
+        t2, m2 = series[j]
+        dt = (t2 - ts_after).total_seconds()
+        if dt < 0:
+            continue
+        if dt > lookahead_sec:
+            break
+        recovered = m2 - mw_end
+        if recovered >= rebound_frac * abs_delta:
+            return False
+        # Next sample still near the trough → real drop.
+        return True
+    return None
+
+
 def detect_load_steps(
     series: Sequence[tuple[datetime, float]],
     *,
@@ -145,11 +199,15 @@ def detect_load_steps(
     z: float = LOAD_Z,
     max_window_steps: int = LOAD_MAX_WINDOW_STEPS,
     drops_only: bool | None = None,
+    require_confirm: bool = True,
 ) -> list[AnomalyEvent]:
     """series: ascending (ts, mw) for one ISO system zone.
 
     Default bar is breaking-news (multi-GW drop + high z). Pass floor_mw/z/
     drops_only to relax for unit tests or backtests.
+
+    Drops require a confirming sample after the trough unless require_confirm
+    is False (tests only). Interim ISO glitches that rebound are dropped.
     """
     if len(series) < 4:
         return []
@@ -204,6 +262,16 @@ def detect_load_steps(
             sigma = statistics.pstdev(hist) or 1.0
             if abs_delta < mu + z * sigma:
                 continue
+
+            if require_confirm and require_drop:
+                confirmed = _load_drop_confirmation(
+                    series,
+                    ts_after=ts_after,
+                    mw_end=mw_end,
+                    abs_delta=abs_delta,
+                )
+                if confirmed is not True:
+                    continue
 
             bucket = _floor_bucket(ts_after, 15)
             key = f"load_step:{iso}:{bucket.strftime('%Y%m%dT%H%MZ')}"
@@ -271,8 +339,11 @@ def detect_lmp_shocks(
     """
     if not rows:
         return []
-    abs_floor = abs_floor if abs_floor is not None else LMP_ABS_FLOOR.get(iso, 400.0)
-    spread_floor = spread_floor if spread_floor is not None else LMP_SPREAD_FLOOR.get(iso, 150.0)
+    abs_floor = abs_floor if abs_floor is not None else LMP_ABS_FLOOR.get(iso, 1500.0)
+    spread_floor = (
+        spread_floor if spread_floor is not None else LMP_SPREAD_FLOOR.get(iso, 1500.0)
+    )
+    spread_max_floor = LMP_SPREAD_MAX_FLOOR.get(iso, 800.0)
 
     by_ts: dict[datetime, list[dict[str, Any]]] = {}
     for r in rows:
@@ -331,7 +402,7 @@ def detect_lmp_shocks(
             )
         )
 
-    if spread >= spread_floor:
+    if spread >= spread_floor and hi >= spread_max_floor:
         key = f"lmp_shock:spread:{iso}:{hour_bucket.strftime('%Y%m%dT%H%MZ')}"
         lo_node = min(pool, key=lambda p: float(p["lmp"]))
         hi_node = max(pool, key=lambda p: float(p["lmp"]))
@@ -357,6 +428,7 @@ def detect_lmp_shocks(
                     "min_node": lo_node.get("node_id"),
                     "max_node": hi_node.get("node_id"),
                     "floor": spread_floor,
+                    "max_floor": spread_max_floor,
                     "n_nodes": len(pool),
                     "dashboard": DASHBOARD["lmp_shock"],
                 },
