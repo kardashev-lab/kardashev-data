@@ -34,6 +34,7 @@ async def spread_forecast_history(
         FROM spread_forecast f
         LEFT JOIN forecast_scores s
           ON s.ts = f.ts AND s.iso = f.iso AND s.node_id = f.node_id
+         AND s.model = f.model
         WHERE f.node_id = :node_id
           AND f.ts >= now() - make_interval(days => :days)
         ORDER BY f.ts

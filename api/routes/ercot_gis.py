@@ -19,6 +19,15 @@ class GisTimeline(BaseModel):
     mean_days: Optional[float]
     median_years: Optional[float]
     total_mw: Optional[float]
+    clock: Optional[str] = None
+
+
+_CLOCK = {
+    "full_process_days": "Full Process",
+    "build_phase_days": "Build Phase",
+    "cod_slip_days": "COD Slip",
+    "pending_years_in_queue": "Pending Interconnection Project",
+}
 
 
 _COLUMNS = "metric, group_type, group_value, sample_count, median_days, mean_days, median_years, total_mw"
@@ -50,7 +59,7 @@ async def get_timelines(
             ORDER BY group_type, group_value, metric""",
         **params,
     )
-    return rows
+    return [{**r, "clock": _CLOCK.get(r.get("metric"))} for r in rows]
 
 
 @router.get("/pending", response_model=list[GisTimeline])
@@ -69,4 +78,4 @@ async def get_pending(zone: Optional[str] = Query(None)):
             ORDER BY group_value""",
         **params,
     )
-    return rows
+    return [{**r, "clock": _CLOCK.get(r.get("metric"))} for r in rows]

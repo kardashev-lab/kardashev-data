@@ -503,6 +503,28 @@ CREATE INDEX IF NOT EXISTS ells_month ON ercot_large_load_snapshots (snapshot_mo
 -- Added 2026-07-16 for the backfill's cross-deck validation; table already exists in prod, so ALTER (not just the inline column above) is what actually lands it there.
 ALTER TABLE ercot_large_load_snapshots ADD COLUMN IF NOT EXISTS trailing_12mo JSONB;
 
+-- Filing Observations: each public deck is kept. Latest-per-month lives in
+-- ercot_large_load_snapshots as a view of the newest observation for that month.
+CREATE TABLE IF NOT EXISTS ercot_large_load_observations (
+    source_url                   TEXT             NOT NULL,
+    snapshot_month               DATE             NOT NULL,
+    report_date                  DATE,
+    total_mw                     DOUBLE PRECISION,
+    colocated_mw                 DOUBLE PRECISION,
+    standalone_mw                DOUBLE PRECISION,
+    by_status                    JSONB,
+    by_size_bucket               JSONB,
+    by_type                      JSONB,
+    by_zone                      JSONB,
+    approved_to_energize_mw      DOUBLE PRECISION,
+    planning_studies_approved_mw DOUBLE PRECISION,
+    trailing_12mo                JSONB,
+    extracted_at                 TIMESTAMPTZ      DEFAULT now(),
+    CONSTRAINT ercot_large_load_observations_pk PRIMARY KEY (source_url)
+);
+CREATE INDEX IF NOT EXISTS ello_month_report
+    ON ercot_large_load_observations (snapshot_month, report_date);
+
 -- ---------------------------------------------------------------------------
 -- ERCOT GIS Report milestone history: monthly generation-interconnection-queue
 -- snapshots (reportTypeId 15933), one row per project per month, so a

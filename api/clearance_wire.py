@@ -24,7 +24,7 @@ def wire_stress_for_counties(
     mode: str,
     mw: float,
 ) -> dict[str, Any]:
-    """HIFLD density (C0) + GridSFM DC power-flow screening (C1). Not in the grade."""
+    """HIFLD density (C0) + GridSFM DC power-flow screening (C1). Attached Evidence, not in the Band."""
     data = _proxy()
     counties = data.get("counties") or {}
     median = data.get("texas_median_line_km_per_km2")
@@ -101,7 +101,7 @@ def wire_stress_for_counties(
                 "level": d_level,
                 "note": (
                     f"{level_note} HIFLD public geometries; not CEII. "
-                    "Density only — see power_flow for DC screening."
+                    "Density only; see DC Screen for the power-flow proxy."
                 ),
                 "density_km_per_km2": round(dens, 5),
                 "texas_median_km_per_km2": round(float(median), 5),
@@ -120,7 +120,7 @@ def wire_stress_for_counties(
         headline = (
             f"DC power-flow screen: {pf['level']} for ~{pf.get('scenario_mw')} MW "
             f"{pf.get('scenario_mode')}. "
-            f"HIFLD density: {density_block.get('level', 'n/a')}. Not in the grade."
+            f"HIFLD density: {density_block.get('level', 'n/a')}. Attached Evidence, not in the Band."
         )
     elif density_block.get("status") == "proxy":
         headline_level = density_block.get("level")

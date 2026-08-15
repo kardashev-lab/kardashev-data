@@ -676,8 +676,35 @@ def upsert_solar_irradiance(rows: list[dict]) -> int:
 
 def upsert_ercot_large_load_snapshot(row: dict) -> int:
     """row: one month's extracted figures from the LLWG large-load deck.
-    See ingest/ercot_large_load.py for the extraction schema."""
+    See ingest/ercot_large_load.py for the extraction schema.
+
+    Each source_url is a Filing Observation (kept). snapshot_month latest
+    row remains the homepage view.
+    """
+    values = (
+        row["snapshot_month"], row.get("report_date"), row.get("total_mw"),
+        row.get("colocated_mw"), row.get("standalone_mw"),
+        psycopg2.extras.Json(row.get("by_status")) if row.get("by_status") else None,
+        psycopg2.extras.Json(row.get("by_size_bucket")) if row.get("by_size_bucket") else None,
+        psycopg2.extras.Json(row.get("by_type")) if row.get("by_type") else None,
+        psycopg2.extras.Json(row.get("by_zone")) if row.get("by_zone") else None,
+        row.get("approved_to_energize_mw"), row.get("planning_studies_approved_mw"),
+        psycopg2.extras.Json(row.get("trailing_12mo")) if row.get("trailing_12mo") else None,
+        row.get("source_url"),
+    )
     with cursor() as cur:
+        if row.get("source_url"):
+            cur.execute(
+                """
+                INSERT INTO ercot_large_load_observations
+                  (snapshot_month, report_date, total_mw, colocated_mw, standalone_mw,
+                   by_status, by_size_bucket, by_type, by_zone,
+                   approved_to_energize_mw, planning_studies_approved_mw, trailing_12mo, source_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (source_url) DO NOTHING
+                """,
+                values,
+            )
         cur.execute(
             """
             INSERT INTO ercot_large_load_snapshots
@@ -700,17 +727,7 @@ def upsert_ercot_large_load_snapshot(row: dict) -> int:
               source_url = EXCLUDED.source_url,
               extracted_at = now()
             """,
-            (
-                row["snapshot_month"], row.get("report_date"), row.get("total_mw"),
-                row.get("colocated_mw"), row.get("standalone_mw"),
-                psycopg2.extras.Json(row.get("by_status")) if row.get("by_status") else None,
-                psycopg2.extras.Json(row.get("by_size_bucket")) if row.get("by_size_bucket") else None,
-                psycopg2.extras.Json(row.get("by_type")) if row.get("by_type") else None,
-                psycopg2.extras.Json(row.get("by_zone")) if row.get("by_zone") else None,
-                row.get("approved_to_energize_mw"), row.get("planning_studies_approved_mw"),
-                psycopg2.extras.Json(row.get("trailing_12mo")) if row.get("trailing_12mo") else None,
-                row.get("source_url"),
-            ),
+            values,
         )
     return 1
 

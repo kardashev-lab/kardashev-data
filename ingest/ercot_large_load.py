@@ -321,10 +321,6 @@ def extract_snapshot(images: list[bytes], source_url: str) -> dict:
     if sm:
         parsed = datetime.strptime(sm[:7], "%Y-%m").date().replace(day=1)
         data["snapshot_month"] = parsed
-
-    normalized_types = _normalize_by_type(data.get("by_type"), data.get("total_mw"))
-    if normalized_types is not None:
-        data["by_type"] = normalized_types
     return data
 
 

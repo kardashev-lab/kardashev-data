@@ -21,7 +21,8 @@ def test_wire_stress_midland_dense_relative_to_loving():
     assert midland["density"]["density_km_per_km2"] > loving["density"]["density_km_per_km2"]
     assert midland["density"]["level"] in {"sparse", "typical", "dense"}
     assert loving["density"]["level"] == "sparse"
-    assert "Not in the grade" in midland["note"]
+    assert "Not in the grade" not in midland["note"]
+    assert "not in the Band" in midland["note"] or "Attached Evidence" in midland["note"]
     assert midland["power_flow"]["status"] == "proxy"
     assert midland["power_flow"]["level"] in {"calm", "moderate", "stressed", "unknown"}
 

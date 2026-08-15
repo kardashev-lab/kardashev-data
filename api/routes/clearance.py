@@ -32,8 +32,14 @@ def _is_empty_date(v: Any) -> bool:
 
 
 # Counties below this search-area share are shown on the map but excluded from
-# queue attribution / grade (avoids 1% Motley-style slivers dominating stats).
+# queue attribution / Band (avoids 1% Motley-style slivers dominating stats).
 _MIN_SCORE_COVERAGE = 0.05
+
+_RUBRIC_V1 = {
+    "name": "Published Rubric",
+    "version": "v1",
+    "inputs": ["queue", "timelines", "market_stress"],
+}
 
 
 def _median(vals: list[float]) -> Optional[float]:
@@ -61,7 +67,7 @@ def _verdict_gen(
     driver_county: Optional[str],
     fuel_key: str,
 ) -> tuple[str, list[str], list[str], dict[str, Any]]:
-    """Transparent arithmetic grade. Returns grade, drivers, actions, comparisons."""
+    """Transparent arithmetic Band. Returns band, drivers, actions, comparisons."""
     drivers: list[str] = []
     actions: list[str] = []
     comparisons: dict[str, Any] = {}
@@ -423,7 +429,7 @@ async def post_score(req: ScoreRequest):
     wire = wire_stress_for_counties(score_hits, mode=req.mode, mw=req.mw)
     curtailment = {
         "status": "not_ready",
-        "note": "Resource-level SCED curtailment is not ingested yet. Not in this grade.",
+        "note": "Resource-level SCED curtailment is not ingested yet. Attached Evidence, not a Band input.",
     }
 
     load_context = None
@@ -506,19 +512,20 @@ async def post_score(req: ScoreRequest):
         summary = (
             f"{grade.upper()} for {req.mw:.0f} MW {fuel_key} in {where}. {headline}."
             if where
-            else f"{grade.upper()} for {req.mw:.0f} MW {fuel_key} — {headline}."
+            else f"{grade.upper()} for {req.mw:.0f} MW {fuel_key}. {headline}."
         )
+        band = grade
     else:
-        grade = "mixed"
+        band = None
         drivers = [
-            "Large-load mode is coarse until by_zone extraction is fixed (see methodology).",
-            f"Counties overlap CDR zones: {', '.join(sorted(by_zone)) or 'unknown'}.",
+            "Large-Load MW cannot be attributed to this Footprint from public decks.",
+            f"Counties overlap CDR Zones: {', '.join(sorted(by_zone)) or 'unknown'}.",
         ]
-        actions = ["Large-load siting is zone-coarse; treat this as directional only"]
+        actions = ["Large-Load Queue context is Attached Evidence, not a Clearance"]
         headline = actions[0]
         summary = (
-            f"MIXED (coarse) for {req.mw:.0f} MW large load — "
-            "zone aggregates only, not project-level load queue."
+            f"{req.mw:.0f} MW Large Load. Large-Load Queue is Attached Evidence. "
+            "Not a Clearance until MW can be attributed to this Footprint."
         )
 
     # Prefer scored fuel, then larger MW
@@ -540,26 +547,37 @@ async def post_score(req: ScoreRequest):
                 "geoid": h["geoid"],
                 "overlap_weight": h["overlap_weight"],
                 "coverage": h.get("coverage"),
-                "in_score": h["name"] in {x["name"] for x in score_hits},
+                "scored": h["name"] in {x["name"] for x in score_hits},
                 "geometry": h.get("geometry"),
                 "county_geometry": h.get("county_geometry"),
             }
             for h in hits
         ],
+        "rubric": _RUBRIC_V1 if req.mode == "gen" else None,
         "verdict": {
-            "grade": grade,
+            "band": band,
             "headline": headline,
             "summary": summary,
             "actions": actions,
             "drivers": drivers,
             "comparisons": comparisons,
-            "inputs_used": ["queue", "timelines", "market_stress"],
-            "inputs_excluded": ["wire_stress", "curtailment"],
+            "inputs_used": list(_RUBRIC_V1["inputs"]) if req.mode == "gen" else [],
+            "inputs_excluded": (
+                ["wire_stress", "curtailment"]
+                if req.mode == "gen"
+                else list(_RUBRIC_V1["inputs"]) + ["wire_stress", "curtailment"]
+            ),
             "disclaimer": (
                 "County-level public data, not an ERCOT interconnection study. GIS rows "
-                "have county, not lat/lon. Wire block is a HIFLD density proxy only — "
-                "not in the grade. "
-                f"Queue stats use counties covering ≥{_MIN_SCORE_COVERAGE:.0%} of the search area"
+                "have county, not lat/lon. Wire Proxy is Attached Evidence, "
+                "not in the Band. "
+                + (
+                    "Load Mode is not a Clearance until Large-Load MW can be attributed "
+                    "to this Footprint. "
+                    if req.mode == "load"
+                    else ""
+                )
+                + f"Generation Queue stats use Scored Counties covering ≥{_MIN_SCORE_COVERAGE:.0%} of the Footprint"
                 + (f" (mostly {driver_county})" if driver_county else "")
                 + "."
             ),

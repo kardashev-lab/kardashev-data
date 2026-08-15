@@ -149,8 +149,8 @@ def powerflow_for_counties(
         "note": (
             f"GridSFM Texas DC power-flow screening for ~{target_mw:.0f} MW {mode_label} "
             f"(peak 16h snapshot). Local branches only (county buses + 1 hop). "
-            f"Synthetic OSM+EIA network — not ERCOT CEII. Slack absorbs imbalance. "
-            "Not a contingency study. Not in the grade."
+            f"Synthetic OSM+EIA network, not ERCOT CEII. Slack absorbs imbalance. "
+            "Not a contingency study. Attached Evidence, not in the Band."
         ),
         "target_mw": mw,
         "scenario_mw": target_mw,

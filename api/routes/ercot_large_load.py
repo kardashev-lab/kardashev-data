@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from api.db import fetch
@@ -49,6 +49,40 @@ async def get_history():
         f"SELECT {_COLUMNS} FROM ercot_large_load_snapshots ORDER BY snapshot_month ASC"
     )
     return rows
+
+
+@router.get("/observations", response_model=list[LargeLoadSnapshot])
+async def get_observations(snapshot_month: Optional[date] = Query(None)):
+    """Every Filing Observation (one row per source deck). Restatements of the
+    same month are separate rows. Latest-per-month remains GET /history."""
+    if snapshot_month:
+        return await fetch(
+            f"SELECT {_COLUMNS} FROM ercot_large_load_observations "
+            "WHERE snapshot_month = :month ORDER BY report_date ASC, extracted_at ASC",
+            month=snapshot_month,
+        )
+    return await fetch(
+        f"SELECT {_COLUMNS} FROM ercot_large_load_observations "
+        "ORDER BY snapshot_month ASC, report_date ASC, extracted_at ASC"
+    )
+
+
+@router.get("/as-of", response_model=Optional[LargeLoadSnapshot])
+async def get_as_of(
+    month: date = Query(..., description="snapshot_month to reconstruct"),
+    on: date = Query(..., description="what was known on this date (report_date)"),
+):
+    """The Filing Observation for `month` as known on `on` (latest report_date <= on)."""
+    rows = await fetch(
+        f"""SELECT {_COLUMNS} FROM ercot_large_load_observations
+            WHERE snapshot_month = :month
+              AND (report_date IS NULL OR report_date <= :on)
+            ORDER BY report_date DESC NULLS LAST, extracted_at DESC
+            LIMIT 1""",
+        month=month,
+        on=on,
+    )
+    return rows[0] if rows else None
 
 
 @router.get("/summary")
