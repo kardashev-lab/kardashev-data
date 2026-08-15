@@ -78,7 +78,7 @@ def _verdict_gen(
     if pending_mw <= 0:
         score += 1
         drivers.append("No pending GIS projects in scored counties (0 MW)")
-        actions.append("No pending generation queue in footprint counties")
+        actions.append("No pending Generation Queue in Scored Counties")
         if zone_pending_mw and zone_pending_mw > 0:
             comparisons["queue_share_of_zone"] = {
                 "value": 0.0,
@@ -101,14 +101,14 @@ def _verdict_gen(
                 f"Busy local queue{where}: {density:.0%} of zone pending MW "
                 f"({pending_mw:,.0f} MW in footprint)"
             )
-            actions.append("High local generation queue in footprint counties")
+            actions.append("High local Generation Queue in Scored Counties")
         elif density <= 0.03:
             score += 1
             drivers.append(
                 f"Light local queue{where}: only {density:.0%} of zone pending MW "
                 f"({pending_mw:,.0f} MW)"
             )
-            actions.append("Relatively light local queue in footprint counties")
+            actions.append("Relatively light local Generation Queue in Scored Counties")
         else:
             drivers.append(
                 f"Moderate local queue{where}: {density:.0%} of zone pending MW "
@@ -118,11 +118,11 @@ def _verdict_gen(
         if pending_mw >= 2000:
             score -= 1
             drivers.append(f"Large pending capacity in scored counties ({pending_mw:,.0f} MW)")
-            actions.append("High local generation queue in footprint counties")
+            actions.append("High local Generation Queue in Scored Counties")
         elif pending_mw <= 200:
             score += 1
             drivers.append(f"Light pending capacity in scored counties ({pending_mw:,.0f} MW)")
-            actions.append("Relatively light local queue in footprint counties")
+            actions.append("Relatively light local Generation Queue in Scored Counties")
         else:
             drivers.append(f"Pending capacity in scored counties: {pending_mw:,.0f} MW")
 
