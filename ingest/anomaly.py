@@ -155,6 +155,42 @@ def _floor_bucket(ts: datetime, minutes: int) -> datetime:
     return ts.replace(minute=ts.minute - discard, second=0, microsecond=0)
 
 
+def drop_hour_boundary_contamination(
+    series: Sequence[tuple[datetime, float]],
+    *,
+    spike_mw: float = LOAD_SPIKE_MW,
+    neighbor_sec: float = 600.0,
+) -> list[tuple[datetime, float]]:
+    """Drop EIA hourly stamps mixed into a native 5-min series.
+
+    PJM/ERCOT/MISO still have leftover EIA :00 values on zone=<ISO> (10-28 GW
+    off the 5-min trend). Consecutive dirty hours are not isolated spikes, so
+    despike alone cannot remove them.
+    """
+    backbone = [(t, m) for t, m in series if t.minute != 0 or t.second != 0]
+    if len(backbone) < 12:
+        return list(series)
+
+    kept: list[tuple[datetime, float]] = []
+    for t, m in series:
+        if t.minute != 0 or t.second != 0:
+            kept.append((t, m))
+            continue
+        nearest: float | None = None
+        best: float | None = None
+        for t1, m1 in backbone:
+            dt = abs((t1 - t).total_seconds())
+            if dt <= neighbor_sec and (best is None or dt < best):
+                best = dt
+                nearest = m1
+        if nearest is None:
+            continue
+        if abs(m - nearest) >= spike_mw:
+            continue
+        kept.append((t, m))
+    return kept
+
+
 def despike_load_series(
     series: Sequence[tuple[datetime, float]],
     *,
@@ -259,7 +295,9 @@ def detect_load_steps(
     is False (tests only). Interim ISO glitches that rebound are dropped.
     Isolated hour-boundary spikes (MISO FuelMix :00) are removed first so a
     fake high then a return to the real series is not paged as a drop.
+    EIA hourly stamps mixed into 5-min native series are dropped the same way.
     """
+    series = drop_hour_boundary_contamination(series)
     series = despike_load_series(series)
     if len(series) < 4:
         return []

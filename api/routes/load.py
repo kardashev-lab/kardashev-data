@@ -76,6 +76,11 @@ async def get_load(
     hours: int = Query(24, ge=1, le=720, description="Hours of history when start/end not given."),
     limit: int = Query(5_000, le=10_000),
 ):
+    """Observed demand only. Future forecast rows live on GET /load/forecast.
+
+    Without an explicit end, timestamps are capped at now() so day-ahead
+    forecasts cannot crowd actuals out of the limit (NYISO zonal DA).
+    """
     params: dict = {"iso": iso.upper(), "lim": limit}
 
     zone_clause = "AND zone = :zone" if zone else ""
@@ -89,7 +94,7 @@ async def get_load(
         start_clause = "AND ts >= now() - :hours * interval '1 hour'"
         params["hours"] = hours
 
-    end_clause = ""
+    end_clause = "AND ts <= now()"
     if end:
         end_clause = "AND ts <= :end_ts"
         params["end_ts"] = datetime.combine(end, datetime.max.time().replace(microsecond=0), tzinfo=timezone.utc)
@@ -99,6 +104,7 @@ async def get_load(
         SELECT ts, iso, zone, mw_actual, mw_forecast
         FROM load_data
         WHERE iso = :iso
+          AND mw_actual IS NOT NULL
           {zone_clause}
           {start_clause}
           {end_clause}

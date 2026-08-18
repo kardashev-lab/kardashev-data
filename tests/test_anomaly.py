@@ -8,6 +8,7 @@ from ingest.anomaly import (
     detect_lmp_shocks,
     detect_load_steps,
     despike_load_series,
+    drop_hour_boundary_contamination,
     format_email_body,
     format_message,
     package_event,
@@ -60,6 +61,35 @@ def test_load_step_ignores_miso_fuelmix_hour_spike():
         (t + timedelta(minutes=20), 90_466.0),  # 02:15
     ]
     assert detect_load_steps(series, iso="MISO") == []
+
+
+def test_load_step_ignores_pjm_eia_hourly_mixed_into_5min():
+    """Leftover EIA :00 stamps 20 GW above inst_load must not page as a drop."""
+    start = datetime(2026, 8, 18, 1, 5, tzinfo=timezone.utc)
+    series = []
+    t = start
+    mw = 125_842.0
+    for _ in range(12):
+        series.append((t, mw))
+        t = t + timedelta(minutes=5)
+        mw -= 450
+    # Real 5-min at 02:00:01 plus dirty EIA at 02:00:00, then more 5-min.
+    series.append((datetime(2026, 8, 18, 2, 0, 0, tzinfo=timezone.utc), 138_830.0))
+    series.append((datetime(2026, 8, 18, 2, 0, 1, tzinfo=timezone.utc), 118_875.0))
+    t = datetime(2026, 8, 18, 2, 5, tzinfo=timezone.utc)
+    mw = 118_394.0
+    for _ in range(12):
+        series.append((t, mw))
+        t = t + timedelta(minutes=5)
+        mw -= 400
+    series.sort(key=lambda x: x[0])
+    assert detect_load_steps(series, iso="PJM") == []
+
+
+def test_drop_hour_boundary_keeps_hourly_only_series():
+    start = datetime(2026, 8, 18, 0, 0, tzinfo=timezone.utc)
+    series = _series(start, [40_000 + i * 200 for i in range(20)], step_min=60)
+    assert drop_hour_boundary_contamination(series) == series
 
 
 def test_despike_drops_trailing_hour_boundary_spike():
