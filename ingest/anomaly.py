@@ -62,6 +62,9 @@ LOAD_MAX_WINDOW_STEPS = 2
 # candidate drop; reject if load rebounds most of the way back.
 LOAD_REBOUND_FRAC = 0.50
 LOAD_REBOUND_LOOKAHEAD_SEC = 900
+# Isolated hour-boundary FuelMix stamps (MISO :00 high or low vs both neighbors).
+LOAD_SPIKE_MW = 8000.0
+LOAD_SPIKE_NEIGHBOR_MW = 4000.0
 
 # LMP: scarcity / emergency territory, not everyday congestion.
 LMP_ISOS = ("ERCOT", "CAISO", "NYISO", "MISO", "SPP", "ISONE", "PJM")
@@ -152,6 +155,52 @@ def _floor_bucket(ts: datetime, minutes: int) -> datetime:
     return ts.replace(minute=ts.minute - discard, second=0, microsecond=0)
 
 
+def despike_load_series(
+    series: Sequence[tuple[datetime, float]],
+    *,
+    spike_mw: float = LOAD_SPIKE_MW,
+    neighbor_mw: float = LOAD_SPIKE_NEIGHBOR_MW,
+    max_dt_sec: float = LOAD_MAX_DT_SEC,
+) -> list[tuple[datetime, float]]:
+    """Drop isolated 5-min spikes (fake high or low) that both neighbors disagree with.
+
+    MISO FuelMix TotalMW at :00 is often 10-28 GW off the 5-min trend. A fake
+    high then a return to the real series looks like a confirmed drop unless
+    the spike is removed first.
+    """
+    if len(series) < 3:
+        return list(series)
+
+    kept: list[tuple[datetime, float]] = [series[0]]
+    for i in range(1, len(series) - 1):
+        t0, m0 = series[i - 1]
+        t, m = series[i]
+        t1, m1 = series[i + 1]
+        dt0 = (t - t0).total_seconds()
+        dt1 = (t1 - t).total_seconds()
+        if 0 < dt0 <= max_dt_sec and 0 < dt1 <= max_dt_sec:
+            isolated = abs(m - m0) >= spike_mw and abs(m - m1) >= spike_mw
+            neighbors_agree = abs(m1 - m0) <= neighbor_mw
+            if isolated and neighbors_agree:
+                continue
+        kept.append(series[i])
+    kept.append(series[-1])
+
+    if len(kept) >= 2:
+        t0, m0 = kept[-2]
+        t1, m1 = kept[-1]
+        dt = (t1 - t0).total_seconds()
+        # Trailing hour-boundary spike with no next sample yet.
+        if (
+            t1.minute == 0
+            and t1.second == 0
+            and 0 < dt <= max_dt_sec
+            and abs(m1 - m0) >= spike_mw
+        ):
+            kept.pop()
+    return kept
+
+
 def _load_drop_confirmation(
     series: Sequence[tuple[datetime, float]],
     *,
@@ -208,7 +257,10 @@ def detect_load_steps(
 
     Drops require a confirming sample after the trough unless require_confirm
     is False (tests only). Interim ISO glitches that rebound are dropped.
+    Isolated hour-boundary spikes (MISO FuelMix :00) are removed first so a
+    fake high then a return to the real series is not paged as a drop.
     """
+    series = despike_load_series(series)
     if len(series) < 4:
         return []
     floor = floor_mw if floor_mw is not None else LOAD_FLOOR_MW.get(iso, 3000.0)

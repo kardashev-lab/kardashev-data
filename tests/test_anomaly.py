@@ -7,6 +7,7 @@ from ingest.anomaly import (
     detect_iso_silent,
     detect_lmp_shocks,
     detect_load_steps,
+    despike_load_series,
     format_email_body,
     format_message,
     package_event,
@@ -43,6 +44,33 @@ def test_load_step_ignores_interim_glitch_that_rebounds():
     baseline = [98_000 + (i % 3) * 40 for i in range(20)]
     values = baseline + [98_893, 74_366, 99_419]  # -24 GW then full rebound
     assert detect_load_steps(_series(start, values), iso="MISO") == []
+
+
+def test_load_step_ignores_miso_fuelmix_hour_spike():
+    """Fake :00 high then the real series looks like a confirmed 18 GW drop."""
+    start = datetime(2026, 8, 18, 0, 20, tzinfo=timezone.utc)
+    baseline = [92_700 + (i % 3) * 30 for i in range(20)]
+    # 01:55 / 02:00 / 02:10 / 02:15 — 10 min gap after the spike still < 720s.
+    series = _series(start, baseline)
+    t = series[-1][0]  # 01:55
+    series = series[:-1] + [
+        (t, 92_727.0),
+        (t + timedelta(minutes=5), 108_882.0),  # 02:00 fake high
+        (t + timedelta(minutes=15), 90_836.0),  # 02:10
+        (t + timedelta(minutes=20), 90_466.0),  # 02:15
+    ]
+    assert detect_load_steps(series, iso="MISO") == []
+
+
+def test_despike_drops_trailing_hour_boundary_spike():
+    start = datetime(2026, 8, 18, 1, 50, tzinfo=timezone.utc)
+    series = [
+        (start, 92_727.0),
+        (start + timedelta(minutes=5), 92_800.0),
+        (start + timedelta(minutes=10), 108_882.0),  # 02:00
+    ]
+    out = despike_load_series(series)
+    assert out[-1][1] == 92_800.0
 
 
 def test_load_step_defers_without_confirming_sample():

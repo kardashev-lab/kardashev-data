@@ -287,6 +287,9 @@ def ingest_isone_load(target: date | None = None):
 
 # EIA respondent code → ISO label stored in kardashev-data
 # Covers BAs not already ingested from native ISO sources
+# Native 5-min ingest already owns zone=<ISO>. EIA hourly must not share that key.
+_EIA_NATIVE_5MIN = frozenset({"CAISO", "ERCOT", "MISO", "PJM"})
+
 _EIA_LOAD_REGIONS: dict[str, str] = {
     "CISO": "CAISO",
     "ERCO": "ERCOT",
@@ -438,8 +441,12 @@ def ingest_eia_load_all(hours: int = 3):
                     ts = tz.localize(ts_naive, is_dst=False).astimezone(timezone.utc)
                 except Exception:
                     ts = pd.to_datetime(item["period"], utc=True)
+                # Native 5-min ingest already owns zone=<ISO>. Writing EIA
+                # hourly onto the same key stomps the :00 stamp (MISO FuelMix
+                # then looks like a 10-28 GW drop).
+                zone = "EIA" if iso_name in _EIA_NATIVE_5MIN else iso_name
                 rows.append({
-                    "ts": ts, "iso": iso_name, "zone": iso_name,
+                    "ts": ts, "iso": iso_name, "zone": zone,
                     "mw_actual": float(val), "mw_forecast": None,
                 })
         except Exception as exc:
