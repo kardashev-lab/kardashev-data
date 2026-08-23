@@ -9,11 +9,19 @@ router = APIRouter(prefix="/forecast", tags=["forecast"])
 
 @router.get("/spread/latest")
 async def latest_spread_forecast(node_id: str | None = Query(None)):
-    """Most recently issued RT-DA spread forecast (P10/P50/P90 per node-hour)."""
+    """Latest issuance per node and Forecast Model.
+
+    Global max(issued_at) would hide hub rows when a later nodal model
+    writes. Live explorer mode is per node; each model keeps its own clock.
+    """
     sql = """
         SELECT ts, node_id, issued_at, p10, p50, p90, da, model
-        FROM spread_forecast
-        WHERE issued_at = (SELECT max(issued_at) FROM spread_forecast)
+        FROM spread_forecast f
+        WHERE issued_at = (
+            SELECT max(s.issued_at) FROM spread_forecast s
+            WHERE s.node_id = f.node_id AND s.model = f.model
+        )
+          AND ts >= now() - interval '2 days'
     """
     if node_id:
         sql += " AND node_id = :node_id"
