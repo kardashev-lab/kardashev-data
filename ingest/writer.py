@@ -732,31 +732,61 @@ def upsert_ercot_large_load_snapshot(row: dict) -> int:
     return 1
 
 
-def upsert_ercot_gis_snapshots(rows: list[tuple]) -> int:
-    """rows: tuples in the column order of ercot_gis_snapshots (see
-    ingest/ercot_gis.py's COLS / to_rows()).
-
-    Historical filings are not rewritten for milestone fields, but
-    poi_location was added later (2026-08-02) so ON CONFLICT fills that
-    column when a re-ingest carries it.
-    """
-    if not rows:
-        return 0
+def existing_ercot_gis_filings() -> set[tuple]:
     with cursor() as cur:
+        cur.execute("SELECT source_document_id, published_at, content_sha256, parser_version FROM ercot_gis_filings")
+        return set(cur.fetchall())
+
+
+def save_ercot_gis_filing(*, source_document_id: str, source_url: str, source_name: str,
+                         published_at, snapshot_month: str, content_sha256: str,
+                         raw_file: bytes, parser_version: str, rows: list[tuple]) -> int:
+    """Atomically retain a source/extraction and refresh the monthly projection.
+
+    Publication order selects the latest filing, not backfill arrival order.
+    Re-parses (bump PARSER_VERSION) and changed bytes remain separate extractions.
+    """
+    import hashlib
+
+    from ingest.ercot_gis import COLS
+
+    if not rows or any(row[1] != snapshot_month for row in rows):
+        raise ValueError("A filing needs nonempty observations from its own month")
+    if hashlib.sha256(raw_file).hexdigest() != content_sha256:
+        raise ValueError("Raw GIS file does not match its SHA-256")
+    columns = ", ".join(COLS)
+    with cursor() as cur:
+        # Serialize projection updates, including concurrent backfills.
+        cur.execute("SELECT pg_advisory_xact_lock(15933)")
+        cur.execute(
+            """INSERT INTO ercot_gis_filings
+               (source_document_id, source_url, source_name, published_at, snapshot_month,
+                content_sha256, raw_file, parser_version)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+               ON CONFLICT (source_document_id, published_at, content_sha256, parser_version)
+               DO NOTHING RETURNING filing_id""",
+            (source_document_id, source_url, source_name, published_at, snapshot_month,
+             content_sha256, psycopg2.Binary(raw_file), parser_version),
+        )
+        result = cur.fetchone()
+        if result is None:
+            return 0
+        filing_id = result[0]
         psycopg2.extras.execute_values(
-            cur,
-            """
-            INSERT INTO ercot_gis_snapshots
-              (queue_id, snapshot_month, project_name, gim_study_phase, county,
-               zone, projected_cod, fuel, technology, capacity_mw,
-               screening_study_started, screening_study_complete, ia_signed,
-               construction_start, construction_end, approved_for_energization,
-               approved_for_synchronization, poi_location)
-            VALUES %s
-            ON CONFLICT (queue_id, snapshot_month) DO UPDATE SET
-              poi_location = COALESCE(EXCLUDED.poi_location, ercot_gis_snapshots.poi_location)
-            """,
-            rows,
+            cur, f"INSERT INTO ercot_gis_observations (filing_id, {columns}) VALUES %s",
+            [(filing_id, *row) for row in rows],
+        )
+        cur.execute(
+            """SELECT filing_id FROM ercot_gis_filings WHERE snapshot_month = %s
+               ORDER BY published_at DESC, extracted_at DESC, filing_id DESC LIMIT 1""",
+            (snapshot_month,),
+        )
+        latest_id = cur.fetchone()[0]
+        cur.execute("DELETE FROM ercot_gis_snapshots WHERE snapshot_month = %s", (snapshot_month,))
+        cur.execute(
+            f"""INSERT INTO ercot_gis_snapshots ({columns})
+                SELECT {columns} FROM ercot_gis_observations WHERE filing_id = %s""",
+            (latest_id,),
         )
     return len(rows)
 

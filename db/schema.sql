@@ -563,6 +563,42 @@ CREATE INDEX IF NOT EXISTS egs_county ON ercot_gis_snapshots (county);
 -- will not alter an existing table).
 ALTER TABLE ercot_gis_snapshots ADD COLUMN IF NOT EXISTS poi_location TEXT;
 
+-- Source-level GIS history. The old monthly table remains a latest-filing
+-- projection for existing readers; these tables are the auditable history.
+CREATE TABLE IF NOT EXISTS ercot_gis_filings (
+    filing_id BIGSERIAL PRIMARY KEY,
+    source_document_id TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    source_name TEXT NOT NULL,
+    published_at TIMESTAMPTZ NOT NULL,
+    snapshot_month TEXT NOT NULL,
+    content_sha256 TEXT NOT NULL,
+    raw_file BYTEA NOT NULL,
+    parser_version TEXT NOT NULL,
+    extracted_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    UNIQUE (source_document_id, published_at, content_sha256, parser_version)
+);
+CREATE INDEX IF NOT EXISTS egf_month ON ercot_gis_filings
+    (snapshot_month, published_at DESC, extracted_at DESC, filing_id DESC);
+
+CREATE TABLE IF NOT EXISTS ercot_gis_observations (
+    LIKE ercot_gis_snapshots INCLUDING DEFAULTS,
+    filing_id BIGINT NOT NULL REFERENCES ercot_gis_filings(filing_id),
+    PRIMARY KEY (filing_id, queue_id)
+);
+CREATE INDEX IF NOT EXISTS ego_project ON ercot_gis_observations (queue_id, filing_id);
+
+-- Preserve pre-migration rows without inventing a document or publication date.
+CREATE TABLE IF NOT EXISTS ercot_gis_legacy_snapshots (
+    LIKE ercot_gis_snapshots INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES
+);
+INSERT INTO ercot_gis_legacy_snapshots
+SELECT s.* FROM ercot_gis_snapshots s
+WHERE NOT EXISTS (
+    SELECT 1 FROM ercot_gis_filings f WHERE f.snapshot_month = s.snapshot_month
+)
+ON CONFLICT (queue_id, snapshot_month) DO NOTHING;
+
 -- ---------------------------------------------------------------------------
 -- Precomputed timeline aggregates from ercot_gis_snapshots (median/mean
 -- durations by zone and fuel type), refreshed after each monthly ingest --

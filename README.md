@@ -99,6 +99,70 @@ ISO APIs / EIA / ERCOT CDR / CAISO OASIS / NYISO Open Data
 
 ---
 
+## ERCOT GIS filing history and corrections
+
+GIS ingestion preserves each source document and extraction in
+`ercot_gis_filings` and its project rows in `ercot_gis_observations`.
+Filings include ERCOT's document ID, download URL, filename, publication
+timestamp, SHA-256, exact downloaded bytes (`raw_file`), parser version, and
+extraction timestamp. `filing_id` joins the source file to every extracted row;
+project identity remains ERCOT's INR (`queue_id`).
+
+The scheduler checks daily at 16:00 UTC. Each available file is downloaded and
+hashed, including previously seen document IDs, so changed bytes under the same
+ID are detectable. Identical document ID/publication/hash/parser combinations
+are skipped. This intentionally uses more bandwidth than checking only filenames.
+Increment `PARSER_VERSION` in `ingest/ercot_gis.py` when correcting extraction
+logic; the next run stores a new extraction while retaining the earlier one.
+A failed or empty parse leaves existing history intact and is retried on a later run.
+
+`ercot_gis_snapshots` remains the compatible monthly projection for existing
+readers. It selects the latest publication for each month; extraction time and
+filing ID break publication-time ties. Replacement is atomic and removes projects
+omitted by a corrected filing. Older backfills cannot supersede later publications.
+Pre-migration rows are retained separately in `ercot_gis_legacy_snapshots`:
+they have no verified source-document provenance and are not represented as
+new auditable filings. A migration alone cannot recover previously missed revisions.
+
+Rollout (in the deployed environment with its configured database):
+
+```bash
+python -m db.migrate
+python -m ingest.ercot_gis --backfill
+python -m ingest.ercot_gis_timelines
+```
+
+The backfill checks all files still available from ERCOT; it cannot recover files
+ERCOT has removed or overwritten before they were archived. Both normal and
+`--backfill` runs now inspect all available documents. `--dry-run --limit 1`
+checks extraction without accessing the database.
+
+Inspect a project's source-backed history:
+
+```sql
+SELECT f.filing_id, f.source_document_id, f.source_url, f.published_at,
+       f.extracted_at, f.content_sha256, f.parser_version,
+       o.snapshot_month, o.queue_id, o.capacity_mw, o.projected_cod
+FROM ercot_gis_observations o
+JOIN ercot_gis_filings f USING (filing_id)
+WHERE o.queue_id = 'YOUR_ERCOT_INR'
+ORDER BY f.published_at, f.extracted_at, f.filing_id;
+```
+
+Retrieve the exact source bytes with `SELECT raw_file FROM ercot_gis_filings
+WHERE filing_id = ...`. Publication time describes ERCOT's metadata; extraction
+time describes when this system captured that version. For a historical
+"what had Kardashev captured by then" query, constrain **both** timestamps.
+The monthly projection and existing aggregate metrics are not an as-of audit API.
+
+Storage regression tests use isolated schemas in a disposable PostgreSQL database:
+
+```bash
+GIS_TEST_DATABASE_URL=postgresql://localhost/kardashev_test pytest tests/test_gis_filing_storage.py -q
+```
+
+---
+
 ## Tools built on this API
 
 | Tool | URL | What it shows |

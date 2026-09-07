@@ -408,7 +408,7 @@ def start():
     last_commodities_week = -1
     last_lmp_purge_day   = -1
     last_ercot_large_load_ym = None  # (year, month) -- ERCOT LLWG posts roughly monthly
-    last_ercot_gis_ym = None         # (year, month) -- ERCOT GIS_Report posts roughly monthly
+    last_ercot_gis_day = None        # Daily checks catch within-month corrections
 
     def _startup(name: str, fn) -> None:
         try:
@@ -538,9 +538,9 @@ def start():
                 log.info("tick: ERCOT large load queue (monthly, vision extraction)")
                 run_ercot_large_load()
 
-            if hour == 16 and (now.year, now.month) != last_ercot_gis_ym:
-                last_ercot_gis_ym = (now.year, now.month)
-                log.info("tick: ERCOT GIS interconnection queue milestones (monthly)")
+            if hour == 16 and now.date() != last_ercot_gis_day:
+                last_ercot_gis_day = now.date()
+                log.info("tick: ERCOT GIS filings and corrections (daily)")
                 run_ercot_gis()
 
             if hour == 3 and day != last_lmp_purge_day:
