@@ -844,7 +844,11 @@ def ingest_spp_fuel_mix_backfill():
 # ---------------------------------------------------------------------------
 
 def ingest_eia_gas_storage():
-    """EIA weekly natural gas in storage by region (Lower 48, East, Midwest, Mountain, Pacific, South Central)."""
+    """EIA weekly natural gas working storage by region (seriesid endpoint).
+
+    The stor/wkly facet query with duoarea=NUS returns empty; weekly working-gas
+    series live under NG.NW2_EPG0_SWO_*_BCF.W (values already in BCF).
+    """
     import os
 
     import requests
@@ -856,33 +860,29 @@ def ingest_eia_gas_storage():
         log.warning("EIA_API_KEY not set, skipping gas storage")
         return
 
+    # Labels match EIA series-description region names (verified 2026-09-14).
     _REGIONS: list[tuple[str, str]] = [
-        ("US Lower 48", "NUS"),
-        ("East",        "NUS-EAST"),
-        ("Midwest",     "NUS-MWE"),
-        ("Mountain",    "NUS-MTN"),
-        ("Pacific",     "NUS-PAC"),
-        ("South Central", "NUS-SCN"),
+        ("US Lower 48", "NG.NW2_EPG0_SWO_R48_BCF.W"),
+        ("East", "NG.NW2_EPG0_SWO_R31_BCF.W"),
+        ("Midwest", "NG.NW2_EPG0_SWO_R32_BCF.W"),
+        ("South Central", "NG.NW2_EPG0_SWO_R33_BCF.W"),
+        ("Mountain", "NG.NW2_EPG0_SWO_R34_BCF.W"),
+        ("Pacific", "NG.NW2_EPG0_SWO_R35_BCF.W"),
     ]
-    url = "https://api.eia.gov/v2/natural-gas/stor/wkly/data/"
     rows: list[dict] = []
 
-    for region_name, duoarea in _REGIONS:
+    for region_name, series_id in _REGIONS:
         try:
-            resp = requests.get(url, params={
-                "api_key": api_key,
-                "facets[duoarea][]": duoarea,
-                "facets[process][]": "VCS",  # Working gas, total storage
-                "frequency": "weekly",
-                "data[]": "value",
-                "sort[0][column]": "period",
-                "sort[0][direction]": "desc",
-                "length": 104,  # ~2 years
-            }, timeout=15)
+            resp = requests.get(
+                f"https://api.eia.gov/v2/seriesid/{series_id}",
+                params={"api_key": api_key},
+                timeout=20,
+            )
             if not resp.ok:
+                log.warning("gas storage %s HTTP %s", region_name, resp.status_code)
                 continue
             data = resp.json().get("response", {}).get("data", [])
-            for rec in data:
+            for rec in data[:104]:  # ~2 years weekly
                 period = rec.get("period")
                 val = rec.get("value")
                 if not period or val is None:
@@ -890,9 +890,10 @@ def ingest_eia_gas_storage():
                 try:
                     ts = datetime.strptime(period, "%Y-%m-%d").replace(tzinfo=timezone.utc)
                     rows.append({
-                        "ts": ts, "region": region_name,
-                        "bcf": float(val) / 1000,  # EIA reports in Mcf → convert to Bcf
-                        "series_id": f"{duoarea}.VCS",
+                        "ts": ts,
+                        "region": region_name,
+                        "bcf": float(val),  # series already in BCF
+                        "series_id": series_id,
                     })
                 except Exception:
                     continue
@@ -900,7 +901,7 @@ def ingest_eia_gas_storage():
             log.warning("gas storage %s: %s", region_name, exc)
 
     n = upsert_gas_storage(rows)
-    log.info("EIA gas storage: %d rows", n)
+    log.info("EIA gas storage: %d rows across %d regions", n, len({r['region'] for r in rows}))
 
 
 # ---------------------------------------------------------------------------
@@ -1073,8 +1074,10 @@ def ingest_ercot_wind_solar():
 
 def ingest_eia_nat_gas_prices():
     """
-    EIA v2 API: Henry Hub + key regional hub daily spot prices.
-    Series IDs (EIA NG v2 facets): RNGWHHD=Henry Hub, others regional.
+    EIA v2 seriesid endpoint: Henry Hub + key regional daily spot prices.
+
+    `natural-gas/pri/sum` only supports monthly/annual — daily spot lives under
+    `/v2/seriesid/NG.*.D` (verified 2026-09-14; the old facet query returned 400).
     """
     import os
 
@@ -1087,35 +1090,27 @@ def ingest_eia_nat_gas_prices():
         log.warning("EIA_API_KEY not set, skipping nat gas prices")
         return
 
-    # Map of display name → EIA series duoarea+product facets
-    _HUBS: list[tuple[str, str, str]] = [
-        ("Henry Hub",        "NUS",  "RNGWHHD"),  # national spot, daily
-        ("Algonquin CG",     "Y05SF", "RNGWHHD"),  # NE hub, use regional if available
-        ("Transco Zone 6 NY", "Y44",  "RNGWHHD"),
-        ("Chicago Citygate", "Y54",   "RNGWHHD"),
-        ("Dominion South",   "Y71",   "RNGWHHD"),
-        ("SoCal Border",     "Y70",   "RNGWHHD"),
+    # display name → EIA series id (daily spot). Regional citygate daily
+    # series IDs used previously 404'd on seriesid (2026-09-14); Henry Hub is
+    # the feed LMP dashboards / forecasting actually need.
+    _HUBS: list[tuple[str, str]] = [
+        ("Henry Hub", "NG.RNGWHHD.D"),
     ]
 
-    url = "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
     rows: list[dict] = []
-
-    for hub_name, duoarea, product in _HUBS:
+    for hub_name, series_id in _HUBS:
         try:
-            resp = requests.get(url, params={
-                "api_key": api_key,
-                "facets[duoarea][]": duoarea,
-                "facets[product][]": product,
-                "frequency": "daily",
-                "data[]": "value",
-                "sort[0][column]": "period",
-                "sort[0][direction]": "desc",
-                "length": 90,
-            }, timeout=15)
+            resp = requests.get(
+                f"https://api.eia.gov/v2/seriesid/{series_id}",
+                params={"api_key": api_key},
+                timeout=20,
+            )
             if not resp.ok:
+                log.warning("nat gas %s HTTP %s", hub_name, resp.status_code)
                 continue
             data = resp.json().get("response", {}).get("data", [])
-            for rec in data:
+            # Newest first; keep ~90 calendar days of daily spots
+            for rec in data[:90]:
                 period = rec.get("period")  # "YYYY-MM-DD"
                 val = rec.get("value")
                 if not period or val is None:
@@ -1126,7 +1121,7 @@ def ingest_eia_nat_gas_prices():
                         "ts": ts,
                         "hub": hub_name,
                         "price_usd": float(val),
-                        "series_id": f"{duoarea}.{product}",
+                        "series_id": series_id,
                     })
                 except Exception:
                     continue
@@ -1134,7 +1129,7 @@ def ingest_eia_nat_gas_prices():
             log.warning("nat gas %s: %s", hub_name, exc)
 
     n = upsert_nat_gas_prices(rows)
-    log.info("EIA nat gas prices: %d rows", n)
+    log.info("EIA nat gas prices: %d rows across %d hubs", n, len({r['hub'] for r in rows}))
 
 
 # ---------------------------------------------------------------------------
@@ -1836,8 +1831,8 @@ def ingest_caiso_lmp_da():
 def ingest_eia_fuel_mix_all():
     """Hourly fuel-type generation for all non-ISO balancing authorities via EIA-930."""
     from ingest.writer import upsert_fuel_mix
-    from kardashev import _eia as eia_930
-    rows = eia_930.get_fuel_mix_all_bas(hours=25)
+    from iso_data.eia_930 import get_fuel_mix_all_bas
+    rows = get_fuel_mix_all_bas(hours=25)
     n = upsert_fuel_mix(rows)
     log.info("EIA-930 non-ISO BA fuel mix: %d rows across all BAs", n)
 
@@ -1849,7 +1844,7 @@ def ingest_eia_fuel_mix_all():
 def ingest_isone_lmp_rt():
     """ISONE RT 5-min LMP via ISO-NE REST API."""
     from ingest.writer import upsert_lmp
-    from kardashev import _isone as isone_api
+    from kardashev import _isone_api as isone_api
     try:
         rows = isone_api.get_rt_lmp()
         n = upsert_lmp(rows)
@@ -1861,7 +1856,7 @@ def ingest_isone_lmp_rt():
 def ingest_isone_lmp_da(target: date | None = None):
     """ISONE DA hourly LMP for all hub zones via ISO-NE REST API."""
     from ingest.writer import upsert_lmp
-    from kardashev import _isone as isone_api
+    from kardashev import _isone_api as isone_api
     target = target or date.today()
     try:
         rows = isone_api.get_da_lmp(target)
@@ -1878,7 +1873,7 @@ def ingest_isone_lmp_da(target: date | None = None):
 def ingest_miso_lmp_rt():
     """MISO RT LMP for hub nodes."""
     from ingest.writer import upsert_lmp
-    from kardashev import _miso as miso_lmp
+    from kardashev import _miso_lmp as miso_lmp
     rows = miso_lmp.get_rt_lmp()
     n = upsert_lmp(rows)
     log.info("MISO RT LMP: %d rows", n)
@@ -1887,7 +1882,7 @@ def ingest_miso_lmp_rt():
 def ingest_miso_lmp_da(target: date | None = None):
     """MISO DA ex-ante LMP for hub nodes."""
     from ingest.writer import upsert_lmp
-    from kardashev import _miso as miso_lmp
+    from kardashev import _miso_lmp as miso_lmp
     target = target or date.today()
     rows = miso_lmp.get_da_lmp(target)
     n = upsert_lmp(rows)

@@ -181,6 +181,18 @@ def _fetch(url: str) -> str:
 
 def find_latest_llwg_meeting() -> tuple[str, date]:
     """Scrape the LLWG committee page for the most recent past meeting's URL + date."""
+    meetings = list_past_llwg_meetings()
+    if not meetings:
+        raise RuntimeError(
+            f"No past LLWG meeting links found on {LLWG_PAGE} -- page structure may have changed"
+        )
+    latest_date, latest_url = meetings[0]
+    log.info("Latest LLWG meeting: %s (%s)", latest_date, latest_url)
+    return latest_url, latest_date
+
+
+def list_past_llwg_meetings() -> list[tuple[date, str]]:
+    """All past LLWG meetings on the committee page, newest first."""
     html = _fetch(LLWG_PAGE)
     today = date.today()
     candidates: list[tuple[date, str]] = []
@@ -196,15 +208,52 @@ def find_latest_llwg_meeting() -> tuple[str, date]:
             continue
         if meeting_date <= today:
             candidates.append((meeting_date, urljoin(LLWG_PAGE, href)))
+    candidates.sort(key=lambda c: c[0], reverse=True)
+    # de-dupe by date keeping first (newest sort already unique usually)
+    seen: set[date] = set()
+    out: list[tuple[date, str]] = []
+    for d, u in candidates:
+        if d in seen:
+            continue
+        seen.add(d)
+        out.append((d, u))
+    return out
 
-    if not candidates:
+
+def find_latest_report_attachment(
+    max_meetings: int = 12,
+) -> tuple[str, date, str]:
+    """Walk recent past LLWG meetings newest-first until a status-update deck
+    is found. Jul/Aug 2026 meetings posted no queue-status report — the live
+    job used to raise on the empty latest meeting and never look further back.
+    Returns (meeting_url, meeting_date, attachment_url)."""
+    meetings = list_past_llwg_meetings()
+    if not meetings:
         raise RuntimeError(
             f"No past LLWG meeting links found on {LLWG_PAGE} -- page structure may have changed"
         )
-    candidates.sort(key=lambda c: c[0])
-    latest_date, latest_url = candidates[-1]
-    log.info("Latest LLWG meeting: %s (%s)", latest_date, latest_url)
-    return latest_url, latest_date
+    errors: list[str] = []
+    for meeting_date, meeting_url in meetings[:max_meetings]:
+        matches = find_all_report_attachments(meeting_url)
+        if not matches:
+            errors.append(f"{meeting_date}: no status-update attachment")
+            continue
+        chosen = matches[-1]
+        if len(matches) > 1:
+            log.info(
+                "Multiple status-update attachments on %s, using latest: %s",
+                meeting_url, chosen,
+            )
+        log.info(
+            "Found large-load status report on LLWG %s: %s",
+            meeting_date, chosen,
+        )
+        return meeting_url, meeting_date, chosen
+    raise RuntimeError(
+        "No large-load status-update attachment found on recent LLWG meetings -- "
+        "ERCOT may have paused the deck or changed the title/naming. "
+        f"Checked: {'; '.join(errors) if errors else 'none'}"
+    )
 
 
 def find_all_report_attachments(meeting_url: str, title_re: re.Pattern = REPORT_TITLE_RE) -> list[str]:
@@ -325,11 +374,16 @@ def extract_snapshot(images: list[bytes], source_url: str) -> dict:
 
 
 def ingest_ercot_large_load():
-    """Discover, download, extract, and store the latest ERCOT large-load snapshot."""
+    """Discover, download, extract, and store the latest ERCOT large-load snapshot.
+
+    Walks recent past LLWG meetings until a status-update deck is found (ERCOT
+    sometimes skips months). If the extracted snapshot_month is already in the
+    DB, upsert is still safe (ON CONFLICT) — we log and finish cleanly so the
+    monthly scheduler does not treat "no newer deck yet" as a hard failure.
+    """
     from ingest.writer import upsert_ercot_large_load_snapshot
 
-    meeting_url, meeting_date = find_latest_llwg_meeting()
-    attachment_url = find_report_attachment(meeting_url)
+    meeting_url, meeting_date, attachment_url = find_latest_report_attachment()
     file_bytes = download_file(attachment_url)
 
     if attachment_url.lower().endswith(".pptx"):
@@ -342,6 +396,7 @@ def ingest_ercot_large_load():
     snapshot.setdefault("report_date", meeting_date)
     upsert_ercot_large_load_snapshot(snapshot)
     log.info(
-        "ERCOT large load: snapshot_month=%s total_mw=%s (source: %s)",
-        snapshot.get("snapshot_month"), snapshot.get("total_mw"), attachment_url,
+        "ERCOT large load: snapshot_month=%s total_mw=%s (meeting=%s source=%s)",
+        snapshot.get("snapshot_month"), snapshot.get("total_mw"),
+        meeting_date, attachment_url,
     )
