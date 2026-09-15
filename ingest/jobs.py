@@ -1916,15 +1916,10 @@ def ingest_ercot_lmp_da(target: date | None = None):
     """ERCOT DAM settlement point prices via CDR archive (hubs/zones only)."""
     from ingest.writer import upsert_lmp
     from kardashev import _ercot_lmp as ercot_lmp
-    try:
-        rows = _filter_ercot_hub_lmp(ercot_lmp.get_da_lmp(target))
-        n = upsert_lmp(rows)
-        log.info("ERCOT DA LMP: %d rows", n)
-    except Exception as exc:
-        log.warning("ERCOT DA LMP failed: %s", exc)
-        rows = _filter_ercot_hub_lmp(ercot_lmp.get_da_lmp(target))
-        n = upsert_lmp(rows)
-        log.info("ERCOT DA LMP (CDR fallback): %d rows", n)
+    target = target or date.today()
+    rows = _filter_ercot_hub_lmp(ercot_lmp.get_da_lmp(target))
+    n = upsert_lmp(rows)
+    log.info("ERCOT DA LMP %s: %d rows", target, n)
 
 
 # ---------------------------------------------------------------------------
